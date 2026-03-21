@@ -3,44 +3,44 @@
 
 
 /*
-	´´½¨Ê±¼ä£º3:09 PM 2008-8-9
-	ËµÃ÷£º¶¨ÒåÁË¶ÔIN,OUTÖ¸ÁîµÄ³éÏó
-		Ê¹ÓÃÁËC++ Inline Assembly ·â×°ÁËIN,OUTÖ¸Áî£¬
-		ÓÃÓÚ¶ÔCHIPSÒÔ¼°ÍâÉèreprogramÊ±ºò¶Ë¿ÚµÄ¶ÁĞ´ºÍÊı¾İ´«ËÍ¡£
+	åˆ›å»ºæ—¶é—´ï¼š3:09 PM 2008-8-9
+	è¯´æ˜ï¼šå®šä¹‰äº†å¯¹IN,OUTæŒ‡ä»¤çš„æŠ½è±¡
+		ä½¿ç”¨äº†C++ Inline Assembly å°è£…äº†IN,OUTæŒ‡ä»¤ï¼Œ
+		ç”¨äºå¯¹CHIPSä»¥åŠå¤–è®¾reprogramæ—¶å€™ç«¯å£çš„è¯»å†™å’Œæ•°æ®ä¼ é€ã€‚
 */
 
 /*
-	ÓĞ2ÖÖ¿É¹©Ñ¡ÔñµÄÊµÏÖ·½°¸£º 
-	(1) Ê¹ÓÃclass IOPort¶ÔIN,OUTÖ¸Áî½øĞĞ·â×°£¬IN¡¢OUTÊµÏÖÎªstatic³ÉÔ±º¯Êı¡£
-	(2) Ê¹ÓÃnamespace IOPort¶ÔIN,OUTÖ¸Áî½øĞĞ·â×°¡£
+	æœ‰2ç§å¯ä¾›é€‰æ‹©çš„å®ç°æ–¹æ¡ˆï¼š 
+	(1) ä½¿ç”¨class IOPortå¯¹IN,OUTæŒ‡ä»¤è¿›è¡Œå°è£…ï¼ŒINã€OUTå®ç°ä¸ºstaticæˆå‘˜å‡½æ•°ã€‚
+	(2) ä½¿ç”¨namespace IOPortå¯¹IN,OUTæŒ‡ä»¤è¿›è¡Œå°è£…ã€‚
 	
-	ÉÏÊöÁ½ÖÖ·½°¸µÄÇø±ğÔÚÓÚ£º  µ÷ÓÃÊ±Óï·¨²»Í¬¡£
-	·½°¸Ò»£º  class IOPort µÄÊµÏÖ·½Ê½
-	µ÷ÓÃÊ±£º  IOPort::IN8(unsigned short port);        
+	ä¸Šè¿°ä¸¤ç§æ–¹æ¡ˆçš„åŒºåˆ«åœ¨äºï¼š  è°ƒç”¨æ—¶è¯­æ³•ä¸åŒã€‚
+	æ–¹æ¡ˆä¸€ï¼š  class IOPort çš„å®ç°æ–¹å¼
+	è°ƒç”¨æ—¶ï¼š  IOPort::IN8(unsigned short port);        
 	
-	·½°¸¶ş£º  namespace IOPortµÄÊµÏÖ·½Ê½
-	µ÷ÓÃÊ±£º  ÔÚÃ»ÓĞÉùÃ÷using namespace IOPort; Çé¿öÏÂ£¬ IOPort::IN8(unsigned short port);
-			ÉùÃ÷ÁËusing namespace IOPort;Ö®ºó£¬ Ö±½ÓIN8(unsigned short port);   
+	æ–¹æ¡ˆäºŒï¼š  namespace IOPortçš„å®ç°æ–¹å¼
+	è°ƒç”¨æ—¶ï¼š  åœ¨æ²¡æœ‰å£°æ˜using namespace IOPort; æƒ…å†µä¸‹ï¼Œ IOPort::IN8(unsigned short port);
+			å£°æ˜äº†using namespace IOPort;ä¹‹åï¼Œ ç›´æ¥IN8(unsigned short port);   
 			
-	×¢£º	Á½ÖÖ·½°¸µÄÊµÏÖ´úÂëÏÂÃæ¶¼ÓĞ£¬·´ÕıÁ½ÖÖ·½°¸ÊµÏÖ´úÂë³ıÁËclassºÍnamespace¹Ø¼ü×ÖµÄÇø±ğ£¬
-		namespaceÊµÏÖ·½°¸º¯ÊıÇ°Ã»ÓĞstatic¹Ø¼ü×ÖÖ®Íâ£¬Ã»ÆäËüÇø±ğ¡£
-		Ä¿Ç°enableÁË·½°¸Ò»£¬ ·½°¸¶şµÄ´úÂë±»×¢ÊÍµôÁË¡£
+	æ³¨ï¼š	ä¸¤ç§æ–¹æ¡ˆçš„å®ç°ä»£ç ä¸‹é¢éƒ½æœ‰ï¼Œåæ­£ä¸¤ç§æ–¹æ¡ˆå®ç°ä»£ç é™¤äº†classå’Œnamespaceå…³é”®å­—çš„åŒºåˆ«ï¼Œ
+		namespaceå®ç°æ–¹æ¡ˆå‡½æ•°å‰æ²¡æœ‰staticå…³é”®å­—ä¹‹å¤–ï¼Œæ²¡å…¶å®ƒåŒºåˆ«ã€‚
+		ç›®å‰enableäº†æ–¹æ¡ˆä¸€ï¼Œ æ–¹æ¡ˆäºŒçš„ä»£ç è¢«æ³¨é‡Šæ‰äº†ã€‚
 */
 
 /*
-	¹ØÓÚC++ Inline Assembly£¬²Î¿¼¡°AT&T »ã±à (AT&T ASM) ²Î¿¼ ¡± 
+	å…³äºC++ Inline Assemblyï¼Œå‚è€ƒâ€œAT&T æ±‡ç¼– (AT&T ASM) å‚è€ƒ â€ 
 	@ http://blog.csdn.net/robin_qiu/archive/2006/03/02/613904.aspx
-	²»¹ıÕâÁ½ÌìÕâ¸öÍøÒ³ÎÒ´ò²»¿ªÁË£¬»¹ºÃÍøÒ³ÎÒ´æÏÂÀ´ÁË¡£
+	ä¸è¿‡è¿™ä¸¤å¤©è¿™ä¸ªç½‘é¡µæˆ‘æ‰“ä¸å¼€äº†ï¼Œè¿˜å¥½ç½‘é¡µæˆ‘å­˜ä¸‹æ¥äº†ã€‚
 */
 
-/*·½°¸Ò»£º*/
+/*æ–¹æ¡ˆä¸€ï¼š*/
 class IOPort
 {	
-	//ÓÉÓÚº¯Êı¶¼ÊÇInline AssemblyµÄÔ­Òò£¬º¯Êı¶¨ÒåĞ´µÀ.cppÎÄ¼şÖĞºÃÏñ»áÓĞÎÊÌâ¡£
-	//ËùÒÔ¸É´à°Ñº¯ÊıÉùÃ÷¡¢¶¨ÒåÒ»ÆğĞ´µÀclass IOPortµÄÉùÃ÷ÀïÃæËãÁË¡£
+	//ç”±äºå‡½æ•°éƒ½æ˜¯Inline Assemblyçš„åŸå› ï¼Œå‡½æ•°å®šä¹‰å†™é“.cppæ–‡ä»¶ä¸­å¥½åƒä¼šæœ‰é—®é¢˜ã€‚
+	//æ‰€ä»¥å¹²è„†æŠŠå‡½æ•°å£°æ˜ã€å®šä¹‰ä¸€èµ·å†™é“class IOPortçš„å£°æ˜é‡Œé¢ç®—äº†ã€‚
 	
 	public:
-		//´ÓÖ¸¶¨¶Ë¿Úport¶ÁÈë8±ÈÌØÊı¾İ£¬·ÅÈëdataÖĞ×÷Îª·µ»ØÖµ
+		//ä»æŒ‡å®šç«¯å£portè¯»å…¥8æ¯”ç‰¹æ•°æ®ï¼Œæ”¾å…¥dataä¸­ä½œä¸ºè¿”å›å€¼
 		static inline unsigned char InByte(unsigned short port)
 		{
 			unsigned char data;
@@ -50,7 +50,7 @@ class IOPort
 			return data;
 		}
 		
-		//´ÓÖ¸¶¨¶Ë¿Úport¶ÁÈë16±ÈÌØÊı¾İ£¬·ÅÈëdataÖĞ×÷Îª·µ»ØÖµ
+		//ä»æŒ‡å®šç«¯å£portè¯»å…¥16æ¯”ç‰¹æ•°æ®ï¼Œæ”¾å…¥dataä¸­ä½œä¸ºè¿”å›å€¼
 		static inline unsigned short InWord(unsigned short port)
 		{
 			unsigned short data;
@@ -60,7 +60,7 @@ class IOPort
 			return data;
 		}
 		
-		//´ÓÖ¸¶¨¶Ë¿Úport¶ÁÈë32±ÈÌØÊı¾İ£¬·ÅÈëdataÖĞ×÷Îª·µ»ØÖµ
+		//ä»æŒ‡å®šç«¯å£portè¯»å…¥32æ¯”ç‰¹æ•°æ®ï¼Œæ”¾å…¥dataä¸­ä½œä¸ºè¿”å›å€¼
 		static inline unsigned int InDWord(unsigned short port)
 		{
 			unsigned int data;
@@ -70,23 +70,23 @@ class IOPort
 			return data;
 		}
 	//=====================================================================
-	//ÒÔÉÏÊÇ¶ÔINµÄ·â×°£¬ÒÔÏÂÊÇ¶ÔOUTÖ¸ÁîµÄ·â×°
+	//ä»¥ä¸Šæ˜¯å¯¹INçš„å°è£…ï¼Œä»¥ä¸‹æ˜¯å¯¹OUTæŒ‡ä»¤çš„å°è£…
 		
-		//½«8±ÈÌØÊı¾İdata£¬Ğ´Èëµ½Ö¸¶¨¶Ë¿ÚportÖĞ
+		//å°†8æ¯”ç‰¹æ•°æ®dataï¼Œå†™å…¥åˆ°æŒ‡å®šç«¯å£portä¸­
 		static inline void OutByte(unsigned short port, unsigned char data)
 		{
 			__asm__ __volatile__("outb %%al, %%dx"
 						:: "d" (port), "a"(data)	);
 		}
 		
-		//½«16±ÈÌØÊı¾İdata£¬Ğ´Èëµ½Ö¸¶¨¶Ë¿ÚportÖĞ
+		//å°†16æ¯”ç‰¹æ•°æ®dataï¼Œå†™å…¥åˆ°æŒ‡å®šç«¯å£portä¸­
 		static inline void OutWord(unsigned short port, unsigned short data)
 		{
 			__asm__ __volatile__("outw %%ax, %%dx"
 						:: "d" (port), "a"(data)	);
 		}
 		
-		//½«32±ÈÌØÊı¾İdata£¬Ğ´Èëµ½Ö¸¶¨¶Ë¿ÚportÖĞ
+		//å°†32æ¯”ç‰¹æ•°æ®dataï¼Œå†™å…¥åˆ°æŒ‡å®šç«¯å£portä¸­
 		static inline void OutDWord(unsigned short port, unsigned int data)
 		{
 			__asm__ __volatile__("outl %%eax, %%dx"
@@ -95,12 +95,12 @@ class IOPort
 		
 }; // end of class IOPort declearation
 
-/*end of ·½°¸Ò» */ 
+/*end of æ–¹æ¡ˆä¸€ */ 
 
-/*·½°¸¶ş:
+/*æ–¹æ¡ˆäºŒ:
 namespace IOPort{
 		
-		//´ÓÖ¸¶¨¶Ë¿Úport¶ÁÈë8±ÈÌØÊı¾İ£¬·ÅÈëdataÖĞ×÷Îª·µ»ØÖµ
+		//ä»æŒ‡å®šç«¯å£portè¯»å…¥8æ¯”ç‰¹æ•°æ®ï¼Œæ”¾å…¥dataä¸­ä½œä¸ºè¿”å›å€¼
 		inline unsigned char in8(unsigned short port)
 		{
 			unsigned char data;
@@ -110,7 +110,7 @@ namespace IOPort{
 			return data;
 		}
 		
-		//´ÓÖ¸¶¨¶Ë¿Úport¶ÁÈë16±ÈÌØÊı¾İ£¬·ÅÈëdataÖĞ×÷Îª·µ»ØÖµ
+		//ä»æŒ‡å®šç«¯å£portè¯»å…¥16æ¯”ç‰¹æ•°æ®ï¼Œæ”¾å…¥dataä¸­ä½œä¸ºè¿”å›å€¼
 		inline unsigned short in16(unsigned short port)
 		{
 			unsigned short data;
@@ -120,7 +120,7 @@ namespace IOPort{
 			return data;
 		}
 		
-		//´ÓÖ¸¶¨¶Ë¿Úport¶ÁÈë32±ÈÌØÊı¾İ£¬·ÅÈëdataÖĞ×÷Îª·µ»ØÖµ
+		//ä»æŒ‡å®šç«¯å£portè¯»å…¥32æ¯”ç‰¹æ•°æ®ï¼Œæ”¾å…¥dataä¸­ä½œä¸ºè¿”å›å€¼
 		inline unsigned int in32(unsigned short port)
 		{
 			unsigned int data;
@@ -130,23 +130,23 @@ namespace IOPort{
 			return data;
 		}
 	//=====================================================================
-	//ÒÔÉÏÊÇ¶ÔINµÄ·â×°£¬ÒÔÏÂÊÇ¶ÔOUTÖ¸ÁîµÄ·â×°
+	//ä»¥ä¸Šæ˜¯å¯¹INçš„å°è£…ï¼Œä»¥ä¸‹æ˜¯å¯¹OUTæŒ‡ä»¤çš„å°è£…
 		
-		//½«8±ÈÌØÊı¾İdata£¬Ğ´Èëµ½Ö¸¶¨¶Ë¿ÚportÖĞ
+		//å°†8æ¯”ç‰¹æ•°æ®dataï¼Œå†™å…¥åˆ°æŒ‡å®šç«¯å£portä¸­
 		inline void out8(unsigned short port, unsigned char data)
 		{
 			__asm__ __volatile__("outb %%al, %%dx" 
 						:: "d" (port), "a"(data)	);
 		}
 		
-		//½«16±ÈÌØÊı¾İdata£¬Ğ´Èëµ½Ö¸¶¨¶Ë¿ÚportÖĞ
+		//å°†16æ¯”ç‰¹æ•°æ®dataï¼Œå†™å…¥åˆ°æŒ‡å®šç«¯å£portä¸­
 		inline void out16(unsigned short port, unsigned short data)
 		{
 			__asm__ __volatile__("outw %%ax, %%dx"
 						:: "d" (port), "a"(data)	);
 		}
 		
-		//½«32±ÈÌØÊı¾İdata£¬Ğ´Èëµ½Ö¸¶¨¶Ë¿ÚportÖĞ
+		//å°†32æ¯”ç‰¹æ•°æ®dataï¼Œå†™å…¥åˆ°æŒ‡å®šç«¯å£portä¸­
 		inline void out32(unsigned short port, unsigned int data)
 		{
 			__asm__ __volatile__("outl %%eax, %%dx"
@@ -154,6 +154,6 @@ namespace IOPort{
 		}
 }//end of IOPort namespace
 
-end of ·½°¸¶ş */ 
+end of æ–¹æ¡ˆäºŒ */ 
 
 #endif

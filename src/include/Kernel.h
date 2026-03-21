@@ -12,23 +12,23 @@
 #include "SwapperManager.h"
 
 /*
- * KernelÀàÓÃÓÚ·â×°ËùÓĞÄÚºËÏà¹ØµÄÈ«¾ÖÀàÊµÀı¶ÔÏó£¬
- * ÀıÈçPageManager, ProcessManagerµÈ¡£
+ * Kernelç±»ç”¨äºå°è£…æ‰€æœ‰å†…æ ¸ç›¸å…³çš„å…¨å±€ç±»å®ä¾‹å¯¹è±¡ï¼Œ
+ * ä¾‹å¦‚PageManager, ProcessManagerç­‰ã€‚
  * 
- * KernelÀàÔÚÄÚ´æÖĞÎªµ¥ÌåÄ£Ê½£¬±£Ö¤ÄÚºËÖĞ·â×°¸÷ÄÚºË
- * Ä£¿éµÄ¶ÔÏó¶¼Ö»ÓĞÒ»¸ö¸±±¾¡£
+ * Kernelç±»åœ¨å†…å­˜ä¸­ä¸ºå•ä½“æ¨¡å¼ï¼Œä¿è¯å†…æ ¸ä¸­å°è£…å„å†…æ ¸
+ * æ¨¡å—çš„å¯¹è±¡éƒ½åªæœ‰ä¸€ä¸ªå‰¯æœ¬ã€‚
  */
 class Kernel
 {
 public:
 	static const unsigned long USER_ADDRESS = 0x400000 - 0x1000 + 0xc0000000;	/* 0xC03FF000 */
-	static const unsigned long USER_PAGE_INDEX = 1023;		/* USER_ADDRESS¶ÔÓ¦Ò³±íÏîÔÚPageTableÖĞµÄË÷Òı */
+	static const unsigned long USER_PAGE_INDEX = 1023;		/* USER_ADDRESSå¯¹åº”é¡µè¡¨é¡¹åœ¨PageTableä¸­çš„ç´¢å¼• */
 
 public:
 	Kernel();
 	~Kernel();
 	static Kernel& Instance();
-	void Initialize();		/* ¸Ãº¯ÊıÍê³É³õÊ¼»¯ÄÚºË´ó²¿·ÖÊı¾İ½á¹¹µÄ³õÊ¼»¯ */
+	void Initialize();		/* è¯¥å‡½æ•°å®Œæˆåˆå§‹åŒ–å†…æ ¸å¤§éƒ¨åˆ†æ•°æ®ç»“æ„çš„åˆå§‹åŒ– */
 
 	KernelPageManager& GetKernelPageManager();
 	UserPageManager& GetUserPageManager();
@@ -39,7 +39,7 @@ public:
 	DeviceManager& GetDeviceManager();
 	FileSystem& GetFileSystem();
 	FileManager& GetFileManager();
-	User& GetUser();		/* »ñÈ¡µ±Ç°½ø³ÌµÄUser½á¹¹ */
+	User& GetUser();		/* è·å–å½“å‰è¿›ç¨‹çš„Userç»“æ„ */
 
 private:
 	void InitMemory();
@@ -48,7 +48,7 @@ private:
 	void InitFileSystem();
 
 private:
-	static Kernel instance;		/* Kernelµ¥ÌåÀàÊµÀı */
+	static Kernel instance;		/* Kernelå•ä½“ç±»å®ä¾‹ */
 
 	KernelPageManager* m_KernelPageManager;
 	UserPageManager* m_UserPageManager;

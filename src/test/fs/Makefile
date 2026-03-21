@@ -1,8 +1,8 @@
 include ..\..\Makefile.inc
 
-#×¨ÃÅÓÃÓÚ´æ·ÅOBJSµÄÄ¿Â¼
+#ä¸“é—¨ç”¨äºå­˜æ”¾OBJSçš„ç›®å½•
 TARGET = ..\..\..\targets\objs
-#SRC/test/xx×ÓÄ¿Â¼ÖĞÍ¬Ê±°üÀ¨*.hºÍ*.cppÎÄ¼ş£¬²»ÔÙ½«*.hµ¥¶À·Åµ½test/includeÄ¿Â¼ÏÂ
+#SRC/test/xxå­ç›®å½•ä¸­åŒæ—¶åŒ…æ‹¬*.hå’Œ*.cppæ–‡ä»¶ï¼Œä¸å†å°†*.hå•ç‹¬æ”¾åˆ°test/includeç›®å½•ä¸‹
 INCLUDE = .
 
 all		:	$(TARGET)\testfilesystem.o

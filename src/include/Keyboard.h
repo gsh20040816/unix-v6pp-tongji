@@ -7,14 +7,14 @@ class Keyboard
 {
 	/* Const Member */
 public:
-	/* ¼üÅÌI/O¶Ë¿ÚµØÖ· */
-	static const unsigned short DATA_PORT = 0x60;	/* ¼üÅÌÊı¾İ¼Ä´æÆ÷¶Ë¿ÚºÅ */
-	static const unsigned short STATUS_PORT = 0x64;	/* ¼üÅÌ×´Ì¬¼Ä´æÆ÷¶Ë¿ÚºÅ */
+	/* é”®ç›˜I/Oç«¯å£åœ°å€ */
+	static const unsigned short DATA_PORT = 0x60;	/* é”®ç›˜æ•°æ®å¯„å­˜å™¨ç«¯å£å· */
+	static const unsigned short STATUS_PORT = 0x64;	/* é”®ç›˜çŠ¶æ€å¯„å­˜å™¨ç«¯å£å· */
 
-	/* ×´Ì¬¼Ä´æÆ÷±ÈÌØÎ»¶¨Òå (¶Ë¿ÚºÅ£º0x64) */
-	static const unsigned char DATA_BUFFER_BUSY = 0x1;	/* ¼üÅÌÊä³ö»º´æÊÇ·ñÂú */
+	/* çŠ¶æ€å¯„å­˜å™¨æ¯”ç‰¹ä½å®šä¹‰ (ç«¯å£å·ï¼š0x64) */
+	static const unsigned char DATA_BUFFER_BUSY = 0x1;	/* é”®ç›˜è¾“å‡ºç¼“å­˜æ˜¯å¦æ»¡ */
 
-	/* É¨ÃèÂë³£Á¿¶¨Òå */
+	/* æ‰«æç å¸¸é‡å®šä¹‰ */
 	static const unsigned char SCAN_ALT = 0x38;
 	static const unsigned char SCAN_CTRL = 0x1d;
 	static const unsigned char SCAN_LSHIFT = 0x2a;
@@ -24,7 +24,7 @@ public:
 	static const unsigned char SCAN_CAPSLOCK = 0x3a;
 	static const unsigned char SCAN_SCRLOCK = 0x46;
 
-	/* ÒÔÏÂÎª¿ØÖÆ¼ü°´ÏÂµÄ×´Ì¬£¬modeÖĞ¸÷±ÈÌØÎ»µÄ¶¨Òå */
+	/* ä»¥ä¸‹ä¸ºæ§åˆ¶é”®æŒ‰ä¸‹çš„çŠ¶æ€ï¼Œmodeä¸­å„æ¯”ç‰¹ä½çš„å®šä¹‰ */
 	static const int M_LCTRL = 0x01;
 	static const int M_RCTRL = 0x02;
 	static const int M_LALT = 0x04;
@@ -40,33 +40,33 @@ public:
 
 	/* Functions */
 public:
-	/* ¼üÅÌÖĞ¶ÏÉè±¸´¦Àí×Ó³ÌĞò */
+	/* é”®ç›˜ä¸­æ–­è®¾å¤‡å¤„ç†å­ç¨‹åº */
 	static void KeyboardHandler(struct pt_regs* reg, struct pt_context* context);
 
 	/* 
-	 * ´¦ÀíÉ¨ÃèÂë×Ó³ÌĞò scanCode(É¨ÃèÂë) expand(À©Õ¹Âë)£¬
-	 * expand±íÊ¾ÊÇ·ñÊÇÀ©Õ¹µÄ¼ü£¬Ö÷ÒªÓÃÓÚÅĞ¶Ï×óÓÒµÄctrlºÍalt
+	 * å¤„ç†æ‰«æç å­ç¨‹åº scanCode(æ‰«æç ) expand(æ‰©å±•ç )ï¼Œ
+	 * expandè¡¨ç¤ºæ˜¯å¦æ˜¯æ‰©å±•çš„é”®ï¼Œä¸»è¦ç”¨äºåˆ¤æ–­å·¦å³çš„ctrlå’Œalt
 	 */
 	static void HandleScanCode(unsigned char scanCode, int expand);
 
-	/* ½«¼üÅÌÉ¨ÃèÂë×ª»»ÎªÏàÓ¦µÄASCIIÂë */
+	/* å°†é”®ç›˜æ‰«æç è½¬æ¢ä¸ºç›¸åº”çš„ASCIIç  */
 	static char ScanCodeTranslate(unsigned char scanCode, int expand);
 	
 	/* Members */
 public:
 	/* 
-	 * ¼üÅÌÓ³Éä½ö½öÈ¡ÁËÒ»¸ö¼üÅÌ¼üµÄ×Ó¼¯£¬±ÈÈç<fx>¹¦ÄÜ¼üÃ»
-	 * ÓĞÉè¼Æ¡£ÕâÀïËùÓë±ê0µÄascÂë±íÊ¾ÔÚ¸ÃÏµÍ³ÖĞÃ»ÓĞÓ³Éä¡£
-	 * keymap ÊÇÔÚshift¼üÃ»ÓĞ°´ÏÂµÄÇé¿öÏÂÉ¨ÃèÂëµÄÓ³ÉäÇé¿ö
-	 * ²»¹ı¶ÔÓÚ´óÓÚ0x45µÄÉ¨ÃèÂë£¬Ò²¾ÍÊÇĞ¡¼üÅÌÇøÓë¹¦ÄÜÇøµÄÉ¨
-	 * ÃèÂë£¬ÕâÀï±íÊ¾numlock¼ü°´ÏÂµÄÇé¿ö
+	 * é”®ç›˜æ˜ å°„ä»…ä»…å–äº†ä¸€ä¸ªé”®ç›˜é”®çš„å­é›†ï¼Œæ¯”å¦‚<fx>åŠŸèƒ½é”®æ²¡
+	 * æœ‰è®¾è®¡ã€‚è¿™é‡Œæ‰€ä¸æ ‡0çš„ascç è¡¨ç¤ºåœ¨è¯¥ç³»ç»Ÿä¸­æ²¡æœ‰æ˜ å°„ã€‚
+	 * keymap æ˜¯åœ¨shifté”®æ²¡æœ‰æŒ‰ä¸‹çš„æƒ…å†µä¸‹æ‰«æç çš„æ˜ å°„æƒ…å†µ
+	 * ä¸è¿‡å¯¹äºå¤§äº0x45çš„æ‰«æç ï¼Œä¹Ÿå°±æ˜¯å°é”®ç›˜åŒºä¸åŠŸèƒ½åŒºçš„æ‰«
+	 * æç ï¼Œè¿™é‡Œè¡¨ç¤ºnumlocké”®æŒ‰ä¸‹çš„æƒ…å†µ
 	 */
 	static char Keymap[];
 
-	/* shift_keymapÔòÊÇshift°´ÏÂµÄÇé¿ö */
+	/* shift_keymapåˆ™æ˜¯shiftæŒ‰ä¸‹çš„æƒ…å†µ */
 	static char Shift_Keymap[];
 
-	/* ctrl, alt, shiftµÄ×´Ì¬£¬²¢ÖÃnumlock,capslock,scrlockÈı¼üËÉ¿ª*/
+	/* ctrl, alt, shiftçš„çŠ¶æ€ï¼Œå¹¶ç½®numlock,capslock,scrlockä¸‰é”®æ¾å¼€*/
 	static int Mode;
 };
 

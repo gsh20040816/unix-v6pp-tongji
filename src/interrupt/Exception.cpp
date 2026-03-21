@@ -5,8 +5,8 @@
 #include "Machine.h"
 
 /* 
- * ÉùÃ÷INT 0 - INT 31ºÅÒì³£ÔÚIDTÖĞµÄÈë¿Úº¯Êı(Entrance)
- * -->ÎŞ³ö´íÂë<-- µÄÒì³£
+ * å£°æ˜INT 0 - INT 31å·å¼‚å¸¸åœ¨IDTä¸­çš„å…¥å£å‡½æ•°(Entrance)
+ * -->æ— å‡ºé”™ç <-- çš„å¼‚å¸¸
  */
 #define IMPLEMENT_EXCEPTION_ENTRANCE(Exception_Entrance, Exception_Handler) \
 void Exception::Exception_Entrance() \
@@ -25,11 +25,11 @@ void Exception::Exception_Entrance() \
 }
 
 /* 
- * ÉùÃ÷INT 0 - INT 31ºÅÒì³£ÔÚIDTÖĞµÄÈë¿Úº¯Êı(Entrance)
- * -->ÓĞ³ö´íÂë(ErrCode)<-- µÄÒì³£
- * ÓÉÓÚ³ö´íÂë±ØĞëÔÚiretÖĞ¶Ï·µ»ØÖ¸ÁîÖ®Ç°ÊÖ¶¯´ÓÕ»ÉÏµ¯³ö£¬
- * ËùÒÔÓĞ³ö´íÂëµÄÇé¿öÏÂ£¬ÔÚleaveÖ¸ÁîÏú»ÙÕ»Ö¡ºó£¬ÔÙÌø¹ı
- * Õ»ÉÏµÄ4¸ö×Ö½Ú³ö´íÂë¡£
+ * å£°æ˜INT 0 - INT 31å·å¼‚å¸¸åœ¨IDTä¸­çš„å…¥å£å‡½æ•°(Entrance)
+ * -->æœ‰å‡ºé”™ç (ErrCode)<-- çš„å¼‚å¸¸
+ * ç”±äºå‡ºé”™ç å¿…é¡»åœ¨iretä¸­æ–­è¿”å›æŒ‡ä»¤ä¹‹å‰æ‰‹åŠ¨ä»æ ˆä¸Šå¼¹å‡ºï¼Œ
+ * æ‰€ä»¥æœ‰å‡ºé”™ç çš„æƒ…å†µä¸‹ï¼Œåœ¨leaveæŒ‡ä»¤é”€æ¯æ ˆå¸§åï¼Œå†è·³è¿‡
+ * æ ˆä¸Šçš„4ä¸ªå­—èŠ‚å‡ºé”™ç ã€‚
  */
 #define IMPLEMENT_EXCEPTION_ENTRANCE_ERRCODE(Exception_Entrance, Exception_Handler) \
 void Exception::Exception_Entrance() \
@@ -51,33 +51,33 @@ void Exception::Exception_Entrance() \
 
 /*
 	=========================
-	¶ÔÉÏÃæ´úÂëµÄÁíÒ»µãËµÃ÷£º
+	å¯¹ä¸Šé¢ä»£ç çš„å¦ä¸€ç‚¹è¯´æ˜ï¼š
 	=========================
-	Ä¿Ç°£¬ÓÉÓÚÎÒÃÇÔÚIMPLEMENT_EXCEPTION_ENTRANCE_ERRCODEºÍIMPLEMENT_EXCEPTION_ENTRANCEÖĞ²ÉÓÃµÄ¶¼ÊÇ
-	Inline Assembly£¬Ã»ÓĞÉùÃ÷ÈÎºÎÁÙÊ±¡¢¾Ö²¿±äÁ¿(Èçint i, j;Ö®ÀàµÄÓï¾ä)»òÕßº¯Êıµ÷ÓÃ£¬ËùÒÔÈë¿Úº¯Êı(Entrance)ÖĞ³ıÁËÔÚÕ»ÉÏÑ¹
-	ÈëebpÖ®Íâ£¬Ã»ÓĞÔÚÕ»ÉÏ·ÖÅäÈÎºÎ¶àÓàµÄ×Ö½Ú£¬·ñÔò¾Í¿ÉÄÜ³öÏÖÏÂÃæµÄÇé¿ö£º
+	ç›®å‰ï¼Œç”±äºæˆ‘ä»¬åœ¨IMPLEMENT_EXCEPTION_ENTRANCE_ERRCODEå’ŒIMPLEMENT_EXCEPTION_ENTRANCEä¸­é‡‡ç”¨çš„éƒ½æ˜¯
+	Inline Assemblyï¼Œæ²¡æœ‰å£°æ˜ä»»ä½•ä¸´æ—¶ã€å±€éƒ¨å˜é‡(å¦‚int i, j;ä¹‹ç±»çš„è¯­å¥)æˆ–è€…å‡½æ•°è°ƒç”¨ï¼Œæ‰€ä»¥å…¥å£å‡½æ•°(Entrance)ä¸­é™¤äº†åœ¨æ ˆä¸Šå‹
+	å…¥ebpä¹‹å¤–ï¼Œæ²¡æœ‰åœ¨æ ˆä¸Šåˆ†é…ä»»ä½•å¤šä½™çš„å­—èŠ‚ï¼Œå¦åˆ™å°±å¯èƒ½å‡ºç°ä¸‹é¢çš„æƒ…å†µï¼š
 	
 	EFLAGS
 	CS
 	EIP
 	[ERRORCODE]	//Optional
 	ebp
-	xx×Ö½Ú¿Õ¼ä  	<--¡±ÁÙÊ±¡¢¾Ö²¿±äÁ¿Õ¼ÓÃµÄ¶ÑÕ»¿Õ¼ä¡°  
+	xxå­—èŠ‚ç©ºé—´  	<--â€ä¸´æ—¶ã€å±€éƒ¨å˜é‡å ç”¨çš„å †æ ˆç©ºé—´â€œ  
 	SaveContext();
 	
-	Õâ»áµ¼ÖÂÈç¹û´òËã²ÉÓÃÄ³Ò»¸ö½á¹¹Ìå£¬Èçpt_regsÀ´°üÀ¨Í¨ÓÃ¼Ä´æÆ÷(eax,ebx...µÈ)ºÍERRORCODE£¬eip£¬cs£¬eflagsµÄÈ«²¿×Ö¶Î£¬
-	ÄÇÃ´ÔÚSaveContext()²¿·Ö×Ö¶ÎºÍERRORCODE£¬eip£¬cs£¬eflagsÖ®¼ä¼äÏ¶Ó¦¸ÃÔ¤Áô¶àÉÙ×Ö½ÚµÄÌî³ä×Ö¶Î(padding)£¿½á¹¹ÌåÖĞÓ¦¸Ã
-	Ô¤Áô¶àÉÙ×Ö½Ú³¤¶ÈµÄÌî³ä×Ö¶ÎÊÇÎŞ·¨Ô¤ÏÈ¼ÆËãµÃµ½µÄ£¬¶øÇÒ³¤¶È»áËæ×Åº¯ÊıÖĞÉùÃ÷¾Ö²¿±äÁ¿¶àÉÙ¶øÓÉ±àÒëÆ÷×Ô¶¯È·¶¨¡£
-	ÎÒÃÇ²¢Ã»ÓĞÖ»²ÉÓÃÒ»¸ö½á¹¹Ìåpt_regsÀ´°üÀ¨È«²¿µÄ×Ö¶Î£¬¶øÊÇ²ÉÓÃÁËpt_regsºÍpt_contextÁ½¸ö×Ö¶Î£»pt_regs°üº¬ÁËÍ¨ÓÃ¼Ä´æÆ÷
-	ÖĞµÄÏÖ³¡ĞÅÏ¢£¬¶øpt_contextÔò°üÀ¨ÁËÖĞ¶ÏÒşÖ¸Áî±£´æµÄÏÖ³¡(eflags£¬cs£¬eipºÍ[ERRORCODE])¡£´ËÍâ£¬ÔÚSaveContext()ºêµÄÊµ
-	ÏÖÖĞ£¬²ÉÓÃ
+	è¿™ä¼šå¯¼è‡´å¦‚æœæ‰“ç®—é‡‡ç”¨æŸä¸€ä¸ªç»“æ„ä½“ï¼Œå¦‚pt_regsæ¥åŒ…æ‹¬é€šç”¨å¯„å­˜å™¨(eax,ebx...ç­‰)å’ŒERRORCODEï¼Œeipï¼Œcsï¼Œeflagsçš„å…¨éƒ¨å­—æ®µï¼Œ
+	é‚£ä¹ˆåœ¨SaveContext()éƒ¨åˆ†å­—æ®µå’ŒERRORCODEï¼Œeipï¼Œcsï¼Œeflagsä¹‹é—´é—´éš™åº”è¯¥é¢„ç•™å¤šå°‘å­—èŠ‚çš„å¡«å……å­—æ®µ(padding)ï¼Ÿç»“æ„ä½“ä¸­åº”è¯¥
+	é¢„ç•™å¤šå°‘å­—èŠ‚é•¿åº¦çš„å¡«å……å­—æ®µæ˜¯æ— æ³•é¢„å…ˆè®¡ç®—å¾—åˆ°çš„ï¼Œè€Œä¸”é•¿åº¦ä¼šéšç€å‡½æ•°ä¸­å£°æ˜å±€éƒ¨å˜é‡å¤šå°‘è€Œç”±ç¼–è¯‘å™¨è‡ªåŠ¨ç¡®å®šã€‚
+	æˆ‘ä»¬å¹¶æ²¡æœ‰åªé‡‡ç”¨ä¸€ä¸ªç»“æ„ä½“pt_regsæ¥åŒ…æ‹¬å…¨éƒ¨çš„å­—æ®µï¼Œè€Œæ˜¯é‡‡ç”¨äº†pt_regså’Œpt_contextä¸¤ä¸ªå­—æ®µï¼›pt_regsåŒ…å«äº†é€šç”¨å¯„å­˜å™¨
+	ä¸­çš„ç°åœºä¿¡æ¯ï¼Œè€Œpt_contextåˆ™åŒ…æ‹¬äº†ä¸­æ–­éšæŒ‡ä»¤ä¿å­˜çš„ç°åœº(eflagsï¼Œcsï¼Œeipå’Œ[ERRORCODE])ã€‚æ­¤å¤–ï¼Œåœ¨SaveContext()å®çš„å®
+	ç°ä¸­ï¼Œé‡‡ç”¨
 
 	=========================
-	¹ØÓÚleaveÖ¸ÁîµÄÒ»µãËµÃ÷£º
+	å…³äºleaveæŒ‡ä»¤çš„ä¸€ç‚¹è¯´æ˜ï¼š
 	=========================
-	²»ÒËÔÚX86AssemblyÀàÖĞÊµÏÖ¶ÔleaveºÍiretÖ¸Áî·â×°µÄº¯Êı¡£
-	¶ÔleaveºÍiretÕâ2ÌõÖ¸Áî½øĞĞº¯Êı·â×°£¬ÔÚµ÷ÓÃÊ±»á²úÉúÒ»Ğ©ÎÊÌâ£¬ËùÒÔÉÏÃæµÄ**Entrance()ºêÀïÃæÖ±½ÓÊ¹ÓÃºê·â×°µÄÄÚÁª»ã±à¡£	
-	X86Assembly::Leave()º¯ÊıµÄ·´»ã±à½á¹û½«»áÈçÏÂ£º
+	ä¸å®œåœ¨X86Assemblyç±»ä¸­å®ç°å¯¹leaveå’ŒiretæŒ‡ä»¤å°è£…çš„å‡½æ•°ã€‚
+	å¯¹leaveå’Œiretè¿™2æ¡æŒ‡ä»¤è¿›è¡Œå‡½æ•°å°è£…ï¼Œåœ¨è°ƒç”¨æ—¶ä¼šäº§ç”Ÿä¸€äº›é—®é¢˜ï¼Œæ‰€ä»¥ä¸Šé¢çš„**Entrance()å®é‡Œé¢ç›´æ¥ä½¿ç”¨å®å°è£…çš„å†…è”æ±‡ç¼–ã€‚	
+	X86Assembly::Leave()å‡½æ•°çš„åæ±‡ç¼–ç»“æœå°†ä¼šå¦‚ä¸‹ï¼š
 	
 	push   %ebp
 	mov    %esp,%ebp
@@ -85,44 +85,44 @@ void Exception::Exception_Entrance() \
 	pop    %ebp
 	ret
 
-	leaveÖ¸ÁîµÈ¼ÛÓÚ2ÌõÖ¸Áî: mov %ebp, %esp; pop ebp; Æä×÷ÓÃÊÇÏú»Ùµ±Ç°º¯Êıµ÷ÓÃµÄÕ»Ö¡£¬ÕâÀïX86Assembly::Leave()º¯ÊıÖĞµÄleave
-	Ö¸ÁîÏú»ÙµÄÊÇÎÒÃÇµ÷ÓÃX86Assembly::Leave()²úÉúµÄÕ»Ö¡¡£Õâ²¢·ÇÎÒÃÇµÄ±¾Òâ£¬ÎÒÃÇÔÚRestoreContext();Ö®ºóÊ¹ÓÃleaveÖ¸ÁîµÄÄ¿µÄÊÇ£¬
-	µ±Î»ÓÚÕ»¶¥µÄÊÇebpÊ±(¼´Òì³£Èë¿Úº¯Êı(Entrance)±àÒëÉú³ÉµÄµÚÒ»ÌõÖ¸ÁîÑ¹ÈëµÄebp)£¬ÓÃleaveÖ¸ÁîÊ¹µÃebp´ÓÕ»ÖĞµ¯³öÒÔ¼°»Ö¸´esp£¬´Ó¶øÏú»Ù
-	Òì³£Èë¿Úº¯Êı(Entrance)µÄÕ»Ö¡¡£
-	Òò¶ø£¬Ä¿Ç°Î¨Ò»µÄ½â¾ö°ì·¨ÊÇÖ±½ÓÓÃInline Assembly£¬¶ø²»¶ÔleaveÖ¸Áî½øĞĞº¯Êı·â×°¡£
+	leaveæŒ‡ä»¤ç­‰ä»·äº2æ¡æŒ‡ä»¤: mov %ebp, %esp; pop ebp; å…¶ä½œç”¨æ˜¯é”€æ¯å½“å‰å‡½æ•°è°ƒç”¨çš„æ ˆå¸§ï¼Œè¿™é‡ŒX86Assembly::Leave()å‡½æ•°ä¸­çš„leave
+	æŒ‡ä»¤é”€æ¯çš„æ˜¯æˆ‘ä»¬è°ƒç”¨X86Assembly::Leave()äº§ç”Ÿçš„æ ˆå¸§ã€‚è¿™å¹¶éæˆ‘ä»¬çš„æœ¬æ„ï¼Œæˆ‘ä»¬åœ¨RestoreContext();ä¹‹åä½¿ç”¨leaveæŒ‡ä»¤çš„ç›®çš„æ˜¯ï¼Œ
+	å½“ä½äºæ ˆé¡¶çš„æ˜¯ebpæ—¶(å³å¼‚å¸¸å…¥å£å‡½æ•°(Entrance)ç¼–è¯‘ç”Ÿæˆçš„ç¬¬ä¸€æ¡æŒ‡ä»¤å‹å…¥çš„ebp)ï¼Œç”¨leaveæŒ‡ä»¤ä½¿å¾—ebpä»æ ˆä¸­å¼¹å‡ºä»¥åŠæ¢å¤espï¼Œä»è€Œé”€æ¯
+	å¼‚å¸¸å…¥å£å‡½æ•°(Entrance)çš„æ ˆå¸§ã€‚
+	å› è€Œï¼Œç›®å‰å”¯ä¸€çš„è§£å†³åŠæ³•æ˜¯ç›´æ¥ç”¨Inline Assemblyï¼Œè€Œä¸å¯¹leaveæŒ‡ä»¤è¿›è¡Œå‡½æ•°å°è£…ã€‚
 	
 	=========================
-	¹ØÓÚiretÖ¸ÁîµÄÒ»µãËµÃ÷£º
+	å…³äºiretæŒ‡ä»¤çš„ä¸€ç‚¹è¯´æ˜ï¼š
 	=========================
-	ÎÒÃÇĞèÒªÔÚµ±Õ»¶¥´æ·ÅµÄÔªËØÒÀ´ÎÊÇ:
+	æˆ‘ä»¬éœ€è¦åœ¨å½“æ ˆé¡¶å­˜æ”¾çš„å…ƒç´ ä¾æ¬¡æ˜¯:
 	SS
 	ESP
 	EFLAGS
 	CS
-	EIP	<--  µ±Ç°Õ»¶¥Î»ÖÃ
+	EIP	<--  å½“å‰æ ˆé¡¶ä½ç½®
 	
-	²Å¿ÉÒÔÊ¹ÓÃiretÖ¸Áî´ÓÖĞ¶Ï·µ»Ø£¬¶ø¶ÔiretÖ¸Áî½øĞĞ·â×°X86Assembly::IRet()µÄ½á¹ûÔòÊÇ£¬¶ÑÕ»Çé¿öÈçÏÂ£º
+	æ‰å¯ä»¥ä½¿ç”¨iretæŒ‡ä»¤ä»ä¸­æ–­è¿”å›ï¼Œè€Œå¯¹iretæŒ‡ä»¤è¿›è¡Œå°è£…X86Assembly::IRet()çš„ç»“æœåˆ™æ˜¯ï¼Œå †æ ˆæƒ…å†µå¦‚ä¸‹ï¼š
 	SS
 	ESP
 	EFLAGS
 	CS
 	EIP	
-	ebp	<--  µ±Ç°Õ»¶¥Î»ÖÃ£¬ ebpÊÇX86Assembly::IRet()º¯ÊıµÚÒ»ÌõÖ¸ÁîÑ¹ÈëµÄ
-	ÔÚÒÔebpÎªÕ»¶¥µÄÇé¿öÏÂ½øĞĞiret£¬»á·¢ÉúÑÏÖØ´íÎó£¬´íÎóµØ°Ñebpµ±³ÉEIP, EIPµ±³ÉCS£¬Ö´ĞĞiretÖ¸Áî½«µ¼ÖÂÏµÍ³±ÀÀ£¡£
+	ebp	<--  å½“å‰æ ˆé¡¶ä½ç½®ï¼Œ ebpæ˜¯X86Assembly::IRet()å‡½æ•°ç¬¬ä¸€æ¡æŒ‡ä»¤å‹å…¥çš„
+	åœ¨ä»¥ebpä¸ºæ ˆé¡¶çš„æƒ…å†µä¸‹è¿›è¡Œiretï¼Œä¼šå‘ç”Ÿä¸¥é‡é”™è¯¯ï¼Œé”™è¯¯åœ°æŠŠebpå½“æˆEIP, EIPå½“æˆCSï¼Œæ‰§è¡ŒiretæŒ‡ä»¤å°†å¯¼è‡´ç³»ç»Ÿå´©æºƒã€‚
 */
 
 
 /* 
- * ¶¨ÒåINT 0 - INT 31ºÅÒì³£´¦Àíº¯Êı(Handler)µÄ2¸öºê¡£
+ * å®šä¹‰INT 0 - INT 31å·å¼‚å¸¸å¤„ç†å‡½æ•°(Handler)çš„2ä¸ªå®ã€‚
  * 
  * (1)	IMPLEMENT_EXCEPTION_HANDLER_ERRCODE(Exception_Handler, Error_Message, Signal_Value)
- * ¶ÔÓ¦ÓĞ³ö´íÂëµÄÇé¿ö£¬µÚ¶ş¸ö²ÎÊıÊ¹ÓÃstruct pte_context* context;
+ * å¯¹åº”æœ‰å‡ºé”™ç çš„æƒ…å†µï¼Œç¬¬äºŒä¸ªå‚æ•°ä½¿ç”¨struct pte_context* context;
  * 
  * (2)	IMPLEMENT_EXCEPTION_HANDLER(Exception_Handler, Error_Message, Signal_Value)
- * ¶ÔÓ¦ÎŞ³ö´íÂëµÄÇé¿ö£¬µÚ¶ş¸ö²ÎÊıÊ¹ÓÃstruct pt_context* context;
+ * å¯¹åº”æ— å‡ºé”™ç çš„æƒ…å†µï¼Œç¬¬äºŒä¸ªå‚æ•°ä½¿ç”¨struct pt_context* context;
  * 
- * Á½¸öºêµÄÇø±ğ¾ÍÔÚÓÚµÚ¶ş²ÎÊıÊÇ°üº¬error_codeµÄ½á¹¹Ìåpte_context, »¹ÊÇÃ»ÓĞ
- * error_code×Ö¶ÎµÄ½á¹¹Ìåpt_context!
+ * ä¸¤ä¸ªå®çš„åŒºåˆ«å°±åœ¨äºç¬¬äºŒå‚æ•°æ˜¯åŒ…å«error_codeçš„ç»“æ„ä½“pte_context, è¿˜æ˜¯æ²¡æœ‰
+ * error_codeå­—æ®µçš„ç»“æ„ä½“pt_context!
  */
 
 #define IMPLEMENT_EXCEPTION_HANDLER(Exception_Handler, Error_Message, Signal_Value) \
@@ -173,78 +173,78 @@ Exception::~Exception()
 }
 
 
-//³ıÁã´í(INT 0)
+//é™¤é›¶é”™(INT 0)
 IMPLEMENT_EXCEPTION_ENTRANCE(DivideErrorEntrance, DivideError)
 IMPLEMENT_EXCEPTION_HANDLER(DivideError, "Divide Exception!", User::SIGFPE)
 
 
-//µ÷ÊÔÒì³£(INT 1)
+//è°ƒè¯•å¼‚å¸¸(INT 1)
 IMPLEMENT_EXCEPTION_ENTRANCE(DebugEntrance, Debug)
 IMPLEMENT_EXCEPTION_HANDLER(Debug, "Debug Exception!", User::SIGTRAP)
 
 
-//NMI·ÇÆÁ±ÎÖĞ¶Ï(INT 2)
+//NMIéå±è”½ä¸­æ–­(INT 2)
 IMPLEMENT_EXCEPTION_ENTRANCE(NMIEntrance, NMI)
 IMPLEMENT_EXCEPTION_HANDLER(NMI, "Non-maskable Interrupt!", User::SIGNUL)
 
 
-//µ÷ÊÔ¶Ïµã(INT 3)
+//è°ƒè¯•æ–­ç‚¹(INT 3)
 IMPLEMENT_EXCEPTION_ENTRANCE(BreakpointEntrance, Breakpoint)
 IMPLEMENT_EXCEPTION_HANDLER(Breakpoint, "Breakpoint Exception!", User::SIGTRAP)
 
 
-//Òç³ö(INT 4)
+//æº¢å‡º(INT 4)
 IMPLEMENT_EXCEPTION_ENTRANCE(OverflowEntrance, Overflow)
 IMPLEMENT_EXCEPTION_HANDLER(Overflow, "Overflow Exception!", User::SIGSEGV)
 
 
-//BOUNDÖ¸ÁîÒì³£(INT 5)
+//BOUNDæŒ‡ä»¤å¼‚å¸¸(INT 5)
 IMPLEMENT_EXCEPTION_ENTRANCE(BoundEntrance, Bound)
 IMPLEMENT_EXCEPTION_HANDLER(Bound, "Bound Range Exceeded!", User::SIGSEGV)
 
 
-//ÎŞĞ§²Ù×÷Âë(INT 6)
+//æ— æ•ˆæ“ä½œç (INT 6)
 IMPLEMENT_EXCEPTION_ENTRANCE(InvalidOpcodeEntrance, InvalidOpcode)
 IMPLEMENT_EXCEPTION_HANDLER(InvalidOpcode, "Invalid Opcode!", User::SIGILL)
 
 
-//Éè±¸²»¿ÉÓÃ(INT 7)
+//è®¾å¤‡ä¸å¯ç”¨(INT 7)
 IMPLEMENT_EXCEPTION_ENTRANCE(DeviceNotAvailableEntrance, DeviceNotAvailable)
 IMPLEMENT_EXCEPTION_HANDLER(DeviceNotAvailable, "Device Not Available!", User::SIGSEGV)
 
 
-//Ë«ÖØ´íÎó(INT 8)  *ÓĞ³ö´íÂë*
+//åŒé‡é”™è¯¯(INT 8)  *æœ‰å‡ºé”™ç *
 IMPLEMENT_EXCEPTION_ENTRANCE_ERRCODE(DoubleFaultEntrance, DoubleFault)
 IMPLEMENT_EXCEPTION_HANDLER_ERRCODE(DoubleFault, "Double Fault Exception!", User::SIGSEGV)
 
 
-//Ğ­´¦ÀíÆ÷¶ÎÔ½½ç(INT 9)
+//åå¤„ç†å™¨æ®µè¶Šç•Œ(INT 9)
 IMPLEMENT_EXCEPTION_ENTRANCE(CoprocessorSegmentOverrunEntrance, CoprocessorSegmentOverrun)
 IMPLEMENT_EXCEPTION_HANDLER(CoprocessorSegmentOverrun, "Coprocessor Segment Overrun!", User::SIGFPE)
 
 
-//ÎŞĞ§TSS(INT 10)  *ÓĞ³ö´íÂë*
+//æ— æ•ˆTSS(INT 10)  *æœ‰å‡ºé”™ç *
 IMPLEMENT_EXCEPTION_ENTRANCE_ERRCODE(InvalidTSSEntrance, InvalidTSS)
 IMPLEMENT_EXCEPTION_HANDLER_ERRCODE(InvalidTSS, "Invalid TSS!", User::SIGSEGV)
 
 
-//¶Î²»´æÔÚ(INT 11)  *ÓĞ³ö´íÂë*
+//æ®µä¸å­˜åœ¨(INT 11)  *æœ‰å‡ºé”™ç *
 IMPLEMENT_EXCEPTION_ENTRANCE_ERRCODE(SegmentNotPresentEntrance, SegmentNotPresent)
 IMPLEMENT_EXCEPTION_HANDLER_ERRCODE(SegmentNotPresent, "Segment Not Present!", User::SIGBUS)
 
 
-//¶ÑÕ»¶Î´íÎó(INT 12)  *ÓĞ³ö´íÂë*
+//å †æ ˆæ®µé”™è¯¯(INT 12)  *æœ‰å‡ºé”™ç *
 IMPLEMENT_EXCEPTION_ENTRANCE_ERRCODE(StackSegmentErrorEntrance, StackSegmentError)
 IMPLEMENT_EXCEPTION_HANDLER_ERRCODE(StackSegmentError, "Stack Segment Error!", User::SIGBUS)
 
 
-//Ò»°ã±£»¤ĞÔÒì³£(INT 13)  *ÓĞ³ö´íÂë*
+//ä¸€èˆ¬ä¿æŠ¤æ€§å¼‚å¸¸(INT 13)  *æœ‰å‡ºé”™ç *
 IMPLEMENT_EXCEPTION_ENTRANCE_ERRCODE(GeneralProtectionEntrance, GeneralProtection)
 IMPLEMENT_EXCEPTION_HANDLER_ERRCODE(GeneralProtection, "General Protection!", User::SIGSEGV)
 
 
 
-//È±Ò³Òì³£(INT 14)  *ÓĞ³ö´íÂë*
+//ç¼ºé¡µå¼‚å¸¸(INT 14)  *æœ‰å‡ºé”™ç *
 IMPLEMENT_EXCEPTION_ENTRANCE_ERRCODE(PageFaultEntrance, PageFault)
 //IMPLEMENT_EXCEPTION_HANDLER_ERRCODE(PageFault, "Page Fault!", User::SIGSEGV)
 
@@ -258,7 +258,7 @@ void Exception::PageFault(struct pt_regs* regs, struct pte_context* context)
 	unsigned int cr2;
 	__asm__ __volatile__(" mov %%cr2, %0":"=r"(cr2) );
 
-    /*ÓÉÈ±Ò³Òì³£´¦Àí³ÌĞòÃ¿´ÎÀ©Õ¹Ò»Ò³£¬Èç¹ûºÏÀíµÄÈ±ÁË¶àÕÅ¶ÑÕ»Ò³Ãæ£¬ÄÇ¾Í¶àÖ´ĞĞ¼¸´ÎÈ±Ò³Òì³££¬Ö±µ½°ÑÕâĞ©Ò³Ãæ²¹Æë*/
+    /*ç”±ç¼ºé¡µå¼‚å¸¸å¤„ç†ç¨‹åºæ¯æ¬¡æ‰©å±•ä¸€é¡µï¼Œå¦‚æœåˆç†çš„ç¼ºäº†å¤šå¼ å †æ ˆé¡µé¢ï¼Œé‚£å°±å¤šæ‰§è¡Œå‡ æ¬¡ç¼ºé¡µå¼‚å¸¸ï¼Œç›´åˆ°æŠŠè¿™äº›é¡µé¢è¡¥é½*/
 
 	if( (context->xcs & USER_MODE) == USER_MODE)
 	{
@@ -278,21 +278,21 @@ void Exception::PageFault(struct pt_regs* regs, struct pte_context* context)
 		Utility::Panic("Page Fault in Kernel Mode.");
 }
 
-//x87 FPU¸¡µã´íÎó(INT 16)
+//x87 FPUæµ®ç‚¹é”™è¯¯(INT 16)
 IMPLEMENT_EXCEPTION_ENTRANCE(CoprocessorErrorEntrance, CoprocessorError)
 IMPLEMENT_EXCEPTION_HANDLER(CoprocessorError, "Coprocessor Error!", User::SIGFPE)
 
 
-//¶ÔÆëĞ£Ñé(INT 17)  *ÓĞ³ö´íÂë*
+//å¯¹é½æ ¡éªŒ(INT 17)  *æœ‰å‡ºé”™ç *
 IMPLEMENT_EXCEPTION_ENTRANCE_ERRCODE(AlignmentCheckEntrance, AlignmentCheck)
 IMPLEMENT_EXCEPTION_HANDLER_ERRCODE(AlignmentCheck, "Alignment Check!", User::SIGBUS)
 
 
-//»úÆ÷¼ì²é(INT 18)
+//æœºå™¨æ£€æŸ¥(INT 18)
 IMPLEMENT_EXCEPTION_ENTRANCE(MachineCheckEntrance, MachineCheck)
 IMPLEMENT_EXCEPTION_HANDLER(MachineCheck, "Machine Check!", User::SIGNUL)
 
 
-//SIMD¸¡µãÒì³£(INT 19)
+//SIMDæµ®ç‚¹å¼‚å¸¸(INT 19)
 IMPLEMENT_EXCEPTION_ENTRANCE(SIMDExceptionEntrance, SIMDException)
 IMPLEMENT_EXCEPTION_HANDLER(SIMDException, "SIMD Float Point Exception!", User::SIGFPE)

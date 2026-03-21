@@ -25,7 +25,7 @@ int float_getExponent(float f)
 	return exponent;
 }
 
-/* 得到整数部分 */
+/* 寰楀埌鏁存暟閮ㄥ垎 */
 float float_getLeft(float f)
 {
 	int exponent = float_getExponent(f);	
@@ -56,12 +56,12 @@ int float_isZero(float f)
 	return float_getMantissa(f) == 0 && float_getExponent(f) == 0;
 }
 
-/* 上溢 */
+/* 涓婃孩 */
 int float_isUpOverFlow(float f)
 {
 	return float_getExponent(f) == FLOAT_UP_OVERFLOW_EXPONENT ;
 }
-/* 下溢 */
+/* 涓嬫孩 */
 int float_isDownOverFlow(float f)
 {
 	return (float_getExponent(f) == FLOAT_DOWN_OVERFLOW_EXPONENT) && (float_getMantissa(f) == 0) ;

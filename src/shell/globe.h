@@ -1,9 +1,9 @@
 #ifndef GLOBE_H
 #define GLOBE_H
 
-extern char line[1000];	/* ½«Ã¿¸öÃüÁîĞĞ·Ö¿ªµÄÊı×é */
-extern char* args[50];	/* ×ÖÖ¸ÕëÊı×é */ 
-extern int argsCnt;		/* ×Ö¸öÊı */
+extern char line[1000];	/* å°†æ¯ä¸ªå‘½ä»¤è¡Œåˆ†å¼€çš„æ•°ç»„ */
+extern char* args[50];	/* å­—æŒ‡é’ˆæ•°ç»„ */ 
+extern int argsCnt;		/* å­—ä¸ªæ•° */
 
 #endif
 

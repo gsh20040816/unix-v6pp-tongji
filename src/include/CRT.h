@@ -7,11 +7,11 @@ class CRT
 {
 	/* Const Member */
 public:
-	/* ÏÔÊ¾¿ØÖÆ¼Ä´æÆ÷I/O¶Ë¿ÚµØÖ· */
-	static const unsigned short VIDEO_ADDR_PORT = 0x3d4;	/* ÏÔÊ¾¿ØÖÆË÷Òı¼Ä´æÆ÷¶Ë¿ÚºÅ */
-	static const unsigned short VIDEO_DATA_PORT = 0x3d5;	/* ÏÔÊ¾¿ØÖÆÊı¾İ¼Ä´æÆ÷¶Ë¿ÚºÅ */
+	/* æ˜¾ç¤ºæ§åˆ¶å¯„å­˜å™¨I/Oç«¯å£åœ°å€ */
+	static const unsigned short VIDEO_ADDR_PORT = 0x3d4;	/* æ˜¾ç¤ºæ§åˆ¶ç´¢å¼•å¯„å­˜å™¨ç«¯å£å· */
+	static const unsigned short VIDEO_DATA_PORT = 0x3d5;	/* æ˜¾ç¤ºæ§åˆ¶æ•°æ®å¯„å­˜å™¨ç«¯å£å· */
 	
-	/* ÆÁÄ»´óĞ¡Îª80 * 25 */
+	/* å±å¹•å¤§å°ä¸º80 * 25 */
 	static const unsigned int COLUMNS = 80;
 	static unsigned int ROWS;
 	
@@ -19,25 +19,25 @@ public:
 
 	/* Functions */
 public:
-	/* ½«Êä³ö»º´æ¶ÓÁĞÖĞµÄÄÚÈİÊä³öµ½ÆÁÄ»ÉÏ */
+	/* å°†è¾“å‡ºç¼“å­˜é˜Ÿåˆ—ä¸­çš„å†…å®¹è¾“å‡ºåˆ°å±å¹•ä¸Š */
 	static void CRTStart(TTy* pTTy);
 
-	/* ¸Ä±ä¹â±êÎ»ÖÃ */
+	/* æ”¹å˜å…‰æ ‡ä½ç½® */
 	static void MoveCursor(unsigned int x, unsigned int y);
 
-	/* »»ĞĞ´¦Àí×Ó³ÌĞò */
+	/* æ¢è¡Œå¤„ç†å­ç¨‹åº */
 	static void NextLine();
 
-	/* ÍË¸ñ´¦Àí×Ó³ÌĞò */
+	/* é€€æ ¼å¤„ç†å­ç¨‹åº */
 	static void BackSpace();
 	
-	/* Tab´¦Àí×Ó³ÌĞò */
+	/* Tabå¤„ç†å­ç¨‹åº */
 	static void Tab();
 
-	/* ÏÔÊ¾µ¥¸ö×Ö·û */
+	/* æ˜¾ç¤ºå•ä¸ªå­—ç¬¦ */
 	static void WriteChar(char ch);
 
-	/* Çå³ıÆÁÄ» */
+	/* æ¸…é™¤å±å¹• */
 	static void ClearScreen();
 
 	/* Members */
@@ -46,10 +46,10 @@ public:
 	static unsigned int m_CursorX;
 	static unsigned int m_CursorY;
 
-	/* Ö¸ÏòÊä³ö»º´æ¶ÓÁĞÖĞµ±Ç°ÒªÊä³öµÄ×Ö·û */
+	/* æŒ‡å‘è¾“å‡ºç¼“å­˜é˜Ÿåˆ—ä¸­å½“å‰è¦è¾“å‡ºçš„å­—ç¬¦ */
 	static char* m_Position;
-	/* Ö¸ÏòÊä³ö»º´æ¶ÓÁĞÖĞÎ´È·ÈÏµÄÊä³ö×Ö·ûµÄ¿ªÊ¼´¦£¬¼´¿ÉÒÔÍ¨¹ıBackspace¼üÉ¾³ıµÄÄÚÈİ£¬
-	 * ×îºóÒ»¸ö»Ø³µÖ®Ç°µÄÄÚÈİÎªÒÑÈ·ÈÏÄÚÈİ£¬²»¿É±»Backspace¼üÉ¾³ı¡£
+	/* æŒ‡å‘è¾“å‡ºç¼“å­˜é˜Ÿåˆ—ä¸­æœªç¡®è®¤çš„è¾“å‡ºå­—ç¬¦çš„å¼€å§‹å¤„ï¼Œå³å¯ä»¥é€šè¿‡Backspaceé”®åˆ é™¤çš„å†…å®¹ï¼Œ
+	 * æœ€åä¸€ä¸ªå›è½¦ä¹‹å‰çš„å†…å®¹ä¸ºå·²ç¡®è®¤å†…å®¹ï¼Œä¸å¯è¢«Backspaceé”®åˆ é™¤ã€‚
 	 */
 	static char* m_BeginChar;
 };

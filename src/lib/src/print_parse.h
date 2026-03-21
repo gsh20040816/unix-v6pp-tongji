@@ -1,7 +1,7 @@
 #ifndef PRINT_PARSE_H
 #define PRINT_PARSE_H
 
-/* µ±Ç°ËùÒª´òÓ¡±äÁ¿µÄconvertion form ĞÅÏ¢ */ 
+/* å½“å‰æ‰€è¦æ‰“å°å˜é‡çš„convertion form ä¿¡æ¯ */ 
 struct print_info
 {
     int prec;			/* Precision.  */
@@ -19,21 +19,21 @@ struct print_info
     char pad;			/* Padding character.  */
 };
 
-/* µ±Ç°ÕıÔÚ±»·ÖÎöµÄfmt×Ö·û´®µÄĞÅÏ¢ */
+/* å½“å‰æ­£åœ¨è¢«åˆ†æçš„fmtå­—ç¬¦ä¸²çš„ä¿¡æ¯ */
 struct print_spec
 {
     char* fmt;
-    char* start_fmt;    /* Ö¸Ïòµ±Ç°·ÖÎöºÃµÄ×Ö·û´®µÄÊ×¸ö×Ö·û */ 
-    char* end_fmt;     /* Ö¸Ïòµ±Ç°·ÖÎöºÃµÄ×Ö·û´®µÄºóÃæÒ»¸ö×Ö·û */ 
-    struct print_info info; /* µ±Ç°ÕıÔÚ·ÖÎöµÄ%ºóµÄconvertion formµÄĞÅÏ¢ */             
+    char* start_fmt;    /* æŒ‡å‘å½“å‰åˆ†æå¥½çš„å­—ç¬¦ä¸²çš„é¦–ä¸ªå­—ç¬¦ */ 
+    char* end_fmt;     /* æŒ‡å‘å½“å‰åˆ†æå¥½çš„å­—ç¬¦ä¸²çš„åé¢ä¸€ä¸ªå­—ç¬¦ */ 
+    struct print_info info; /* å½“å‰æ­£åœ¨åˆ†æçš„%åçš„convertion formçš„ä¿¡æ¯ */             
 };
 
 /*
-* Ñ°ÕÒÏÂÒ»¸öspecµÄ¿ªÊ¼×Ö·û
-* ²ÎÊı£º spec(µ±Ç°ÕıÔÚ·ÖÎöµÄfmt×Ö·û´®) 
-* ·µ»ØÖµ£º 0 ³É¹¦£¬ -1 eof 
+* å¯»æ‰¾ä¸‹ä¸€ä¸ªspecçš„å¼€å§‹å­—ç¬¦
+* å‚æ•°ï¼š spec(å½“å‰æ­£åœ¨åˆ†æçš„fmtå­—ç¬¦ä¸²) 
+* è¿”å›å€¼ï¼š 0 æˆåŠŸï¼Œ -1 eof 
 */
-int find_spec( struct print_spec* spec); /* Ñ°ÕÒÏÂÒ»¸öspecµÄ¿ªÊ¼×Ö·û */
+int find_spec( struct print_spec* spec); /* å¯»æ‰¾ä¸‹ä¸€ä¸ªspecçš„å¼€å§‹å­—ç¬¦ */
 
 int parse_spec( struct print_spec* spec );
 

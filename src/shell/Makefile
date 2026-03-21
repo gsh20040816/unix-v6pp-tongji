@@ -2,14 +2,14 @@
 # Makefile for Unix V6++ Shell
 #
 
-#命令定义
+#鍛戒护瀹氫箟
 CC = gcc
 LD = ld
 
-#参数定义
+#鍙傛暟瀹氫箟
 CFLAGS = -W -O0 -g -nostdlib -nostdinc -nostartfiles -fno-builtin -fno-exceptions
 
-#目录定义
+#鐩綍瀹氫箟
 TARGET = .\OBJS
 V6++LIB = "..\lib\Lib_V6++.a"
 INCLUDE = .

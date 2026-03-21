@@ -1,8 +1,8 @@
 [BITS 32]
 [extern _main0]
 
-[extern __main]  	;"_main()"¶¨ÒåÔÚsupport.cÖĞ
-[extern __atexit]	; "_atexit()"¶¨ÒåÔÚsupport.cÖĞ
+[extern __main]  	;"_main()"å®šä¹‰åœ¨support.cä¸­
+[extern __atexit]	; "_atexit()"å®šä¹‰åœ¨support.cä¸­
 
 global greatstart
 greatstart:
@@ -10,9 +10,9 @@ greatstart:
 	mov eax,2
 	mov eax,3
 
-;MakefileÖĞg++Ñ¡Ïî -nostartfiles½ûÖ¹ÁËg++È¥Á´½Óstartup code,
-;startup code¼´ÊÇÔÚ½øÈëÎÒÃÇÓÃC++±àĞ´µÄmain0()º¯ÊıÖ®Ç°£¬ÒÔ¼°main0()
-;ÍË³öÊ±Ö´ĞĞµÄ´úÂë£¬ÆäÖ´ĞĞµÄ¹¤×÷ÊÇ³õÊ¼»¯(/Ïú»Ù)global/static¶ÔÏó¡£
+;Makefileä¸­g++é€‰é¡¹ -nostartfilesç¦æ­¢äº†g++å»é“¾æ¥startup code,
+;startup codeå³æ˜¯åœ¨è¿›å…¥æˆ‘ä»¬ç”¨C++ç¼–å†™çš„main0()å‡½æ•°ä¹‹å‰ï¼Œä»¥åŠmain0()
+;é€€å‡ºæ—¶æ‰§è¡Œçš„ä»£ç ï¼Œå…¶æ‰§è¡Œçš„å·¥ä½œæ˜¯åˆå§‹åŒ–(/é”€æ¯)global/staticå¯¹è±¡ã€‚
 	call __main		;call our own startup code
 	jmp _main0
 	call __atexit  	;call our own startup code

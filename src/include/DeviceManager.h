@@ -8,30 +8,30 @@ class DeviceManager
 {
 	/* static const member */
 public:
-	static const int MAX_DEVICE_NUM = 10;	/* ÏµÍ³ÔÊĞí×î´ó¿éÉè±¸ÊıÁ¿ */
-	static const int NODEV = -1;	/* NODEVÉè±¸ºÅ */
+	static const int MAX_DEVICE_NUM = 10;	/* ç³»ç»Ÿå…è®¸æœ€å¤§å—è®¾å¤‡æ•°é‡ */
+	static const int NODEV = -1;	/* NODEVè®¾å¤‡å· */
 
-	static const short ROOTDEV = (0 << 8) | 0;	/* ´ÅÅÌµÄÖ÷¡¢´ÓÉè±¸ºÅ¶¼Îª0 */
-	static const short TTYDEV = (0 << 8) | 0;	/* TTYÖÕ¶Ë×Ö·ûÉè±¸µÄÖ÷¡¢´ÓÉè±¸ºÅ¶¼Îª0 */
+	static const short ROOTDEV = (0 << 8) | 0;	/* ç£ç›˜çš„ä¸»ã€ä»è®¾å¤‡å·éƒ½ä¸º0 */
+	static const short TTYDEV = (0 << 8) | 0;	/* TTYç»ˆç«¯å­—ç¬¦è®¾å¤‡çš„ä¸»ã€ä»è®¾å¤‡å·éƒ½ä¸º0 */
 
 public:
 	DeviceManager();
 	~DeviceManager();
 
-	/* ³õÊ¼»¯¿éÉè±¸»ùÀàÖ¸ÕëÊı×é¡£Ïàµ±ÓÚÊÇ¶Ô¿éÉè±¸¿ª¹Ø±íbdevswµÄ³õÊ¼»¯¡£*/
+	/* åˆå§‹åŒ–å—è®¾å¤‡åŸºç±»æŒ‡é’ˆæ•°ç»„ã€‚ç›¸å½“äºæ˜¯å¯¹å—è®¾å¤‡å¼€å…³è¡¨bdevswçš„åˆå§‹åŒ–ã€‚*/
 	void Initialize();
 
-	int GetNBlkDev();							/* »ñÈ¡ÏµÍ³ÖĞÊµ¼Ê¿éÉè±¸ÊıÁ¿nblkdev */
-	BlockDevice& GetBlockDevice(short major);	/* ¸ù¾İÖ÷Éè±¸ºÅmajor»ñÈ¡ÏàÓ¦¿éÉè±¸¶ÔÏóÊµÀı */
-	int GetNChrDev();							/* »ñÈ¡ÏµÍ³ÖĞÊµ¼Ê×Ö·ûÉè±¸ÊıÁ¿nchrdev */
-	CharDevice& GetCharDevice(short major);		/* ¸ù¾İÖ÷Éè±¸ºÅmajor»ñÈ¡ÏàÓ¦×Ö·ûÉè±¸¶ÔÏóÊµÀı */
+	int GetNBlkDev();							/* è·å–ç³»ç»Ÿä¸­å®é™…å—è®¾å¤‡æ•°é‡nblkdev */
+	BlockDevice& GetBlockDevice(short major);	/* æ ¹æ®ä¸»è®¾å¤‡å·majorè·å–ç›¸åº”å—è®¾å¤‡å¯¹è±¡å®ä¾‹ */
+	int GetNChrDev();							/* è·å–ç³»ç»Ÿä¸­å®é™…å­—ç¬¦è®¾å¤‡æ•°é‡nchrdev */
+	CharDevice& GetCharDevice(short major);		/* æ ¹æ®ä¸»è®¾å¤‡å·majorè·å–ç›¸åº”å­—ç¬¦è®¾å¤‡å¯¹è±¡å®ä¾‹ */
 	
 private:
-	int nblkdev;							/* ÏµÍ³ÖĞ¿éÉè±¸µÄÊıÁ¿ @line 4631 */
-	BlockDevice *bdevsw[MAX_DEVICE_NUM];	/* Ö¸Ïò¿éÉè±¸»ùÀàµÄÖ¸ÕëÊı×é£¬Ïàµ±ÓÚUnix V6ÖĞ¿éÉè±¸¿ª¹Ø±í */
+	int nblkdev;							/* ç³»ç»Ÿä¸­å—è®¾å¤‡çš„æ•°é‡ @line 4631 */
+	BlockDevice *bdevsw[MAX_DEVICE_NUM];	/* æŒ‡å‘å—è®¾å¤‡åŸºç±»çš„æŒ‡é’ˆæ•°ç»„ï¼Œç›¸å½“äºUnix V6ä¸­å—è®¾å¤‡å¼€å…³è¡¨ */
 
-	int nchrdev;							/* ÏµÍ³ÖĞ×Ö·ûÉè±¸µÄÊıÁ¿ */
-	CharDevice	*cdevsw[MAX_DEVICE_NUM];	/* Ö¸Ïò×Ö·ûÉè±¸»ùÀàµÄÖ¸ÕëÊı×é£¬Ïàµ±ÓÚ×Ö·ûÉè±¸¿ª¹Ø±í */
+	int nchrdev;							/* ç³»ç»Ÿä¸­å­—ç¬¦è®¾å¤‡çš„æ•°é‡ */
+	CharDevice	*cdevsw[MAX_DEVICE_NUM];	/* æŒ‡å‘å­—ç¬¦è®¾å¤‡åŸºç±»çš„æŒ‡é’ˆæ•°ç»„ï¼Œç›¸å½“äºå­—ç¬¦è®¾å¤‡å¼€å…³è¡¨ */
 };
 
 #endif

@@ -22,7 +22,6 @@ src/program/*.lnk
 .vscode/dryrun.log
 .vscode/make-dryrun-full.log
 .vscode/targets.log
-.vscode/settings.json
 .vscode/c_cpp_properties.json
 
 # Eclipse/CDT local state. Keep .project and .cproject if we still use them.

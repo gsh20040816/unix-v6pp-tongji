@@ -41,9 +41,9 @@ void CharDevice::SgTTy(short dev, TTy* pTTy)
 
 /*==============================class ConsoleDevice===============================*/
 /* 
- * ���ﶨ��������ConsoleDevice�Ķ���ʵ����
- * ��ʵ��������override���ַ��豸������
- * Open(), Close(), Read(), Write()���麯����
+ * 这里定义派生类ConsoleDevice的对象实例。
+ * 该实例对象中override了字符设备基类中
+ * Open(), Close(), Read(), Write()等虚函数。
  */
 ConsoleDevice g_ConsoleDevice;
 extern TTy g_TTy;
@@ -63,7 +63,7 @@ void ConsoleDevice::Open(short dev, int mode)
 	short minor = Utility::GetMinor(dev);
 	User& u = Kernel::Instance().GetUser();
 
-	if ( minor != 0 )	/* ѡ��Ĳ���console */
+	if ( minor != 0 )	/* 选择的不是console */
 	{
 		return;
 	}
@@ -73,13 +73,13 @@ void ConsoleDevice::Open(short dev, int mode)
 		this->m_TTy = &g_TTy;
 	}
 
-	/* �ý��̵�һ�δ�����豸 */
+	/* 该进程第一次打开这个设备 */
 	if ( NULL == u.u_procp->p_ttyp )
 	{
 		u.u_procp->p_ttyp = this->m_TTy;	
 	}
 
-	/* �����豸��ʼģʽ */
+	/* 设置设备初始模式 */
 	if ( (this->m_TTy->t_state & TTy::ISOPEN) == 0 )
 	{
 		this->m_TTy->t_state = TTy::ISOPEN | TTy::CARR_ON;
@@ -100,7 +100,7 @@ void ConsoleDevice::Read(short dev)
 
 	if ( 0 == minor )
 	{
-		this->m_TTy->TTRead();	/* �ж��Ƿ�ѡ����console */
+		this->m_TTy->TTRead();	/* 判断是否选择了console */
 	}
 }
 
@@ -110,7 +110,7 @@ void ConsoleDevice::Write(short dev)
 
 	if ( 0 == minor )
 	{
-		this->m_TTy->TTWrite();	/* �ж��Ƿ�ѡ����console */
+		this->m_TTy->TTWrite();	/* 判断是否选择了console */
 	}
 }
 

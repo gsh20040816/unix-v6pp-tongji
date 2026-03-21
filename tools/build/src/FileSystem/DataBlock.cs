@@ -4,31 +4,31 @@ using System.IO;
 namespace Build
 {
 	/// <summary>
-	/// datablock µÄÕªÒªËµÃ÷¡£
+	/// datablock çš„æ‘˜è¦è¯´æ˜ã€‚
 	/// </summary>
 	public class DataBlock
 	{
-        //³¬¼¶¿ì¹ÜÀí
+        //è¶…çº§å¿«ç®¡ç†
 		private Superblock _initSuper;
-        //´ÅÅÌÎÄ¼ş
+        //ç£ç›˜æ–‡ä»¶
         private Disk _diskFile;
 
 		/// <summary>
-        /// Êı¾İÇøÕ¼¾İµÄ¿éÊı(²»°üÀ¨Æô¶¯Çø£¬ÄÚºËÇø,³¬¼¶¿éÇø£¬inodeÇø,swapÇø)
+        /// æ•°æ®åŒºå æ®çš„å—æ•°(ä¸åŒ…æ‹¬å¯åŠ¨åŒºï¼Œå†…æ ¸åŒº,è¶…çº§å—åŒºï¼ŒinodeåŒº,swapåŒº)
 		/// </summary>
         /// 
 		private int _dataBlkNum;
 
 		/// <summary>
-		/// Êı¾İÇøÆğÊ¼¿é
+		/// æ•°æ®åŒºèµ·å§‹å—
 		/// </summary>
 		private int _dataBlkStart;
 
         /// <summary>
-        /// ¹¹Ôìº¯Êı
+        /// æ„é€ å‡½æ•°
         /// </summary>
-        /// <param name="tsb">´«ÈëµÄ³¬¼¶¿é</param>
-        /// <param name="diskFile">´ÅÅÌÎÄ¼ş</param>
+        /// <param name="tsb">ä¼ å…¥çš„è¶…çº§å—</param>
+        /// <param name="diskFile">ç£ç›˜æ–‡ä»¶</param>
 		public DataBlock(Superblock tsb,Disk diskFile)
 		{
 			_initSuper = tsb;
@@ -38,7 +38,7 @@ namespace Build
         }
 
         /// <summary>
-        /// ³õÊ¼»¯Êı¾İ¿é
+        /// åˆå§‹åŒ–æ•°æ®å—
         /// </summary>
 		public void InitDataBlock()
 		{
@@ -48,40 +48,40 @@ namespace Build
 			_initSuper._s_free[_initSuper._s_nfree++] = 0;
             _diskFile.OpenFile();
 
-            //´Ó×îºóÒ»¿éÍùÇ°×ß£¬Ã¿100¿éÖ®Ç°µÄÒ»¿éÎª¹ÜÀí¿é
-            //ÆäÄÚÈİ°üÀ¨
-            //1£º¸Ã¹ÜÀí¿é¹ÜÀíµÄ¿éÊı
-            //2£º¸Ã¹ÜÀí¿é¹ÜÀíµÄËùÓĞ¿éºÅ
+            //ä»æœ€åä¸€å—å¾€å‰èµ°ï¼Œæ¯100å—ä¹‹å‰çš„ä¸€å—ä¸ºç®¡ç†å—
+            //å…¶å†…å®¹åŒ…æ‹¬
+            //1ï¼šè¯¥ç®¡ç†å—ç®¡ç†çš„å—æ•°
+            //2ï¼šè¯¥ç®¡ç†å—ç®¡ç†çš„æ‰€æœ‰å—å·
 			for (int i = _dataBlkNum - 1; i >= 0; --i)
 			{
 				if (_initSuper._s_nfree >= 100)
 				{
-                    //ÕÒµ½ÒªĞ´ÈëµÄÎ»ÖÃ,½«s_nfreeºÍs_freeĞ´Èëi + datablkstartºÅ´ÅÅÌ¿é
+                    //æ‰¾åˆ°è¦å†™å…¥çš„ä½ç½®,å°†s_nfreeå’Œs_freeå†™å…¥i + datablkstartå·ç£ç›˜å—
 					_diskFile.SeekFilePosition(_diskFile.ConvertPosition(i + _dataBlkStart,0), System.IO.SeekOrigin.Begin);
                     
-                    //×ª»»³ÉÁ÷£¬Ğ´Èë´ÅÅÌ
+                    //è½¬æ¢æˆæµï¼Œå†™å…¥ç£ç›˜
 					writeTo = Helper.Struct2Bytes(_initSuper._s_nfree);
 					_diskFile.WriteFile(ref writeTo, 0, 4);
 
 					for (int j = 0; j < _initSuper._s_nfree; ++j)
 					{
-						//×ª»»³ÉÁ÷£¬Ğ´Èë´ÅÅÌ
+						//è½¬æ¢æˆæµï¼Œå†™å…¥ç£ç›˜
 						writeTo = Helper.Struct2Bytes(_initSuper._s_free[j]);
 						_diskFile.WriteFile(ref writeTo, 0, 4);
 					}
 					_initSuper._s_nfree = 0;
 				}
-                //Êı×éÔªËØ³õÊ¼»¯(Êı×éÔªËØÓÃÓÚ¹ÜÀí¿ÕÏĞ¿éºÅ)
+                //æ•°ç»„å…ƒç´ åˆå§‹åŒ–(æ•°ç»„å…ƒç´ ç”¨äºç®¡ç†ç©ºé—²å—å·)
 				_initSuper._s_free[_initSuper._s_nfree++] = i + _dataBlkStart;
 			}
-            //¹Ø±Õ´ÅÅÌÎÄ¼ş
+            //å…³é—­ç£ç›˜æ–‡ä»¶
             _diskFile.CloseFile();
-            //½«¸üĞÂºóµÄ³¬¼¶¿ìĞÅÏ¢Ğ´»Ø
+            //å°†æ›´æ–°åçš„è¶…çº§å¿«ä¿¡æ¯å†™å›
             _initSuper.UpdateSuperBlockToDisk();
 		}
 
 		/// <summary>
-		/// »ñÈ¡¿ÕÏĞ¿é
+		/// è·å–ç©ºé—²å—
 		/// </summary>
 		/// <returns></returns>
 		public int GetFreeBlock()
@@ -91,13 +91,13 @@ namespace Build
 
 			reValue = _initSuper._s_free[--_initSuper._s_nfree];
 
-			//³ö´í´¦Àí,ÒÑ¾­·ÖÅäÍê¿ÕÏĞÅÌ¿é
+			//å‡ºé”™å¤„ç†,å·²ç»åˆ†é…å®Œç©ºé—²ç›˜å—
 			if(_initSuper._s_nfree <= 0 && reValue == 0)
 			{
-                throw (new Exception("¿ÕÏĞÊı¾İ¿éÒÑ·ÖÅäÍê")); 
+                throw (new Exception("ç©ºé—²æ•°æ®å—å·²åˆ†é…å®Œ")); 
 			}
 
-			//Èç¹û±¾Åú´ÎÖ±½Ó¹ÜÀíµÄ¿ÕÏĞ¿éÓÃÍê£¬Ôòµ¼ÈëÏÂÒ»×é
+			//å¦‚æœæœ¬æ‰¹æ¬¡ç›´æ¥ç®¡ç†çš„ç©ºé—²å—ç”¨å®Œï¼Œåˆ™å¯¼å…¥ä¸‹ä¸€ç»„
 			if (_initSuper._s_nfree <= 0)
 			{
                 _diskFile.OpenFile();
@@ -112,7 +112,7 @@ namespace Build
 				}
                 _diskFile.CloseFile();
 			}
-			//×îºÃÔÚÕâÀï½«ĞÂÉêÇëµ½µÄ¿éÈ«²¿ÇåÁã
+			//æœ€å¥½åœ¨è¿™é‡Œå°†æ–°ç”³è¯·åˆ°çš„å—å…¨éƒ¨æ¸…é›¶
 
 			CleanBlock(reValue);
             _initSuper.UpdateSuperBlockToDisk();
@@ -120,7 +120,7 @@ namespace Build
 		}
 
 		/// <summary>
-		/// ½«´ÅÅÌ¿éÈ«²¿ÇåÁã
+		/// å°†ç£ç›˜å—å…¨éƒ¨æ¸…é›¶
 		/// </summary>
 		/// <param name="bno"></param>
 		private void CleanBlock(int bno)
@@ -140,7 +140,7 @@ namespace Build
 		}
 
         /// <summary>
-        /// µÃµ½ĞéÄâ´ÅÅÌÊ£Óà¿Õ¼ä´óĞ¡(ÔİÎŞÒıÓÃ)
+        /// å¾—åˆ°è™šæ‹Ÿç£ç›˜å‰©ä½™ç©ºé—´å¤§å°(æš‚æ— å¼•ç”¨)
         /// </summary>
         /// <returns></returns>
         public int returnFreeSize()

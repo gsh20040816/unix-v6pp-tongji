@@ -19,6 +19,6 @@ void printf(char* fmt, ... )
 void gets(char * s)
 {
 	int n = read(STDIN, s, 1024);
-	/* ÒÔ/n¶¨½ç£¬Òò´Ë×îºóÒªÉ¾È¥/n */
+	/* ä»¥/nå®šç•Œï¼Œå› æ­¤æœ€åè¦åˆ å»/n */
 	if ( s[n - 1] == '\n' ) s[n - 1] = 0;
 }

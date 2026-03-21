@@ -9,7 +9,7 @@ void MemoryDescriptor::Initialize()
 {
 	KernelPageManager& kernelPageManager = Kernel::Instance().GetKernelPageManager();
 	
-	/* m_UserPageTableArrayĞèÒª°ÑAllocMemory()·µ»ØµÄÎïÀíÄÚ´æµØÖ· + 0xC0000000 */
+	/* m_UserPageTableArrayéœ€è¦æŠŠAllocMemory()è¿”å›çš„ç‰©ç†å†…å­˜åœ°å€ + 0xC0000000 */
 	this->m_UserPageTableArray = (PageTable*)(kernelPageManager.AllocMemory(sizeof(PageTable) * USER_SPACE_PAGE_TABLE_CNT) + Machine::KERNEL_SPACE_START_ADDRESS);
 }
 
@@ -27,7 +27,7 @@ unsigned int MemoryDescriptor::MapEntry(unsigned long virtualAddress, unsigned i
 {	
 	unsigned long address = virtualAddress - USER_SPACE_START_ADDRESS;
 	
-	//¼ÆËã´ÓpagetableµÄÄÄÒ»¸öµØÖ·¿ªÊ¼Ó³Éä
+	//è®¡ç®—ä»pagetableçš„å“ªä¸€ä¸ªåœ°å€å¼€å§‹æ˜ å°„
 	unsigned long startIdx = address >> 12;
 	unsigned long cnt = ( size + (PageManager::PAGE_SIZE - 1) )/ PageManager::PAGE_SIZE;
 
@@ -86,7 +86,7 @@ bool MemoryDescriptor::CheckUserSpaceSize( unsigned long textVirtualAddress, uns
 {
 	User& u = Kernel::Instance().GetUser();
 
-	/* Èç¹û³¬³öÔÊĞíµÄÓÃ»§³ÌĞò×î´ó8MµÄµØÖ·¿Õ¼äÏŞÖÆ */
+	/* å¦‚æœè¶…å‡ºå…è®¸çš„ç”¨æˆ·ç¨‹åºæœ€å¤§8Mçš„åœ°å€ç©ºé—´é™åˆ¶ */
 	if ( textSize + dataSize + stackSize  + PageManager::PAGE_SIZE > USER_SPACE_SIZE - textVirtualAddress)
 	{
 		u.u_error = User::ENOMEM;
@@ -95,26 +95,26 @@ bool MemoryDescriptor::CheckUserSpaceSize( unsigned long textVirtualAddress, uns
 	}
 }
 
-/* ÒòÎªĞèÒª¹©Newprocµ÷ÓÃ£¬ËùÒÔÖ»Ğ´Ò³±í£¬²»½¨Á¢µØÖ·Ó³Éä¹ØÏµ */
+/* å› ä¸ºéœ€è¦ä¾›Newprocè°ƒç”¨ï¼Œæ‰€ä»¥åªå†™é¡µè¡¨ï¼Œä¸å»ºç«‹åœ°å€æ˜ å°„å…³ç³» */
 void MemoryDescriptor::EstablishUserPageTable( unsigned long textVirtualAddress, unsigned long textSize, unsigned long dataVirtualAddress, unsigned long dataSize, unsigned long stackSize )
 {
 	User& u = Kernel::Instance().GetUser();
 
 	// this->ClearUserPageTable();
 
-	/* ÒÔÏà¶ÔÆğÊ¼µØÖ·phyPageIndexÎª0£¬ÎªÕıÎÄ¶Î½¨Á¢Ò³±í */
+	/* ä»¥ç›¸å¯¹èµ·å§‹åœ°å€phyPageIndexä¸º0ï¼Œä¸ºæ­£æ–‡æ®µå»ºç«‹é¡µè¡¨ */
 	unsigned int phyPageIndex = 0 + u.u_procp->p_textp->x_caddr>>12;
 	phyPageIndex = this->MapEntry(textVirtualAddress, textSize, phyPageIndex, false);
 
-	/* ÒÔÏà¶ÔÆğÊ¼µØÖ·phyPageIndexÎª1£¬ppdaÇøÕ¼ÓÃ1Ò³4K´óĞ¡ÎïÀíÄÚ´æ£¬ÎªÊı¾İ¶Î½¨Á¢Ò³±í */
+	/* ä»¥ç›¸å¯¹èµ·å§‹åœ°å€phyPageIndexä¸º1ï¼ŒppdaåŒºå ç”¨1é¡µ4Kå¤§å°ç‰©ç†å†…å­˜ï¼Œä¸ºæ•°æ®æ®µå»ºç«‹é¡µè¡¨ */
 	phyPageIndex = 1 + (u.u_procp->p_addr>>12);
 	phyPageIndex = this->MapEntry(dataVirtualAddress, dataSize, phyPageIndex, true);
 
-	/* ½ô¸ú×ÅÊı¾İ¶ÎÖ®ºó£¬Îª¶ÑÕ»¶Î½¨Á¢Ò³±í */
+	/* ç´§è·Ÿç€æ•°æ®æ®µä¹‹åï¼Œä¸ºå †æ ˆæ®µå»ºç«‹é¡µè¡¨ */
 	unsigned long stackStartAddress = (USER_SPACE_START_ADDRESS + USER_SPACE_SIZE - stackSize) & 0xFFFFF000;
 	this->MapEntry(stackStartAddress, stackSize, phyPageIndex, true);
 
-	this->MapEntry(0, 4096, 0, true);  /* Îª0#Âß¼­Ò³½¨Á¢Ò³±íÏî£¬½«ÆäÓ³ÉäÖÁ0#ÎïÀíÒ³¿ò */
+	this->MapEntry(0, 4096, 0, true);  /* ä¸º0#é€»è¾‘é¡µå»ºç«‹é¡µè¡¨é¡¹ï¼Œå°†å…¶æ˜ å°„è‡³0#ç‰©ç†é¡µæ¡† */
 
 	// this->MapToPageTable();
 // 	return true;
@@ -183,7 +183,7 @@ void MemoryDescriptor::MapToPageTable()
 	{
 		for ( unsigned int j = 0; j < PageTable::ENTRY_CNT_PER_PAGETABLE; j++ )
 		{
-			pUserPageTable[i].m_Entrys[j].m_Present = 0;   //ÏÈÇå0
+			pUserPageTable[i].m_Entrys[j].m_Present = 0;   //å…ˆæ¸…0
 
 			if ( 1 == this->m_UserPageTableArray[i].m_Entrys[j].m_Present )
 			{
@@ -202,14 +202,14 @@ void MemoryDescriptor::MapToPageTable()
 	User& u = Kernel::Instance().GetUser();
 	Machine& machine = Machine::Instance();
 
-    unsigned long phyFrame = (unsigned long)(u.u_MemoryDescriptor.m_UserPageTableArray);  // Ïà¶Ô±í£¨ÏÖÔÚÒÑ¾­ÊÇÒ³±íÁË£©Ê×µØÖ·£¬ĞéµØÖ·
+    unsigned long phyFrame = (unsigned long)(u.u_MemoryDescriptor.m_UserPageTableArray);  // ç›¸å¯¹è¡¨ï¼ˆç°åœ¨å·²ç»æ˜¯é¡µè¡¨äº†ï¼‰é¦–åœ°å€ï¼Œè™šåœ°å€
 
 	if(phyFrame == NULL)
 		return;
 	else
-		phyFrame = (phyFrame - 0xC0000000) >> 12;   // Ïà¶Ô±í£¨ÏÖÔÚÒÑ¾­ÊÇÒ³±íÁË£©ÎïÀíÒ³¿òºÅ
+		phyFrame = (phyFrame - 0xC0000000) >> 12;   // ç›¸å¯¹è¡¨ï¼ˆç°åœ¨å·²ç»æ˜¯é¡µè¡¨äº†ï¼‰ç‰©ç†é¡µæ¡†å·
 
-	Diagnose::Write("Start Address of Process's User Page Table: %x£¬%x\n",(unsigned long)(u.u_MemoryDescriptor.m_UserPageTableArray),phyFrame);
+	Diagnose::Write("Start Address of Process's User Page Table: %xï¼Œ%x\n",(unsigned long)(u.u_MemoryDescriptor.m_UserPageTableArray),phyFrame);
 
 	for ( unsigned int i = 0; i < Machine::USER_PAGE_TABLE_CNT; i++, phyFrame++ )
 	{

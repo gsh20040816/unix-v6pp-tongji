@@ -35,9 +35,9 @@ void InitCommandTree();
 int GetNextFreeCommandNode();
 
 /* 
-*½¨Á¢²»Í¬ÃüÁî½Úµãº¯Êı
-* ²ÎÊı£ºstArg:Start pos in args[], edArg: End pos in args[], midArg: Key token pos, only for pipe(|) and & and ; Nodes 
-* ·µ»Ø£º½ÚµãÔÚcommandNodes[] ÖĞµÄÎ»ÖÃ
+*å»ºç«‹ä¸åŒå‘½ä»¤èŠ‚ç‚¹å‡½æ•°
+* å‚æ•°ï¼šstArg:Start pos in args[], edArg: End pos in args[], midArg: Key token pos, only for pipe(|) and & and ; Nodes 
+* è¿”å›ï¼šèŠ‚ç‚¹åœ¨commandNodes[] ä¸­çš„ä½ç½®
 *
 */
 int CreateSimpleNode( int stArg, int edArg, int params);
@@ -45,8 +45,8 @@ int CreateCurveNode( int stArg, int edArg, int params);
 int CreatePipeNode( int stArg, int edArg, int midArg, int params);
 int CreateTableNode( int stArg, int edArg, int midArg, int params);
 /*
-* ·ÖÎöÃüÁîÊ÷
-* ·µ»ØÃüÁîÊı¸ù½Úµã
+* åˆ†æå‘½ä»¤æ ‘
+* è¿”å›å‘½ä»¤æ•°æ ¹èŠ‚ç‚¹
 */
 int AnalizeCommand( int stArg, int edArg, int params);
 

@@ -4,7 +4,7 @@ namespace Build
 {
 
     /// <summary>
-    /// Inode½á¹¹Ìå
+    /// Inodeç»“æ„ä½“
     /// </summary>
 	public class InodeStr
 	{
@@ -34,30 +34,30 @@ namespace Build
 	};
 
 	/// <summary>
-	/// InodeÇø¹ÜÀíÀà
+	/// InodeåŒºç®¡ç†ç±»
 	/// </summary>
 	public class InodeBlock
 	{
 		private Superblock _initSuper;
 
 		/// <summary>
-		/// inodeµÄ´óĞ¡£¬µ¥Î»ÊÇ×Ö½Ú
+		/// inodeçš„å¤§å°ï¼Œå•ä½æ˜¯å­—èŠ‚
 		/// </summary>
 		private const int INODE_SIZE = 64;
 		/// <summary>
-		/// Ö±½Ó¹ÜÀíinodeÊıÄ¿
+		/// ç›´æ¥ç®¡ç†inodeæ•°ç›®
 		/// </summary>
 		private const int DERECTN_INODE = 100;
 		/// <summary>
-		/// inodeÇøµÄÆğÊ¼¿éºÅ
+		/// inodeåŒºçš„èµ·å§‹å—å·
 		/// </summary>
 		private static int INODE_START = MachinePara.BootAndKernelSize + MachinePara.SuperBlockSize;
         /// <summary>
-        /// ´ÅÅÌÎÄ¼ş
+        /// ç£ç›˜æ–‡ä»¶
         /// </summary>
         private Disk _diskFile;
         /// <summary>
-        /// ¹¹Ôìº¯Êı
+        /// æ„é€ å‡½æ•°
         /// </summary>
         /// <param name="tsb"></param>
         /// <param name="diskFile"></param>
@@ -67,63 +67,63 @@ namespace Build
             _diskFile = diskFile;
 		}
 
-		#region ³õÊ¼»¯inodeÇø
+		#region åˆå§‹åŒ–inodeåŒº
 		public void initInodeManager()
 		{
-			//³õÊ¼»¯ËùÓĞµÄinode£¬Ê¹Æäi-mode == 0
+			//åˆå§‹åŒ–æ‰€æœ‰çš„inodeï¼Œä½¿å…¶i-mode == 0
 			CreatInode();
-			//ÌîĞ´Ö±½Ó¿ØÖÆµÄ100¸ö¿ÕÏĞinode
+			//å¡«å†™ç›´æ¥æ§åˆ¶çš„100ä¸ªç©ºé—²inode
 			CreatMngArray();
 		}
 
-		//ÔÚ´ÅÅÌµÄinodeÇøÖĞ´´½¨inode
+		//åœ¨ç£ç›˜çš„inodeåŒºä¸­åˆ›å»ºinode
 		private void CreatInode()
 		{
-			//½«i_mode == 0Ğ´Èëinode½á¹¹ÖĞ£¬±íÊ¾¸Ãinode¿ÕÏĞ
+			//å°†i_mode == 0å†™å…¥inodeç»“æ„ä¸­ï¼Œè¡¨ç¤ºè¯¥inodeç©ºé—²
 			uint i_mode = 0;
 			byte[] writeinto;
 
             _diskFile.OpenFile();
-			//´ÓµÚ¶ş¸öÅÌ¿éÆğÊÇinodeÇø
+			//ä»ç¬¬äºŒä¸ªç›˜å—èµ·æ˜¯inodeåŒº
 			for (int i = 0 + INODE_START; i < _initSuper._s_isize + INODE_START; ++i)
 			{
 				for (int j = 0; j < 512; j = j + INODE_SIZE)
 				{
-					//ÕÒµ½ÒªĞ´ÈëµÄÎ»ÖÃ
+					//æ‰¾åˆ°è¦å†™å…¥çš„ä½ç½®
                     _diskFile.SeekFilePosition(_diskFile.ConvertPosition(i, j), System.IO.SeekOrigin.Begin);
-					//×ª»»³ÉÁ÷
+					//è½¬æ¢æˆæµ
 					writeinto = Helper.Struct2Bytes(i_mode);
-					//Ğ´Èë³õÊ¼»¯µÄÖµ£¬¼´½«i_mode == 0Ğ´Èë
+					//å†™å…¥åˆå§‹åŒ–çš„å€¼ï¼Œå³å°†i_mode == 0å†™å…¥
 					_diskFile.WriteFile(ref writeinto,0,4);
 				}
 			}
             _diskFile.CloseFile();
 		}
 
-		//³õÊ¼»¯SuperBlockÖĞµÄinode¹ÜÀíÊı×é
+		//åˆå§‹åŒ–SuperBlockä¸­çš„inodeç®¡ç†æ•°ç»„
 		private void CreatMngArray()
 		{
-			//×îºóÒ»¸öinodeµÄ±àºÅ
+			//æœ€åä¸€ä¸ªinodeçš„ç¼–å·
 			int inodetail = _initSuper._s_isize * (512 / INODE_SIZE) - 1;
 
 			for (int i = 0; i < DERECTN_INODE-1; ++i,--inodetail)
 			{
-                //³¬¼¶¿éµÄs_inodeÊı×éÖĞ´æ·ÅµÄÖ»ÊÇinodeµÄ±àºÅ
+                //è¶…çº§å—çš„s_inodeæ•°ç»„ä¸­å­˜æ”¾çš„åªæ˜¯inodeçš„ç¼–å·
 				_initSuper._s_inode[i] = inodetail;
 			}
 			//rootdir
             _initSuper._s_inode[DERECTN_INODE - 1] = 0;
 
-			//Ö±½Ó¿ØÖÆinodeÊıÁ¿
+			//ç›´æ¥æ§åˆ¶inodeæ•°é‡
             _initSuper._s_ninode = DERECTN_INODE;    /* spb.s_inode[spb.s_ninode++] = ino */
 
             _initSuper.UpdateSuperBlockToDisk();
 		}
 		#endregion
         
-		#region inode²Ù×÷
+		#region inodeæ“ä½œ
         /// <summary>
-        /// Çå¿ÕinodeÖĞµÄaddrÊı×éĞÅÏ¢
+        /// æ¸…ç©ºinodeä¸­çš„addræ•°ç»„ä¿¡æ¯
         /// </summary>
         /// <param name="id"></param>
         public void CleanInodeAddr(InodeStr id)
@@ -135,12 +135,12 @@ namespace Build
         }
 
 		/// <summary>
-		/// µÃµ½Ò»¸öinode
+		/// å¾—åˆ°ä¸€ä¸ªinode
 		/// </summary>
 		/// <returns></returns>
 		public int FetchFreeInode()
 		{
-			//inodeÒç³ö
+			//inodeæº¢å‡º
 
             int inodeTail = _initSuper._s_isize * (512/ INODE_SIZE) - 1;
 
@@ -154,7 +154,7 @@ namespace Build
                 }
                 if (_initSuper._s_ninode == 0 && i < 0)
                 {
-                    throw (new Exception("Ã»ÓĞ¿ÕÏĞinode"));
+                    throw (new Exception("æ²¡æœ‰ç©ºé—²inode"));
                 }
 			}
             _initSuper._s_ninode--;
@@ -163,7 +163,7 @@ namespace Build
 			return _initSuper._s_inode[_initSuper._s_ninode];
 		}
 
-		/// ÅĞ¶ÏinodeÊÇ·ñ¿ÕÏĞ
+		/// åˆ¤æ–­inodeæ˜¯å¦ç©ºé—²
         public int IsInodeFree(int no)
         {
             byte[] readFrom=new byte[4];
@@ -178,7 +178,7 @@ namespace Build
                 return 0;
         }
 
-        ///ÊÍ·ÅÒ»¸öinode
+        ///é‡Šæ”¾ä¸€ä¸ªinode
         public void FreeInode(int no)
         {
             InodeStr istr = new InodeStr();
@@ -191,7 +191,7 @@ namespace Build
         }
         
         /// <summary>
-        /// ´ÓÓ²ÅÌ»ñÈ¡inodeÖµ
+        /// ä»ç¡¬ç›˜è·å–inodeå€¼
         /// </summary>
         /// <param name="istr"></param>
         /// <param name="no"></param>
@@ -201,36 +201,36 @@ namespace Build
 			int startPosition;
 
             _diskFile.OpenFile();
-			//inodeËùÔÚµÄÁ÷µÄÎ»ÖÃ
+			//inodeæ‰€åœ¨çš„æµçš„ä½ç½®
 			startPosition = INODE_START * 512 + INODE_SIZE * no;
             _diskFile.SeekFilePosition(startPosition, System.IO.SeekOrigin.Begin);
 
-			//¶ÁÈëi_mode
+			//è¯»å…¥i_mode
 			readFrom = new byte[System.Runtime.InteropServices.Marshal.SizeOf(istr._i_mode)];
 			_diskFile.ReadFile(ref readFrom,0,System.Runtime.InteropServices.Marshal.SizeOf(istr._i_mode));
 			istr._i_mode = (uint)Helper.Bytes2Struct(readFrom,typeof(uint));
 
-			//¶ÁÈëi_ilink
+			//è¯»å…¥i_ilink
 			readFrom = new byte[System.Runtime.InteropServices.Marshal.SizeOf(istr._i_ilink)];
 			_diskFile.ReadFile(ref readFrom,0,System.Runtime.InteropServices.Marshal.SizeOf(istr._i_ilink));
 			istr._i_ilink = (int)Helper.Bytes2Struct(readFrom,typeof(int));
 
-			//¶ÁÈëi_uid
+			//è¯»å…¥i_uid
 			readFrom = new byte[System.Runtime.InteropServices.Marshal.SizeOf(istr._i_uid)];
 			_diskFile.ReadFile(ref readFrom,0,System.Runtime.InteropServices.Marshal.SizeOf(istr._i_uid));
 			istr._i_uid = (short)Helper.Bytes2Struct(readFrom,typeof(short));
 
-			//¶ÁÈëi_gid
+			//è¯»å…¥i_gid
 			readFrom = new byte[System.Runtime.InteropServices.Marshal.SizeOf(istr._i_gid)];
 			_diskFile.ReadFile(ref readFrom,0,System.Runtime.InteropServices.Marshal.SizeOf(istr._i_gid));
 			istr._i_gid = (short)Helper.Bytes2Struct(readFrom,typeof(short));
 
-			//¶ÁÈëi_size
+			//è¯»å…¥i_size
 			readFrom = new byte[System.Runtime.InteropServices.Marshal.SizeOf(istr._i_size)];
 			_diskFile.ReadFile(ref readFrom,0,System.Runtime.InteropServices.Marshal.SizeOf(istr._i_size));
 			istr._i_size = (int)Helper.Bytes2Struct(readFrom,typeof(int));
 
-			//¶ÁÈëi_addr
+			//è¯»å…¥i_addr
 			readFrom = new byte[4];
 			for(int i = 0;i < 10;i++)
 			{
@@ -238,12 +238,12 @@ namespace Build
 				istr._i_addr[i] = (int)Helper.Bytes2Struct(readFrom,typeof(int));
 			}
 
-			//¶ÁÈëi_atime
+			//è¯»å…¥i_atime
 			readFrom = new byte[System.Runtime.InteropServices.Marshal.SizeOf(istr._i_atime)];
 			_diskFile.ReadFile(ref readFrom,0,System.Runtime.InteropServices.Marshal.SizeOf(istr._i_atime));
 			istr._i_atime = (int)Helper.Bytes2Struct(readFrom,typeof(int));
 
-			//¶ÁÈëi_atime
+			//è¯»å…¥i_atime
 			readFrom = new byte[System.Runtime.InteropServices.Marshal.SizeOf(istr._i_mtime)];
 			_diskFile.ReadFile(ref readFrom,0,System.Runtime.InteropServices.Marshal.SizeOf(istr._i_mtime));
 			istr._i_mtime = (int)Helper.Bytes2Struct(readFrom,typeof(int));
@@ -252,44 +252,44 @@ namespace Build
 		}
 
 		/// <summary>
-		/// ÉèÖÃinodeÖµ²¢±£´æµ½Ó²ÅÌ
+		/// è®¾ç½®inodeå€¼å¹¶ä¿å­˜åˆ°ç¡¬ç›˜
 		/// </summary>
-		/// <param name="istr">ĞèĞ´ÈëµÄinodestr</param>
-		/// <param name="no">inode±àºÅ</param>
+		/// <param name="istr">éœ€å†™å…¥çš„inodestr</param>
+		/// <param name="no">inodeç¼–å·</param>
 		public void UpdateInodeToDisk(InodeStr istr,int no)
 		{
 			byte[] writeTo;
 			int startPosition;
 
             _diskFile.OpenFile();
-			//inodeËùÔÚµÄÁ÷µÄÎ»ÖÃ
+			//inodeæ‰€åœ¨çš„æµçš„ä½ç½®
 			startPosition = INODE_START * 512 + INODE_SIZE * no;
             _diskFile.SeekFilePosition(startPosition, System.IO.SeekOrigin.Begin);
-			//Ğ´Èëi_mode
+			//å†™å…¥i_mode
 			writeTo = Helper.Struct2Bytes(istr._i_mode);
 			_diskFile.WriteFile(ref writeTo, 0, 4);
-			//Ğ´Èëi_ilink
+			//å†™å…¥i_ilink
 			writeTo = Helper.Struct2Bytes(istr._i_ilink);
 			_diskFile.WriteFile(ref writeTo, 0, 4);
-			//Ğ´Èëi_uid
+			//å†™å…¥i_uid
 			writeTo = Helper.Struct2Bytes(istr._i_uid);
 			_diskFile.WriteFile(ref writeTo, 0, 2);
-			//Ğ´Èëi_gid
+			//å†™å…¥i_gid
 			writeTo = Helper.Struct2Bytes(istr._i_gid);
 			_diskFile.WriteFile(ref writeTo, 0, 2);
-			//Ğ´Èëi_size
+			//å†™å…¥i_size
 			writeTo = Helper.Struct2Bytes(istr._i_size);
 			_diskFile.WriteFile(ref writeTo, 0, 4);
-			//Ğ´Èëi_addr
+			//å†™å…¥i_addr
 			for (int i = 0; i < 10; ++i)
 			{
 				writeTo = Helper.Struct2Bytes(istr._i_addr[i]);
 				_diskFile.WriteFile(ref writeTo, 0, 4);
 			}
-			//Ğ´Èëi_atime
+			//å†™å…¥i_atime
 			writeTo = Helper.Struct2Bytes(istr._i_atime);
 			_diskFile.WriteFile(ref writeTo, 0, 4);
-			//Ğ´Èëi_mtime
+			//å†™å…¥i_mtime
 			writeTo = Helper.Struct2Bytes(istr._i_mtime);
 			_diskFile.WriteFile(ref writeTo, 0, 4);
 

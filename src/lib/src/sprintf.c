@@ -31,9 +31,9 @@ int sprintf_string(char* buffer, struct print_info* info, va pva, unsigned int* 
 	char* bp = buffer;
 	int i;
 	*pva_offset += sizeof(char*);
-	if ( info->width == -1 ) info->width = strl; /* ÓÃ»§²¢Ã»ÓĞÉèÖÃ¿í¶ÈÖµ */
+	if ( info->width == -1 ) info->width = strl; /* ç”¨æˆ·å¹¶æ²¡æœ‰è®¾ç½®å®½åº¦å€¼ */
 	if ( info->prec == -1 ) info->prec = strl;
-	/* Èç¹û×Ö·û´®¾«¶È´óÓÚ¿í¶È£¬ÄÇÃ´¿í¶ÈµÈÓÚ¾«¶È */
+	/* å¦‚æœå­—ç¬¦ä¸²ç²¾åº¦å¤§äºå®½åº¦ï¼Œé‚£ä¹ˆå®½åº¦ç­‰äºç²¾åº¦ */
 	if ( info->prec > info->width) info->width = info->prec;
 	padding = info->width - (strl > info->prec ? info->prec : strl);
 	if ( !info->left )/* padding at left */
@@ -51,7 +51,7 @@ int sprintf_interger(char* buffer, struct print_info* info, va pva, unsigned int
 {
 	char num[256];
 	char* pn = buffer;
-	char pre[20]; /* Ç°×º */
+	char pre[20]; /* å‰ç¼€ */
 	char* bp = 0;
 	char* bpre = pre;
 	int strl = 0;

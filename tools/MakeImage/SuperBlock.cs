@@ -6,22 +6,22 @@ namespace MakeImage
 {
     class SuperBlock
     {
-        public int	s_isize;		/* Íâ´æInodeÇøÕ¼ÓÃµÄÅÌ¿éÊı */
-	    public int	s_fsize;		/* ÅÌ¿é×ÜÊı */
+        public int	s_isize;		/* å¤–å­˜InodeåŒºå ç”¨çš„ç›˜å—æ•° */
+	    public int	s_fsize;		/* ç›˜å—æ€»æ•° */
 	
-	    public int	s_nfree;		/* Ö±½Ó¹ÜÀíµÄ¿ÕÏĞÅÌ¿éÊıÁ¿ */
-	    public int[] s_free;	    /* Ö±½Ó¹ÜÀíµÄ¿ÕÏĞÅÌ¿éË÷Òı±í */
+	    public int	s_nfree;		/* ç›´æ¥ç®¡ç†çš„ç©ºé—²ç›˜å—æ•°é‡ */
+	    public int[] s_free;	    /* ç›´æ¥ç®¡ç†çš„ç©ºé—²ç›˜å—ç´¢å¼•è¡¨ */
 	
-	    public int	s_ninode;		/* Ö±½Ó¹ÜÀíµÄ¿ÕÏĞÍâ´æInodeÊıÁ¿ */
-	    public int[] s_inode;       /* Ö±½Ó¹ÜÀíµÄ¿ÕÏĞÍâ´æInodeË÷Òı±í */
+	    public int	s_ninode;		/* ç›´æ¥ç®¡ç†çš„ç©ºé—²å¤–å­˜Inodeæ•°é‡ */
+	    public int[] s_inode;       /* ç›´æ¥ç®¡ç†çš„ç©ºé—²å¤–å­˜Inodeç´¢å¼•è¡¨ */
 	
-	    public int	s_flock;		/* ·âËø¿ÕÏĞÅÌ¿éË÷Òı±í±êÖ¾ */
-	    public int  s_ilock;		/* ·âËø¿ÕÏĞInode±í±êÖ¾ */
+	    public int	s_flock;		/* å°é”ç©ºé—²ç›˜å—ç´¢å¼•è¡¨æ ‡å¿— */
+	    public int  s_ilock;		/* å°é”ç©ºé—²Inodeè¡¨æ ‡å¿— */
 	
-	    public int	s_fmod;			/* ÄÚ´æÖĞsuper block¸±±¾±»ĞŞ¸Ä±êÖ¾£¬ÒâÎ¶×ÅĞèÒª¸üĞÂÍâ´æ¶ÔÓ¦µÄSuper Block */
-	    public int	s_ronly;		/* ±¾ÎÄ¼şÏµÍ³Ö»ÄÜ¶Á³ö */
-	    public int	s_time;			/* ×î½üÒ»´Î¸üĞÂÊ±¼ä */
-	    public int[] padding;       /* Ìî³äÊ¹SuperBlock¿é´óĞ¡µÈÓÚ1024×Ö½Ú£¬Õ¼¾İ2¸öÉÈÇø */
+	    public int	s_fmod;			/* å†…å­˜ä¸­super blockå‰¯æœ¬è¢«ä¿®æ”¹æ ‡å¿—ï¼Œæ„å‘³ç€éœ€è¦æ›´æ–°å¤–å­˜å¯¹åº”çš„Super Block */
+	    public int	s_ronly;		/* æœ¬æ–‡ä»¶ç³»ç»Ÿåªèƒ½è¯»å‡º */
+	    public int	s_time;			/* æœ€è¿‘ä¸€æ¬¡æ›´æ–°æ—¶é—´ */
+	    public int[] padding;       /* å¡«å……ä½¿SuperBlockå—å¤§å°ç­‰äº1024å­—èŠ‚ï¼Œå æ®2ä¸ªæ‰‡åŒº */
 
         public SuperBlock()
         {
@@ -47,12 +47,12 @@ namespace MakeImage
 
         public void Update()
         {
-            /* Super BlockµÄ´óĞ¡Îª1024×Ö½Ú */
+            /* Super Blockçš„å¤§å°ä¸º1024å­—èŠ‚ */
             byte[] buffer = new byte[1024];
             int offset = 0;
 
             /*------------------------------------------*/
-            /* ½«SuperBlock¸÷¸ö×Ö¶ÎÒÀ´ÎĞ´Èëbuffer[1024] */
+            /* å°†SuperBlockå„ä¸ªå­—æ®µä¾æ¬¡å†™å…¥buffer[1024] */
             /*------------------------------------------*/
 
             Tool.WriteInt(s_isize, ref buffer, offset);
@@ -106,7 +106,7 @@ namespace MakeImage
                 while (true) ;
             }
             
-            /* ½«bufferÖĞÄÚÈİĞ´µ½(100, 101)´ÅÅÌ¿éÖĞ */
+            /* å°†bufferä¸­å†…å®¹å†™åˆ°(100, 101)ç£ç›˜å—ä¸­ */
             Tool.WriteSector(ref buffer, Constant.SUPER_BLOCK_SECTOR_NUMBER);
         }
     }

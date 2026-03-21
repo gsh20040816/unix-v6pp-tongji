@@ -6,56 +6,56 @@
 class ATADriver
 {
 public:
-	/* ´ÅÅÌÖĞ¶ÏÉè±¸´¦Àí×Ó³ÌĞò */
+	/* ç£ç›˜ä¸­æ–­è®¾å¤‡å¤„ç†å­ç¨‹åº */
 	static void ATAHandler(struct pt_regs* reg, struct pt_context* context);
 
-	/* ÉèÖÃ´ÅÅÌ¼Ä´æÆ÷£¬Æô¶¯´ÅÅÌ½øĞĞI/O²Ù×÷ */
+	/* è®¾ç½®ç£ç›˜å¯„å­˜å™¨ï¼Œå¯åŠ¨ç£ç›˜è¿›è¡ŒI/Oæ“ä½œ */
 	static void DevStart(struct Buf* bp);
 
 private:
-	/* ¼ì²é¿ØÖÆÆ÷ÊÇ·ñ¾ÍĞ÷£¬·µ»ØÖµ·ÇÁã±íÊ¾¾ÍĞ÷£¬²Å¿ÉÒÔ·¢ËÍÃüÁî */
+	/* æ£€æŸ¥æ§åˆ¶å™¨æ˜¯å¦å°±ç»ªï¼Œè¿”å›å€¼éé›¶è¡¨ç¤ºå°±ç»ªï¼Œæ‰å¯ä»¥å‘é€å‘½ä»¤ */
 	static int IsControllerReady();
 
-	/* ¼ì²éI/O¹ı³ÌÖĞÊÇ·ñÓĞ´íÎó·¢Éú */
+	/* æ£€æŸ¥I/Oè¿‡ç¨‹ä¸­æ˜¯å¦æœ‰é”™è¯¯å‘ç”Ÿ */
 	static bool IsError();
 
-	// /* Ä¿Ç°Î´ÊµÏÖDMA£¬ĞèÒª´Ëº¯Êı¡£Ğ´²Ù×÷(¶Á²Ù×÷²»ĞèÒª´Ëº¯Êı)Ç°ĞèÒª
-	//  * È·¶¨Ó²ÅÌ»º³åÇøÊÇ·ñ×¼±¸ºÃ½ÓÊÜÊı¾İ¡£Ë³Ğò£º´ÅÅÌ»º³åÇø¾ÍĞ÷ -> Ğ´Èë
-	//  * ´ÅÅÌ»º³åÇø -> ×îÖÕĞ´ÈëÄ¿±êÉÈÇø -> I/OÍê³Éºó·¢³öÖĞ¶Ï¡£
+	// /* ç›®å‰æœªå®ç°DMAï¼Œéœ€è¦æ­¤å‡½æ•°ã€‚å†™æ“ä½œ(è¯»æ“ä½œä¸éœ€è¦æ­¤å‡½æ•°)å‰éœ€è¦
+	//  * ç¡®å®šç¡¬ç›˜ç¼“å†²åŒºæ˜¯å¦å‡†å¤‡å¥½æ¥å—æ•°æ®ã€‚é¡ºåºï¼šç£ç›˜ç¼“å†²åŒºå°±ç»ª -> å†™å…¥
+	//  * ç£ç›˜ç¼“å†²åŒº -> æœ€ç»ˆå†™å…¥ç›®æ ‡æ‰‡åŒº -> I/Oå®Œæˆåå‘å‡ºä¸­æ–­ã€‚
 	//  */
 	// static int ReadyToTransfer();
 
 	/* static const member */
 public:
-	/* ´ÅÅÌ¼Ä´æÆ÷½çÃæI/O¶Ë¿ÚµØÖ· */
-	static const unsigned short DATA_PORT	=	0x1f0;	/* Êı¾İ¼Ä´æÆ÷¶Ë¿Ú */
-	static const unsigned short ERROR_PORT	=	0x1f1;	/* ´íÎó¼Ä´æÆ÷¶Ë¿Ú */
-	static const unsigned short NSECTOR_PORT =	0x1f2;	/* ÉÈÇøÊı¼Ä´æÆ÷¶Ë¿Ú */
-	static const unsigned short BLKNO_PORT_1 =	0x1f3;	/* ÉÈÇøºÅ¼Ä´æÆ÷¶Ë¿Ú(1)£¬´æ·ÅLBA28Ñ°Ö·Ä£Ê½ÖĞ´ÅÅÌ¿éºÅµÄ0-7Î» */
-	static const unsigned short BLKNO_PORT_2 =	0x1f4;	/* ÉÈÇøºÅ¼Ä´æÆ÷¶Ë¿Ú(2)£¬´æ·ÅLBA28Ñ°Ö·Ä£Ê½ÖĞ´ÅÅÌ¿éºÅµÄ8-15Î» */
-	static const unsigned short BLKNO_PORT_3 =	0x1f5;	/* ÉÈÇøºÅ¼Ä´æÆ÷¶Ë¿Ú(3)£¬´æ·ÅLBA28Ñ°Ö·Ä£Ê½ÖĞ´ÅÅÌ¿éºÅµÄ16-23Î» */
-	static const unsigned short MODE_PORT	=	0x1f6;	/* BIT(0-3)£ºÉÈÇøºÅ¼Ä´æÆ÷¶Ë¿Ú(4)£¬´æ·ÅLBA28Ñ°Ö·Ä£Ê½ÖĞ´ÅÅÌ¿éºÅµÄ24-27Î» 
-														   BIT(4-7)£ºATA´ÅÅÌ¹¤×÷Ä£Ê½£¬Bit(7ºÍ5)Îª1±íÊ¾ÊÇIDE½Ó¿Ú£¬Bit(6)Îª1±íÊ¾¿ªÆôLBA28Ä£Ê½£¬Bit(4)Îª0±íÊ¾Ö÷ÅÌ¡£*/
-	static const unsigned short CMD_PORT	=	0x1f7;	/* Ö»Ğ´£ºÃüÁî¼Ä´æÆ÷¶Ë¿Ú */
-	static const unsigned short STATUS_PORT	=	0x1f7;	/* Ö»¶Á£ºÖ÷×´Ì¬¼Ä´æÆ÷¶Ë¿Ú */
-	static const unsigned short CTRL_PORT	=	0x3f6;	/* ¿ØÖÆ¼Ä´æÆ÷¶Ë¿Ú£ºÖ÷ÒªÓÃÓÚ¿ØÖÆ´ÅÅÌI/O²Ù×÷Íê³ÉºóÊÇ·ñ·¢ËÍÖĞ¶Ï */
+	/* ç£ç›˜å¯„å­˜å™¨ç•Œé¢I/Oç«¯å£åœ°å€ */
+	static const unsigned short DATA_PORT	=	0x1f0;	/* æ•°æ®å¯„å­˜å™¨ç«¯å£ */
+	static const unsigned short ERROR_PORT	=	0x1f1;	/* é”™è¯¯å¯„å­˜å™¨ç«¯å£ */
+	static const unsigned short NSECTOR_PORT =	0x1f2;	/* æ‰‡åŒºæ•°å¯„å­˜å™¨ç«¯å£ */
+	static const unsigned short BLKNO_PORT_1 =	0x1f3;	/* æ‰‡åŒºå·å¯„å­˜å™¨ç«¯å£(1)ï¼Œå­˜æ”¾LBA28å¯»å€æ¨¡å¼ä¸­ç£ç›˜å—å·çš„0-7ä½ */
+	static const unsigned short BLKNO_PORT_2 =	0x1f4;	/* æ‰‡åŒºå·å¯„å­˜å™¨ç«¯å£(2)ï¼Œå­˜æ”¾LBA28å¯»å€æ¨¡å¼ä¸­ç£ç›˜å—å·çš„8-15ä½ */
+	static const unsigned short BLKNO_PORT_3 =	0x1f5;	/* æ‰‡åŒºå·å¯„å­˜å™¨ç«¯å£(3)ï¼Œå­˜æ”¾LBA28å¯»å€æ¨¡å¼ä¸­ç£ç›˜å—å·çš„16-23ä½ */
+	static const unsigned short MODE_PORT	=	0x1f6;	/* BIT(0-3)ï¼šæ‰‡åŒºå·å¯„å­˜å™¨ç«¯å£(4)ï¼Œå­˜æ”¾LBA28å¯»å€æ¨¡å¼ä¸­ç£ç›˜å—å·çš„24-27ä½ 
+														   BIT(4-7)ï¼šATAç£ç›˜å·¥ä½œæ¨¡å¼ï¼ŒBit(7å’Œ5)ä¸º1è¡¨ç¤ºæ˜¯IDEæ¥å£ï¼ŒBit(6)ä¸º1è¡¨ç¤ºå¼€å¯LBA28æ¨¡å¼ï¼ŒBit(4)ä¸º0è¡¨ç¤ºä¸»ç›˜ã€‚*/
+	static const unsigned short CMD_PORT	=	0x1f7;	/* åªå†™ï¼šå‘½ä»¤å¯„å­˜å™¨ç«¯å£ */
+	static const unsigned short STATUS_PORT	=	0x1f7;	/* åªè¯»ï¼šä¸»çŠ¶æ€å¯„å­˜å™¨ç«¯å£ */
+	static const unsigned short CTRL_PORT	=	0x3f6;	/* æ§åˆ¶å¯„å­˜å™¨ç«¯å£ï¼šä¸»è¦ç”¨äºæ§åˆ¶ç£ç›˜I/Oæ“ä½œå®Œæˆåæ˜¯å¦å‘é€ä¸­æ–­ */
 	
-	/* Ö÷×´Ì¬¼Ä´æÆ÷(Ö»¶Á)±ÈÌØÎ»¶¨Òå (¶Ë¿ÚºÅ£º0x1f7) */
-	static const unsigned char HD_ERROR	= 0x01;			/* Ö´ĞĞ×î½üÒ»´Î´ÅÅÌ²Ù×÷¹ı³ÌÖĞ·¢Éú´íÎó */
-	static const unsigned char HD_DEVICE_REQUEST = 0x08;	/* ¿ØÖÆÆ÷ÒÑ¾­×¼±¸ºÃ´Ó´ÅÅÌ»º´æÇø·¢ËÍºÍ½ÓÊÕÊı¾İ */
-	static const unsigned char HD_DEVICE_FAULT = 0x20;	/* Çı¶¯Æ÷·¢ÉúĞ´¹ÊÕÏ */
-	static const unsigned char HD_DEVICE_READY = 0x40;	/* ´ÅÅÌ¿ØÖÆÆ÷ÒÑ¾­×¼±¸¾ÍĞ÷£¬¿ÉÒÔ·¢ËÍ¶Á¡¢Ğ´ÃüÁî */
-	static const unsigned char HD_DEVICE_BUSY =	0x80;	/* Çı¶¯Æ÷Ã¦£¬ÕıÔÚÖ´ĞĞÃüÁî¡£ */
+	/* ä¸»çŠ¶æ€å¯„å­˜å™¨(åªè¯»)æ¯”ç‰¹ä½å®šä¹‰ (ç«¯å£å·ï¼š0x1f7) */
+	static const unsigned char HD_ERROR	= 0x01;			/* æ‰§è¡Œæœ€è¿‘ä¸€æ¬¡ç£ç›˜æ“ä½œè¿‡ç¨‹ä¸­å‘ç”Ÿé”™è¯¯ */
+	static const unsigned char HD_DEVICE_REQUEST = 0x08;	/* æ§åˆ¶å™¨å·²ç»å‡†å¤‡å¥½ä»ç£ç›˜ç¼“å­˜åŒºå‘é€å’Œæ¥æ”¶æ•°æ® */
+	static const unsigned char HD_DEVICE_FAULT = 0x20;	/* é©±åŠ¨å™¨å‘ç”Ÿå†™æ•…éšœ */
+	static const unsigned char HD_DEVICE_READY = 0x40;	/* ç£ç›˜æ§åˆ¶å™¨å·²ç»å‡†å¤‡å°±ç»ªï¼Œå¯ä»¥å‘é€è¯»ã€å†™å‘½ä»¤ */
+	static const unsigned char HD_DEVICE_BUSY =	0x80;	/* é©±åŠ¨å™¨å¿™ï¼Œæ­£åœ¨æ‰§è¡Œå‘½ä»¤ã€‚ */
 	
-	/* ÃüÁî¼Ä´æÆ÷(Ö»Ğ´)±ÈÌØÎ»¶¨Òå (¶Ë¿ÚºÅ£º0x1f7) */
-	static const unsigned char HD_READ	= 0x20;	/* ´ÅÅÌ¶ÁÃüÁî£¬ÈçÓöµ½´íÎóÔÊĞíÖØÊÔ */
-	static const unsigned char HD_WRITE	= 0x30;	/* ´ÅÅÌĞ´ÃüÁî£¬ÈçÓöµ½´íÎóÔÊĞíÖØÊÔ */
-	static const unsigned char HD_DMA_READ = 0xC8;	/* DMA·½Ê½¶Á´ÅÅÌÃüÁî */
-	static const unsigned char HD_DMA_WRITE = 0xCA;	/* DMA·½Ê½Ğ´´ÅÅÌÃüÁî */
+	/* å‘½ä»¤å¯„å­˜å™¨(åªå†™)æ¯”ç‰¹ä½å®šä¹‰ (ç«¯å£å·ï¼š0x1f7) */
+	static const unsigned char HD_READ	= 0x20;	/* ç£ç›˜è¯»å‘½ä»¤ï¼Œå¦‚é‡åˆ°é”™è¯¯å…è®¸é‡è¯• */
+	static const unsigned char HD_WRITE	= 0x30;	/* ç£ç›˜å†™å‘½ä»¤ï¼Œå¦‚é‡åˆ°é”™è¯¯å…è®¸é‡è¯• */
+	static const unsigned char HD_DMA_READ = 0xC8;	/* DMAæ–¹å¼è¯»ç£ç›˜å‘½ä»¤ */
+	static const unsigned char HD_DMA_WRITE = 0xCA;	/* DMAæ–¹å¼å†™ç£ç›˜å‘½ä»¤ */
 	
-	/* ¹¤×÷Ä£Ê½¼Ä´æÆ÷±ÈÌØÎ»¶¨Òå (¶Ë¿ÚºÅ£º 0x1f6) */
-	static const unsigned char MODE_IDE = 0xA0;		/* ATA´ÅÅÌ¹¤×÷Ä£Ê½£¬Bit(7ºÍ5)Îª1±íÊ¾ÊÇIDE½Ó¿Ú */
-	static const unsigned char MODE_LBA28 = 0x40;	/* ATA´ÅÅÌ¹¤×÷Ä£Ê½£¬Bit(6)Îª1±íÊ¾¿ªÆôLBA28Ä£Ê½ */
+	/* å·¥ä½œæ¨¡å¼å¯„å­˜å™¨æ¯”ç‰¹ä½å®šä¹‰ (ç«¯å£å·ï¼š 0x1f6) */
+	static const unsigned char MODE_IDE = 0xA0;		/* ATAç£ç›˜å·¥ä½œæ¨¡å¼ï¼ŒBit(7å’Œ5)ä¸º1è¡¨ç¤ºæ˜¯IDEæ¥å£ */
+	static const unsigned char MODE_LBA28 = 0x40;	/* ATAç£ç›˜å·¥ä½œæ¨¡å¼ï¼ŒBit(6)ä¸º1è¡¨ç¤ºå¼€å¯LBA28æ¨¡å¼ */
 };
 
 #endif

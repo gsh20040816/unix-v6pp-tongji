@@ -3,7 +3,7 @@
 
 #include <time.h>
 
-	/* p_sigÖĞ½ÓÊÜµ½µÄĞÅºÅ¶¨Òå */
+	/* p_sigä¸­æ¥å—åˆ°çš„ä¿¡å·å®šä¹‰ */
 	#define SIGNUL  0	/* No Signal Received */
 	#define SIGHUP  1	/* Hangup (kill controlling terminal) */
 	#define SIGINT  2    /* Interrupt from keyboard */
@@ -69,15 +69,15 @@ int setgid(short gid);
 
 int setuid(short uid);
 
-int gettime(struct tms* ptms);   /* ¶ÁÏµÍ³Ê±ÖÓ */
+int gettime(struct tms* ptms);   /* è¯»ç³»ç»Ÿæ—¶é’Ÿ */
 
-/* »ñÈ¡½ø³ÌÓÃ»§Ì¬¡¢ºËĞÄÌ¬CPUÊ±¼äÆ¬Êı */
+/* è·å–è¿›ç¨‹ç”¨æˆ·æ€ã€æ ¸å¿ƒæ€CPUæ—¶é—´ç‰‡æ•° */
 int times(struct tms* ptms);
 
-/* »ñÈ¡ÏµÍ³½ø³ÌÇĞ»»´ÎÊı */
+/* è·å–ç³»ç»Ÿè¿›ç¨‹åˆ‡æ¢æ¬¡æ•° */
 int getswtch();
 
-/* ÆôÓÃÆÁÄ»µ×²¿µÄlinesĞĞÊä³öµ÷ÊÔĞÅÏ¢ */
+/* å¯ç”¨å±å¹•åº•éƒ¨çš„linesè¡Œè¾“å‡ºè°ƒè¯•ä¿¡æ¯ */
 int trace(int lines);
 
 

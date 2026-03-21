@@ -4,7 +4,7 @@
 #include "Buf.h"
 #include "Utility.h"
 
-/* ¿éÉè±¸±ídevtab¶¨Òå */
+/* å—è®¾å¤‡è¡¨devtabå®šä¹‰ */
 class Devtab
 {
 public:
@@ -21,10 +21,10 @@ public:
 };
 
 /*
- * ¿éÉè±¸»ùÀà£¬¸÷Àà¿éÉè±¸¶¼´Ó´Ë»ùÀà¼Ì³Ğ¡£
- * ÅÉÉúÀàoverride»ùÀàÖĞµÄOpen(), Close(), Strategy()º¯Êı£¬
- * ÊµÏÖ¶Ô¸÷ÖĞ¿éÉè±¸²»Í¬µÄ²Ù×÷Âß¼­¡£ÒÔ´ËÌæ´úUnix V6ÖĞ
- * Ô­¿éÉè±¸¿ª¹Ø±í(bdevsw)µÄ¹¦ÄÜ¡£
+ * å—è®¾å¤‡åŸºç±»ï¼Œå„ç±»å—è®¾å¤‡éƒ½ä»æ­¤åŸºç±»ç»§æ‰¿ã€‚
+ * æ´¾ç”Ÿç±»overrideåŸºç±»ä¸­çš„Open(), Close(), Strategy()å‡½æ•°ï¼Œ
+ * å®ç°å¯¹å„ä¸­å—è®¾å¤‡ä¸åŒçš„æ“ä½œé€»è¾‘ã€‚ä»¥æ­¤æ›¿ä»£Unix V6ä¸­
+ * åŸå—è®¾å¤‡å¼€å…³è¡¨(bdevsw)çš„åŠŸèƒ½ã€‚
  */
 class BlockDevice
 {
@@ -33,8 +33,8 @@ public:
 	BlockDevice(Devtab* tab);
 	virtual ~BlockDevice();
 	/* 
-	 * ¶¨ÒåÎªĞéº¯Êı£¬ÓÉÅÉÉúÀà½øĞĞoverrideÊµÏÖÉè±¸
-	 * ÌØ¶¨²Ù×÷¡£Õı³£Çé¿öÏÂ£¬»ùÀàÖĞº¯Êı²»Ó¦±»µ÷ÓÃµ½¡£
+	 * å®šä¹‰ä¸ºè™šå‡½æ•°ï¼Œç”±æ´¾ç”Ÿç±»è¿›è¡Œoverrideå®ç°è®¾å¤‡
+	 * ç‰¹å®šæ“ä½œã€‚æ­£å¸¸æƒ…å†µä¸‹ï¼ŒåŸºç±»ä¸­å‡½æ•°ä¸åº”è¢«è°ƒç”¨åˆ°ã€‚
 	 */
 	virtual int Open(short dev, int mode);
 	virtual int Close(short dev, int mode);
@@ -42,29 +42,29 @@ public:
 	virtual void Start();
 	
 public:
-	Devtab*	d_tab;		/* Ö¸Ïò¿éÉè±¸±íµÄÖ¸Õë */
+	Devtab*	d_tab;		/* æŒ‡å‘å—è®¾å¤‡è¡¨çš„æŒ‡é’ˆ */
 };
 
 
-/* ATA´ÅÅÌÉè±¸ÅÉÉúÀà¡£´Ó¿éÉè±¸»ùÀàBlockDevice¼Ì³Ğ¶øÀ´¡£ */
+/* ATAç£ç›˜è®¾å¤‡æ´¾ç”Ÿç±»ã€‚ä»å—è®¾å¤‡åŸºç±»BlockDeviceç»§æ‰¿è€Œæ¥ã€‚ */
 class ATABlockDevice : public BlockDevice
 {
 public:
-	static int NSECTOR;		/* ATA´ÅÅÌÉÈÇøÊı */
+	static int NSECTOR;		/* ATAç£ç›˜æ‰‡åŒºæ•° */
 
 public:
 	ATABlockDevice(Devtab* tab);
 	virtual ~ATABlockDevice();
 	/* 
-	 * Override»ùÀàBlockDeviceÖĞµÄĞéº¯Êı£¬ÊµÏÖ
-	 * ÅÉÉúÀàATABlockDeviceÌØ¶¨µÄÉè±¸²Ù×÷Âß¼­¡£
+	 * OverrideåŸºç±»BlockDeviceä¸­çš„è™šå‡½æ•°ï¼Œå®ç°
+	 * æ´¾ç”Ÿç±»ATABlockDeviceç‰¹å®šçš„è®¾å¤‡æ“ä½œé€»è¾‘ã€‚
 	 */
 	int Open(short dev, int mode);
 	int Close(short dev, int mode);
 	int Strategy(Buf* bp);
 	/* 
-	 * Æô¶¯¿éÉè±¸Ö´ĞĞI/OÇëÇó¡£´Ëº¯Êı½«ÇëÇó¿éËÍÈë
-	 * I/OÇëÇó¶ÓÁĞ£¬Èç¹ûÓ²ÅÌ¿ÕÏĞÔòÁ¢¼´½øĞĞ²Ù×÷¡£
+	 * å¯åŠ¨å—è®¾å¤‡æ‰§è¡ŒI/Oè¯·æ±‚ã€‚æ­¤å‡½æ•°å°†è¯·æ±‚å—é€å…¥
+	 * I/Oè¯·æ±‚é˜Ÿåˆ—ï¼Œå¦‚æœç¡¬ç›˜ç©ºé—²åˆ™ç«‹å³è¿›è¡Œæ“ä½œã€‚
 	 */
 	void Start();
 };

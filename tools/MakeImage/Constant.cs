@@ -6,39 +6,39 @@ namespace MakeImage
 {
     class Constant
     {
-        /* ¶¨ÒåÒ»Ð©³£Á¿ */
+        /* å®šä¹‰ä¸€äº›å¸¸é‡ */
         
-        /* ×Ö·û¿é´óÐ¡ */
+        /* å­—ç¬¦å—å¤§å° */
         public static int BLOCK_SIZE = 512;
 
-        /* ¶¨ÒåSuperBlockÎ»ÓÚ´ÅÅÌÉÏµÄÉÈÇøºÅ£¬Õ¼¾Ý100£¬101Á½¸öÉÈÇø¡£ */
+        /* å®šä¹‰SuperBlockä½äºŽç£ç›˜ä¸Šçš„æ‰‡åŒºå·ï¼Œå æ®100ï¼Œ101ä¸¤ä¸ªæ‰‡åŒºã€‚ */
         public static int SUPER_BLOCK_SECTOR_NUMBER = 200;
 
-        /* ÎÄ¼þÏµÍ³¸ùÄ¿Â¼Íâ´æInode±àºÅ */
+        /* æ–‡ä»¶ç³»ç»Ÿæ ¹ç›®å½•å¤–å­˜Inodeç¼–å· */
         public static int ROOTINO = 0;
 
-        /* Íâ´æINode¶ÔÏó³¤¶ÈÎª64×Ö½Ú£¬Ã¿¸ö´ÅÅÌ¿é¿ÉÒÔ´æ·Å512/64 = 8¸öÍâ´æInode */
+        /* å¤–å­˜INodeå¯¹è±¡é•¿åº¦ä¸º64å­—èŠ‚ï¼Œæ¯ä¸ªç£ç›˜å—å¯ä»¥å­˜æ”¾512/64 = 8ä¸ªå¤–å­˜Inode */
         public static int INODE_NUMBER_PER_SECTOR = 8;
 
-        /* Íâ´æInodeÇøÎ»ÓÚ´ÅÅÌÉÏµÄÆðÊ¼ÉÈÇøºÅ */
+        /* å¤–å­˜InodeåŒºä½äºŽç£ç›˜ä¸Šçš„èµ·å§‹æ‰‡åŒºå· */
         public static int INODE_ZONE_START_SECTOR = 202;
 
-	    /* ´ÅÅÌÉÏÍâ´æInodeÇøÕ¼¾ÝµÄÉÈÇøÊý */
+	    /* ç£ç›˜ä¸Šå¤–å­˜InodeåŒºå æ®çš„æ‰‡åŒºæ•° */
         public static int INODE_ZONE_SIZE = 1024 - 202;
 
-        /* Êý¾ÝÇøµÄÆðÊ¼ÉÈÇøºÅ */
+        /* æ•°æ®åŒºçš„èµ·å§‹æ‰‡åŒºå· */
 	    public static int DATA_ZONE_START_SECTOR = 1024;
 
-        /* C.imgÉÈÇø×ÜÊý */
+        /* C.imgæ‰‡åŒºæ€»æ•° */
         public static int NSECTOR = 20160;
 
         /* exe Start Block */
         public static int EXEBLOCK = 19000;
 
-	    /* Êý¾ÝÇøµÄ½áÊøÉÈÇøºÅ */
+	    /* æ•°æ®åŒºçš„ç»“æŸæ‰‡åŒºå· */
         public static int DATA_ZONE_END_SECTOR = 18000 - 1;
 
-        /* Êý¾ÝÇøÕ¼¾ÝµÄÉÈÇøÊýÁ¿ */
+        /* æ•°æ®åŒºå æ®çš„æ‰‡åŒºæ•°é‡ */
         public static int DATA_ZONE_SIZE = 18000 - DATA_ZONE_START_SECTOR;
     }
 }

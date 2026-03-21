@@ -168,8 +168,8 @@ int CreateTableNode( int stArg, int edArg, int midArg, int params)
 	return nodeNumber;
 }
 
-/* ·µ»Ø-1±íÊ¾Ê§°Ü»òÕß²»ÄÜ½¨Á¢ */
-/* ËùÒÔÔÚÖ´ĞĞÃüÁîÊ÷Ê±ĞèÒª¼ì²é½ÚµãÊÇ·ñÎª-1 */
+/* è¿”å›-1è¡¨ç¤ºå¤±è´¥æˆ–è€…ä¸èƒ½å»ºç«‹ */
+/* æ‰€ä»¥åœ¨æ‰§è¡Œå‘½ä»¤æ ‘æ—¶éœ€è¦æ£€æŸ¥èŠ‚ç‚¹æ˜¯å¦ä¸º-1 */
 int AnalizeCommand( int stArg, int edArg, int params)
 {
 	int curArg;

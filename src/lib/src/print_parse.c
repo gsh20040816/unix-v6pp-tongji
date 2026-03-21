@@ -6,7 +6,7 @@
 #include <ctype.h>
 #endif
 
-int find_spec( struct print_spec* spec) /* Ñ°ÕÒÏÂÒ»¸öspecµÄ¿ªÊ¼×Ö·û */
+int find_spec( struct print_spec* spec) /* å¯»æ‰¾ä¸‹ä¸€ä¸ªspecçš„å¼€å§‹å­—ç¬¦ */
 {
     char* pf = spec->end_fmt;
     while ( *pf != 0 && *pf != '%' )

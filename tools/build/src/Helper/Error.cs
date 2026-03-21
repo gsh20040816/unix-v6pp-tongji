@@ -3,7 +3,7 @@ using System;
 namespace Build
 {
 	/// <summary>
-	/// error µÄÕªÒªËµÃ÷¡£
+	/// error çš„æ‘˜è¦è¯´æ˜ã€‚
 	/// </summary>
 	public class Error
 	{
@@ -11,23 +11,23 @@ namespace Build
 
 		public const int SUCCESS = 0;
 		/// <summary>
-		/// ¿ÕÏĞ¿éÏûºÄÍê
+		/// ç©ºé—²å—æ¶ˆè€—å®Œ
 		/// </summary>
 		public const int DATABLOCKOVERFLOW = 1;
 		/// <summary>
-		/// inodeÏûºÄÍê
+		/// inodeæ¶ˆè€—å®Œ
 		/// </summary>
 		public const int INODEOVERFLOW = 2;
 		/// <summary>
-		/// Ğ´ÈëÎÄ¼şÊ±£¬´ò¿ªÔ´ÎÄ¼ş´íÎó
+		/// å†™å…¥æ–‡ä»¶æ—¶ï¼Œæ‰“å¼€æºæ–‡ä»¶é”™è¯¯
 		/// </summary>
 		public const int ORIGFILEERROR = 3;
 		/// <summary>
-		/// ËÑË÷Ä¿Â¼Ê±£¬Ã»ÓĞËÑË÷µ½Ä¿Â¼Ïî
+		/// æœç´¢ç›®å½•æ—¶ï¼Œæ²¡æœ‰æœç´¢åˆ°ç›®å½•é¡¹
 		/// </summary>
 		public const int SEARCHDIR = 4;
 		/// <summary>
-		/// Í¬Ò»Ä¿Â¼ÏÂµÄÎÄ¼şÃûÏàÍ¬
+		/// åŒä¸€ç›®å½•ä¸‹çš„æ–‡ä»¶åç›¸åŒ
 		/// </summary>
 		public const int SAMEFILENAME = 5;
 

@@ -2,21 +2,21 @@
 #define	PREEXECUTE_H
 
 /* 
-* ¹¦ÄÜ£º½«ÊäÈëÃüÁî·Ö³Étoken, ²¢½«Î»ÖÃËÍµ½argsÊý×éÖÐ
-* ²ÎÊý£ºinputÊäÈë×Ö·û´®
-* ·µ»Ø£º·ÖÎö³ö²ÎÊýµÄ¸öÊý
+* åŠŸèƒ½ï¼šå°†è¾“å…¥å‘½ä»¤åˆ†æˆtoken, å¹¶å°†ä½ç½®é€åˆ°argsæ•°ç»„ä¸­
+* å‚æ•°ï¼šinputè¾“å…¥å­—ç¬¦ä¸²
+* è¿”å›žï¼šåˆ†æžå‡ºå‚æ•°çš„ä¸ªæ•°
 */
 int SpiltCommand( char* input );
 /*
-* ¹¦ÄÜ£ºµÃµ½ÏÂÒ»¸ötokenµÄµØÖ·
-* ²ÎÊý£ºinputÊäÈë×Ö·û´®
-* ·µ»Ø£ºÏÂÒ»¸ökeytokenµÄµØÖ·
+* åŠŸèƒ½ï¼šå¾—åˆ°ä¸‹ä¸€ä¸ªtokençš„åœ°å€
+* å‚æ•°ï¼šinputè¾“å…¥å­—ç¬¦ä¸²
+* è¿”å›žï¼šä¸‹ä¸€ä¸ªkeytokençš„åœ°å€
 */
 char* NextKeyToken(char* input);
 /*
-* ¹¦ÄÜ£ºÉ¾³ýÊäÈë×Ö·û´®×ó±ß¶àÓà¿Õ¸ñ
-* ²ÎÊý£ºtpÊäÈë×Ö·û´®
-* ·µ»Ø£º½á¹û×Ö·û´®
+* åŠŸèƒ½ï¼šåˆ é™¤è¾“å…¥å­—ç¬¦ä¸²å·¦è¾¹å¤šä½™ç©ºæ ¼
+* å‚æ•°ï¼štpè¾“å…¥å­—ç¬¦ä¸²
+* è¿”å›žï¼šç»“æžœå­—ç¬¦ä¸²
 */
 char* TrimLeft( char* tp );
 

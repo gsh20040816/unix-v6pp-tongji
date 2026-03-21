@@ -3,17 +3,17 @@ using System;
 namespace Build
 {
 	/// <summary>
-	/// devfile µÄÕªÒªËµÃ÷¡£
+	/// devfile çš„æ‘˜è¦è¯´æ˜ã€‚
 	/// </summary>
 	public class DevFile : File
 	{
 		/// <summary>
-		/// Éè±¸ÖÖÀà
+		/// è®¾å¤‡ç§ç±»
 		/// </summary>
 		private string _devType;
 
         /// <summary>
-        /// ¹¹Ôìº¯Êı
+        /// æ„é€ å‡½æ•°
         /// </summary>
         /// <param name="tsb"></param>
         /// <param name="tid"></param>
@@ -28,7 +28,7 @@ namespace Build
         }
 
         /// <summary>
-        /// ÉèÖÃÎÄ¼şµÄinodeÄÚÈİ
+        /// è®¾ç½®æ–‡ä»¶çš„inodeå†…å®¹
         /// </summary>
 		protected override void SetCommonFileInode()
 		{

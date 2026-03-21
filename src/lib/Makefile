@@ -2,14 +2,14 @@
 # Makefile for Unix V6++ Mini Clib.
 #
 
-#命令定义
+#鍛戒护瀹氫箟
 CC = gcc
 LD = ld
 
-#参数定义
+#鍙傛暟瀹氫箟
 CFLAGS = -w -O0 -g -nostdlib -nostdinc -nostartfiles -fno-builtin -fno-exceptions -I"$(SRC)"
 
-#目录定义
+#鐩綍瀹氫箟
 TARGET = .\objs
 INCLUDE = .\include
 SRC = .\src
@@ -72,7 +72,7 @@ clean:
 	del Lib_V6++.a
 	
 	
-#默认编译规则
+#榛樿缂栬瘧瑙勫垯
 .c.s:
 	$(CC) $(CFLAGS) \
 	-S -o $*.s $<

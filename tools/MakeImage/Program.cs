@@ -10,9 +10,9 @@ namespace MakeImage
         static string FILE_NOT_EXISTED_PATTERN = "{0} not exist!";
         static void Main(string[] args)
         {
-            /* ×¢ÊÍµôarg[]Ïà¹Ø´úÂë£¬ÎªÁË±ãÓÚF5Ö±½Óµ÷ÊÔ£¬
-             * ¶ø²»ÓÃdeploy.bat¡£boot.bin£¬kernel.bin£¬c.img
-             * Ö±½Ó·ÅÔÚÏîÄ¿µÄDebug\Ä¿Â¼ÏÂ¡£
+            /* æ³¨é‡Šæ‰arg[]ç›¸å…³ä»£ç ï¼Œä¸ºäº†ä¾¿äºF5ç›´æ¥è°ƒè¯•ï¼Œ
+             * è€Œä¸ç”¨deploy.batã€‚boot.binï¼Œkernel.binï¼Œc.img
+             * ç›´æ¥æ”¾åœ¨é¡¹ç›®çš„Debug\ç›®å½•ä¸‹ã€‚
             if (args.Length < 2)
             {
                 PrintUsage();
@@ -51,22 +51,22 @@ namespace MakeImage
                 byte[] buffer = new byte[fsRead.Length];
                 fsRead.Read(buffer, 0, buffer.Length);
 
-                //Ğ´Èë´ÅÅÌ¾µÏñ
+                //å†™å…¥ç£ç›˜é•œåƒ
                 fs.Write(buffer, 0, buffer.Length);
 
                 fsRead.Close();
             }
 
 
-            byte[] exeInfo = new byte[Constant.BLOCK_SIZE]; /*  ×÷Îª19000#ÉÈÇø */
+            byte[] exeInfo = new byte[Constant.BLOCK_SIZE]; /*  ä½œä¸º19000#æ‰‡åŒº */
 
-            /* ×¢Òâc.imgÖĞ18000#ÉÈÇø¿ªÊ¼Îª½»»»Çø!
+            /* æ³¨æ„c.imgä¸­18000#æ‰‡åŒºå¼€å§‹ä¸ºäº¤æ¢åŒº!
              * 
-             * ½«²ÎÊıargÖĞÃ¿Ò»¸ö*.exeÎÄ¼şµÄÆğÊ¼ÉÈÇø¼ÇÂ¼ÔÚ19000#ÉÈÇøÖĞ£¬
-             * exeµÄÊı¾İ´Ó19001#¿ªÊ¼´æ·Å!
+             * å°†å‚æ•°argä¸­æ¯ä¸€ä¸ª*.exeæ–‡ä»¶çš„èµ·å§‹æ‰‡åŒºè®°å½•åœ¨19000#æ‰‡åŒºä¸­ï¼Œ
+             * exeçš„æ•°æ®ä»19001#å¼€å§‹å­˜æ”¾!
              * 
-             * ½«peProgram.exeĞ´Èëc.imgµÄEXEBLOCK = 19001#¼°ºóĞøÉÈÇøÖĞ£¬
-             * ÓÃ´Ë·½·¨½«Íâ²¿exeÎÄ¼ş·ÅÈëc.img!! ÄÚºËÔÚÖ¸¶¨ÉÈÇøÎ»ÖÃÉÏ¶ÁÈ¡peProgram.exe¡£
+             * å°†peProgram.exeå†™å…¥c.imgçš„EXEBLOCK = 19001#åŠåç»­æ‰‡åŒºä¸­ï¼Œ
+             * ç”¨æ­¤æ–¹æ³•å°†å¤–éƒ¨exeæ–‡ä»¶æ”¾å…¥c.img!! å†…æ ¸åœ¨æŒ‡å®šæ‰‡åŒºä½ç½®ä¸Šè¯»å–peProgram.exeã€‚
              */
             long offset = 1;
             for (int i = 2, j = 0; i < files.Length; i++ )
@@ -75,7 +75,7 @@ namespace MakeImage
                 byte[] peBuffer = new byte[fsPERead.Length];
                 fsPERead.Read(peBuffer, 0, peBuffer.Length);
 
-                //peProgram.exeĞ´Èëc.imgÖĞ19000# Sector
+                //peProgram.exeå†™å…¥c.imgä¸­19000# Sector
                 fs.Seek(Constant.BLOCK_SIZE * (Constant.EXEBLOCK + offset), SeekOrigin.Begin);
                 fs.Write(peBuffer, 0, peBuffer.Length);
 
@@ -84,7 +84,7 @@ namespace MakeImage
                 Tool.WriteInt((int)fsPERead.Length, ref exeInfo, j);
                 j += sizeof(int);
 
-                /* ¼ÆËã±¾´ÎexeÎÄ¼şĞ´ÈëÕ¼ÓÃÁË¶àÉÙÕûÊı¸ö´ÅÅÌ¿é */
+                /* è®¡ç®—æœ¬æ¬¡exeæ–‡ä»¶å†™å…¥å ç”¨äº†å¤šå°‘æ•´æ•°ä¸ªç£ç›˜å— */
                 offset += (fsPERead.Length + (Constant.BLOCK_SIZE - 1)) / Constant.BLOCK_SIZE;
                 fsPERead.Close();
             }
@@ -94,17 +94,17 @@ namespace MakeImage
 
 
             /**********************************************/
-            /*  ÏÂÃæ½øĞĞ¹¹½¨Unix V6ÎÄ¼şÏµÍ³¸ñÊ½µÄC.img    */
+            /*  ä¸‹é¢è¿›è¡Œæ„å»ºUnix V6æ–‡ä»¶ç³»ç»Ÿæ ¼å¼çš„C.img    */
             /**********************************************/
             Tool.Init(diskFilePath);
 
             SuperBlock spb = new SuperBlock();
 
             DataBlockManager blkMgr = new DataBlockManager(ref spb);
-            /* ÈÏÎªÊı¾İÇøÖĞËùÓĞÅÌ¿é½ÔÎª¿ÕÏĞ£¬¹¹½¨"Õ»µÄÕ»" */
+            /* è®¤ä¸ºæ•°æ®åŒºä¸­æ‰€æœ‰ç›˜å—çš†ä¸ºç©ºé—²ï¼Œæ„å»º"æ ˆçš„æ ˆ" */
             blkMgr.FreeAllBlock();
 
-            /* ½«ĞŞ¸ÄºóµÄspb¸üĞÂµ½c.img */
+            /* å°†ä¿®æ”¹åçš„spbæ›´æ–°åˆ°c.img */
             spb.Update();
 
             Tool.imgfs.Close();

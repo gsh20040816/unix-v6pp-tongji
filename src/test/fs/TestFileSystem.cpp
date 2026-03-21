@@ -50,8 +50,8 @@ void LoadSuperBlock()
 
 void MakeFS()
 {
-	/* ËµÃ÷:
-	 * c.imgÉÈÇøÇøÓò»®·Ö£¬³£Á¿¶¨ÒåÔÚFileSystemÀàÖĞ£¬ÉÈÇøºÅ 0 ~ 20,159 ¡£
+	/* è¯´æ˜:
+	 * c.imgæ‰‡åŒºåŒºåŸŸåˆ’åˆ†ï¼Œå¸¸é‡å®šä¹‰åœ¨FileSystemç±»ä¸­ï¼Œæ‰‡åŒºå· 0 ~ 20,159 ã€‚
 	 * (0 - 99) (100, 101) (102 - 1023) (1024 - 20,159)
 	 * (boot & kernel) (SuperBlock) (DiskInode Zone) (Data Zone)
 	 */
@@ -71,8 +71,8 @@ void MakeFS()
 	spb.padding[46] = 0x473C2B1A;
 	
 	/* 
-	 * ¶ÔÊı¾İÇø( 1024 <= blkno < 18000 )ÖĞÃ¿¸öÉÈÇø£¬Free(dev, blkno)Ò»ÏÂ£¬
-	 * ¼´¿É½«ËùÓĞfree block°´ÕÕ"Õ»µÄÕ»"·½Ê½×éÖ¯ÆğÀ´¡£
+	 * å¯¹æ•°æ®åŒº( 1024 <= blkno < 18000 )ä¸­æ¯ä¸ªæ‰‡åŒºï¼ŒFree(dev, blkno)ä¸€ä¸‹ï¼Œ
+	 * å³å¯å°†æ‰€æœ‰free blockæŒ‰ç…§"æ ˆçš„æ ˆ"æ–¹å¼ç»„ç»‡èµ·æ¥ã€‚
 	 */
 	for(int blkno = FileSystem::DATA_ZONE_END_SECTOR; blkno >= FileSystem::DATA_ZONE_START_SECTOR; --blkno)
 	{
@@ -92,7 +92,7 @@ void MakeFS()
 	/* 0# DiskInode permanently for root dir */
 	spb.s_inode[spb.s_ninode++] = 0;
 
-	/****************** ½«0# DiskInode·ÖÅä×ö¸ùÄ¿Â¼µÄDiskInode ******************/
+	/****************** å°†0# DiskInodeåˆ†é…åšæ ¹ç›®å½•çš„DiskInode ******************/
     Inode* pNode = filesys.IAlloc(DeviceManager::ROOTDEV);
 
     User& u = Kernel::Instance().GetUser();
@@ -102,10 +102,10 @@ void MakeFS()
     pNode->i_uid = u.u_uid;
     pNode->i_gid = u.u_gid;
 
-    g_InodeTable.IPut(pNode);	/* ½«rootDir DiskInodeĞ´Èë´ÅÅÌ */
-	/****************** ½«0# DiskInode·ÖÅä×ö¸ùÄ¿Â¼µÄDiskInode ******************/
+    g_InodeTable.IPut(pNode);	/* å°†rootDir DiskInodeå†™å…¥ç£ç›˜ */
+	/****************** å°†0# DiskInodeåˆ†é…åšæ ¹ç›®å½•çš„DiskInode ******************/
 	
-	/* ½«SuperBlockĞ´µ½c.imgÖĞÈ¥ */
+	/* å°†SuperBlockå†™åˆ°c.imgä¸­å» */
 	spb.s_fmod = 1;
 	filesys.Update();
 	
@@ -125,7 +125,7 @@ void InitTTyInode()
 		Diagnose::Write("user error = %d \n", u.u_error);
 		while(true);
 	}
-	/* tty1±¾Éí¾Í²»´æÔÚ£¬NameIÏÔÈ»·µ»ØNULL£¬µ÷ÓÃMakNode´´½¨tty1 */
+	/* tty1æœ¬èº«å°±ä¸å­˜åœ¨ï¼ŒNameIæ˜¾ç„¶è¿”å›NULLï¼Œè°ƒç”¨MakNodeåˆ›å»ºtty1 */
 	if ( NULL == pInode )
 	{
 		pInode = fileMgr.MakNode(0x1FF);	/* rwxrwxrwx */
@@ -145,16 +145,16 @@ void InitTTyInode()
 			/* Print tty1 Inode */
 			PrintInode("tty1", pInode);
 
-			pInode->Prele(); /* IPut(pInode)Ğ§¹ûµÈÍ¬ */
+			pInode->Prele(); /* IPut(pInode)æ•ˆæœç­‰åŒ */
 
 			Diagnose::Write("Create /file1 succeed! \n");
 		}
-	}/* ÖÁ´Ë£¬´´½¨tty1³É¹¦! */
+	}/* è‡³æ­¤ï¼Œåˆ›å»ºtty1æˆåŠŸ! */
 
 	Kernel::Instance().GetFileSystem().Update();
 }
 
-/* Ïà¶ÔÓÚMakeFS()µÄÄæ¹ı³Ì£¬µ«±¾º¯Êı²»½«superblockĞ´»Øc.img£¬½öÎª²âÊÔÄ¿µÄ¡£ */
+/* ç›¸å¯¹äºMakeFS()çš„é€†è¿‡ç¨‹ï¼Œä½†æœ¬å‡½æ•°ä¸å°†superblockå†™å›c.imgï¼Œä»…ä¸ºæµ‹è¯•ç›®çš„ã€‚ */
 bool AllocAllBlock()
 {
 	FileSystem& filesys = Kernel::Instance().GetFileSystem();
@@ -168,14 +168,14 @@ bool AllocAllBlock()
 		Diagnose::Write("blkno Allocated = %d\n", pBuf->b_blkno);
 		
 		/* 
-		 * ÓÉÓÚAlloc()»áµ÷ÓÃGetBlk()£¬Èç¹û²»Brelse()£¬
-		 * »áºÜ¿ì½«NBUF¸öBufºÄ¾¡... :(
+		 * ç”±äºAlloc()ä¼šè°ƒç”¨GetBlk()ï¼Œå¦‚æœä¸Brelse()ï¼Œ
+		 * ä¼šå¾ˆå¿«å°†NBUFä¸ªBufè€—å°½... :(
 		 */
 		bufMgr.Brelse(pBuf);
 
 		if( i + FileSystem::DATA_ZONE_START_SECTOR != pBuf->b_blkno)
 		{
-			/* ·ÖÅäµ½µÄ×Ö·û¿éºÅ(orÉÈÇøºÅ)Ó¦¸ÃÊÇ1024, 1025, 1026, ... , 20,159ÕâÑù¡£ */
+			/* åˆ†é…åˆ°çš„å­—ç¬¦å—å·(oræ‰‡åŒºå·)åº”è¯¥æ˜¯1024, 1025, 1026, ... , 20,159è¿™æ ·ã€‚ */
 			Diagnose::Write("Test Failed in AllocAllBlock()!\n");
 			while(1);
 			return false;
@@ -190,9 +190,9 @@ bool IAllocTest()
 	Inode* pNode;
 	FileSystem& filesys = Kernel::Instance().GetFileSystem();
 
-	/* IAlloc()Ö´ĞĞ10´Î£¬´óÓÚÏÈÇ°³õÊ¼»¯spbÖ±½Ó¹ÜÀíµÄDiskInodeÊıÁ¿count¸ö£¬
-	 * IAlloc()»áÖØĞÂÊÕ¼¯Âú100¸öInode£¬²¢ÇÒ²»»á½«ÒÑIAlloc()³öÈ¥µÄ0# DiskInode
-	 * ÊÕ¼¯½øÀ´¡£
+	/* IAlloc()æ‰§è¡Œ10æ¬¡ï¼Œå¤§äºå…ˆå‰åˆå§‹åŒ–spbç›´æ¥ç®¡ç†çš„DiskInodeæ•°é‡countä¸ªï¼Œ
+	 * IAlloc()ä¼šé‡æ–°æ”¶é›†æ»¡100ä¸ªInodeï¼Œå¹¶ä¸”ä¸ä¼šå°†å·²IAlloc()å‡ºå»çš„0# DiskInode
+	 * æ”¶é›†è¿›æ¥ã€‚
 	 */
 	for( int i = 0; i < 10; i++ )
 	{
@@ -204,7 +204,7 @@ bool IAllocTest()
 		Delay();
 	}
 	
-	/* ´ÓÕâÒ»ĞĞÊä³ö¿ÉÒÔ¿´³öÒÑ·ÖÅä³öÈ¥µÄ0# InodeÈ·ÊµÃ»ÓĞ±»IAlloc()½øspb.s_Inode[] */
+	/* ä»è¿™ä¸€è¡Œè¾“å‡ºå¯ä»¥çœ‹å‡ºå·²åˆ†é…å‡ºå»çš„0# Inodeç¡®å®æ²¡æœ‰è¢«IAlloc()è¿›spb.s_Inode[] */
 	Diagnose::Write("spb.s_Inode[0] = %d, spb.s_Inode[%d] = [%d]\n", spb.s_inode[0], spb.s_ninode-1, spb.s_inode[spb.s_ninode-1]);
 	Delay();
 	
@@ -219,16 +219,16 @@ bool NameIandMakNodeTest()
 	Inode* pInode;
 	int parentDirSize = 0;
 
-	/* u.u_dirpÖ¸ÏòÒªËÑË÷µÄÂ·¾¶char* pathname£¬¶ÔÓÚopen(),creat()ÏµÍ³µ÷ÓÃ
-	 * u.u_dirpÖµÔÚSystemCall::Trap()ÖĞ³õÊ¼»¯£¬ÕâÀïĞ´Test caseĞèÒªÊÖ¹¤½øĞĞ£¬
-	 * ÒÔCREATE·½Ê½½øĞĞNameI()¡£
+	/* u.u_dirpæŒ‡å‘è¦æœç´¢çš„è·¯å¾„char* pathnameï¼Œå¯¹äºopen(),creat()ç³»ç»Ÿè°ƒç”¨
+	 * u.u_dirpå€¼åœ¨SystemCall::Trap()ä¸­åˆå§‹åŒ–ï¼Œè¿™é‡Œå†™Test caseéœ€è¦æ‰‹å·¥è¿›è¡Œï¼Œ
+	 * ä»¥CREATEæ–¹å¼è¿›è¡ŒNameI()ã€‚
 	 */
 
 	//Case 1: Open non-exist file --> Create non-exist file --> Open exist file
 	char* filePath1 = "/testfile1";	
 	u.u_dirp = filePath1;
 	u.u_error = User::NOERROR;
-	/* ²éÕÒ²»´æÔÚµÄ/testfile1£¬NameI()·µ»ØNULL */
+	/* æŸ¥æ‰¾ä¸å­˜åœ¨çš„/testfile1ï¼ŒNameI()è¿”å›NULL */
 	pInode = fileMgr.NameI(FileManager::NextChar, FileManager::OPEN);
 	PrintResult(
 		"NameITest 1-1",
@@ -242,7 +242,7 @@ bool NameIandMakNodeTest()
 		"NameITest 1-2",
 		User::NOERROR == u.u_error && NULL == pInode
 		);
-	/* MakNode()ºó±ØĞë½âËø/testfile1µÄInode,·ñÔòÒÔºóNameI()ÖĞ½«ÎŞ·¨IGet()´ËInode! */
+	/* MakNode()åå¿…é¡»è§£é”/testfile1çš„Inode,å¦åˆ™ä»¥åNameI()ä¸­å°†æ— æ³•IGet()æ­¤Inode! */
 	parentDirSize = u.u_pdir->i_size;
 	pInode = fileMgr.MakNode(Inode::IRWXU | Inode::IRWXG | Inode::IRWXO);	/* rwxrwxrwx */
 	PrintResult(
@@ -273,7 +273,7 @@ bool NameIandMakNodeTest()
 
 
 	//Case 2: Open non-exist file in non-exist folder --> Create non-exist file in non-exist folder
-	/* NameI()ÎŞ·¨Ò»´ÎĞÔ½¨Á¢ÉîÄ¿Â¼²ã´ÎµÄÎÄ¼ş£¬Ö»ÄÜ¶à´Îµ÷ÓÃÖğ²ã½¨Á¢Ä¿Â¼½á¹¹£¬×îºó´´½¨ÎÄ¼ş */
+	/* NameI()æ— æ³•ä¸€æ¬¡æ€§å»ºç«‹æ·±ç›®å½•å±‚æ¬¡çš„æ–‡ä»¶ï¼Œåªèƒ½å¤šæ¬¡è°ƒç”¨é€å±‚å»ºç«‹ç›®å½•ç»“æ„ï¼Œæœ€ååˆ›å»ºæ–‡ä»¶ */
 	char* filePath2 = "/nonexist/testfile2";
 	u.u_dirp = filePath2;
 	u.u_error = User::NOERROR;
@@ -339,10 +339,10 @@ bool NameIandMakNodeTest()
 		);
 	pInode->Prele();
 
-	/* ¶ÔÄÚ´æInodeµÄĞŞ¸ÄĞ´»Øc.img */
+	/* å¯¹å†…å­˜Inodeçš„ä¿®æ”¹å†™å›c.img */
 	fileMgr.m_FileSystem->Update();
-	/* MakNode()->WriteDir()->WriteI()ÖĞ°ÑÎ´Âú512×Ö½ÚµÄÅÌ¿é±ê¼Ç"ÑÓ³ÙĞ´"£¬
-	 * ËùÒÔÕâÀïĞèÒª°ÑÑÓ³ÙÅÌ¿éĞ´Èëc.img£¬×¢ÒâÊÇROOTDEV£¬¶øUpdate()ÖĞÊÇNODEV¡£
+	/* MakNode()->WriteDir()->WriteI()ä¸­æŠŠæœªæ»¡512å­—èŠ‚çš„ç›˜å—æ ‡è®°"å»¶è¿Ÿå†™"ï¼Œ
+	 * æ‰€ä»¥è¿™é‡Œéœ€è¦æŠŠå»¶è¿Ÿç›˜å—å†™å…¥c.imgï¼Œæ³¨æ„æ˜¯ROOTDEVï¼Œè€ŒUpdate()ä¸­æ˜¯NODEVã€‚
 	 */
 	Kernel::Instance().GetBufferManager().Bflush(DeviceManager::ROOTDEV);
 	return true;
@@ -354,7 +354,7 @@ bool NameITest()
 	FileManager& fileMgr = Kernel::Instance().GetFileManager();
 	Inode* pInode;
 
-	/* ÒªËÑË÷µÄpathname£¬ÒÔcreate·½Ê½½øĞĞNameI() */
+	/* è¦æœç´¢çš„pathnameï¼Œä»¥createæ–¹å¼è¿›è¡ŒNameI() */
 	u.u_dirp = "/file1";
 	pInode = fileMgr.NameI(FileManager::NextChar, FileManager::CREATE);
 	if (u.u_error != User::NOERROR)
@@ -362,7 +362,7 @@ bool NameITest()
 		Diagnose::Write("user error = %d \n", u.u_error);
 		while(true);
 	}
-	/* file1±¾Éí¾Í²»´æÔÚ£¬NameIÏÔÈ»·µ»ØNULL£¬µ÷ÓÃMakNode´´½¨file1 */
+	/* file1æœ¬èº«å°±ä¸å­˜åœ¨ï¼ŒNameIæ˜¾ç„¶è¿”å›NULLï¼Œè°ƒç”¨MakNodeåˆ›å»ºfile1 */
 	if ( NULL == pInode )
 	{
 		pInode = fileMgr.MakNode(0x1FF);
@@ -377,14 +377,14 @@ bool NameITest()
 			/* Print file1 Inode */
 			PrintInode("pInode", pInode);
 
-			/* ±ØĞëUnlock file1 Inode!!! ·ñÔòÒÔºóNameI()ÖĞ½«ÎŞ·¨IGet() file1 Inode */
-			pInode->Prele(); /* IPut(pInode)Ğ§¹ûµÈÍ¬ */
+			/* å¿…é¡»Unlock file1 Inode!!! å¦åˆ™ä»¥åNameI()ä¸­å°†æ— æ³•IGet() file1 Inode */
+			pInode->Prele(); /* IPut(pInode)æ•ˆæœç­‰åŒ */
 
 			Diagnose::Write("Create /file1 succeed! \n");
 		}
-	}/* ÖÁ´Ë£¬´´½¨file1³É¹¦! */
+	}/* è‡³æ­¤ï¼Œåˆ›å»ºfile1æˆåŠŸ! */
 
-	/* ÒªËÑË÷µÄÂ·¾¶ */
+	/* è¦æœç´¢çš„è·¯å¾„ */
 	u.u_dirp = "/fileX";
 	pInode = fileMgr.NameI(FileManager::NextChar, FileManager::OPEN);
 	/* Obviously it will fail! */
@@ -398,7 +398,7 @@ bool NameITest()
 		while(true);
 	}
 
-	/* u_errorÒ»¶¨ÒªÇåÁã£¬·ñÔòÇ°Ò»´ÎNameI()µÄÊ§°Ü»áµ¼ÖÂËÑË÷file1Ò²Ê§°Ü */
+	/* u_errorä¸€å®šè¦æ¸…é›¶ï¼Œå¦åˆ™å‰ä¸€æ¬¡NameI()çš„å¤±è´¥ä¼šå¯¼è‡´æœç´¢file1ä¹Ÿå¤±è´¥ */
 	u.u_error = User::NOERROR;
 	u.u_dirp = "/file1";
 	pInode = fileMgr.NameI(FileManager::NextChar, FileManager::OPEN);
@@ -417,9 +417,9 @@ bool NameITest()
 	/* Disable Output!!! */
 	Diagnose::TraceOff();
 
-	/* ¶ÔÄÚ´æInodeµÄĞŞ¸ÄĞ´»Øc.img */
+	/* å¯¹å†…å­˜Inodeçš„ä¿®æ”¹å†™å›c.img */
 	fileMgr.m_FileSystem->Update();
-	/* MakNode()->WriteDir()->WriteI()ÖĞ°ÑÎ´Âú512×Ö½ÚµÄÅÌ¿é±ê¼Ç"ÑÓ³ÙĞ´"£¬ËùÒÔÕâÀïĞèÒª°ÑÑÓ³ÙÅÌ¿éĞ´Èëc.img */
+	/* MakNode()->WriteDir()->WriteI()ä¸­æŠŠæœªæ»¡512å­—èŠ‚çš„ç›˜å—æ ‡è®°"å»¶è¿Ÿå†™"ï¼Œæ‰€ä»¥è¿™é‡Œéœ€è¦æŠŠå»¶è¿Ÿç›˜å—å†™å…¥c.img */
 	Kernel::Instance().GetBufferManager().Bflush(DeviceManager::ROOTDEV);
 
 	Diagnose::TraceOn();

@@ -3,32 +3,32 @@ using System;
 namespace Build
 {
 	/// <summary>
-	/// ����һ��������
+	/// 这是一个操作类
 	/// </summary>
 	public class Directary
 	{
 		/// <summary>
-		/// ���������
+		/// 超级块管理
 		/// </summary>
 		private Superblock _superBlock;
 
 		/// <summary>
-		/// inode����
+		/// inode管理
 		/// </summary>
 		private InodeBlock _inode;
 
 		/// <summary>
-		/// �������ݿ����
+		/// 空闲数据块管理
 		/// </summary>
 		private DataBlock _dataBlock;
 
         /// <summary>
-        /// �����ļ�
+        /// 磁盘文件
         /// </summary>
         private Disk _diskFile;
         
         /// <summary>
-        /// ���캯��
+        /// 构造函数
         /// </summary>
         /// <param name="tsb"></param>
         /// <param name="tid"></param>
@@ -43,36 +43,36 @@ namespace Build
 		}
 
 		/// <summary>
-		/// �����ļ�ʱ��Ŀ¼����
-        /// ��������4������
-        /// ����1��Ŀ¼������ϣ�����������������1.֮ǰ����Ŀ¼�������ҵ�,2.��û�з��ϵ����һ���ļ�,3.�Ҵ����flagΪCREATFILE
-        /// ����2��Ŀ¼������ϣ�������ȫ����������������
-        /// ����3���ļ�����Ŀ¼����ϵͳ���Ѵ��ڣ��Ҵ���flagΪDELETEFILE
-        /// ����4���ļ�����Ŀ¼����ϵͳ���Ѵ��ڣ�������flag��ΪDELETEFILE
+		/// 创建文件时的目录搜索
+        /// 本函数共4个出口
+        /// 出口1：目录搜索完毕，且满足三个条件：1.之前各级目录名都能找到,2.但没有符合的最后一级文件,3.且传入的flag为CREATFILE
+        /// 出口2：目录搜索完毕，但不完全满足上述三个条件
+        /// 出口3：文件（或目录）在系统中已存在，且传入flag为DELETEFILE
+        /// 出口4：文件（或目录）在系统中已存在，但传入flag不为DELETEFILE
 		/// </summary>
-		/// <param name="path">�����ļ���Ŀ¼</param>
-		/// <param name="DirInodeNo">��Ŀ¼��inode��</param>
-		/// <returns>Ŀ¼���λ��</returns>
+		/// <param name="path">创建文件的目录</param>
+		/// <param name="DirInodeNo">父目录的inode号</param>
+		/// <returns>目录项的位置</returns>
 		public int NameI(string path,ref int dirInodeNo,ref InodeStr dirInode,ref int fileInodeNo,ref InodeStr fileInode,ref char[] fileName,int flag)
 		{
-            //���ڼ�¼��·���ַ�����ɨ�赽������
+            //用于记录在路径字符串中扫描到了哪里
 			int curPos = 0;
-            //���ڼ�¼inode��
+            //用于记录inode号
 			dirInodeNo = 0;
-            //���ȶ����Ŀ¼inode
+            //首先读入根目录inode
 			_inode.GetInodeFromDisk(dirInode,dirInodeNo);
 
-            //������ʼ��һ�������߶����'/'�ַ�
+            //跳过开始的一个（或者多个）'/'字符
             for (; curPos < path.Length; ++curPos)
             {
                 if (path[curPos] != '/')
                     break;
             }
 
-            //��ѭ��
+            //主循环
 			while(true)
 			{
-                //��ȡ����'/'���е����ݣ�����dirPath��
+                //获取两个'/'当中的内容，存入dirPath中
                 char[] tmp = new char[28];
 				for(int i = 0;curPos < path.Length;++curPos,++i)
 				{
@@ -82,33 +82,33 @@ namespace Build
 				}
                 tmp.CopyTo(fileName, 0);
 
-                //������һ�������߶����'/'�ַ���Ϊ��һ��ѭ��(��һ��Ŀ¼������еĻ�)��׼��
+                //跳过下一个（或者多个）'/'字符，为下一次循环(下一级目录，如果有的话)做准备
                 for (; curPos < path.Length; ++curPos)
                 {
                     if (path[curPos] != '/')
                         break;
                 }
-                //���ڴ洢ɨ�赱ǰĿ¼�ļ���ƫ����
+                //用于存储扫描当前目录文件的偏移量
 				int offset = 0;
-                //���ڼ�¼��һ������Ŀ¼���ƫ����
+                //用于记录第一个空闲目录项的偏移量
                 int firstFreeOffset=0;
-                //��¼�Ƿ��ֿ���Ŀ¼��
+                //记录是否又空闲目录项
                 int freeFlag = 0;
-				//Ŀ¼������
+				//目录项项数
 				int dirSize = dirInode._i_size / 32;
-                //���ڶ�ȡһ�����̿�
+                //用于读取一个磁盘块
 				byte[] buffer = new byte[512];
 
-				//����ѭ�����ڵ�ǰĿ¼�ļ�������
+				//（次循环）在当前目录文件中搜索
 				while(true)
 				{
-					//����1���Ե�ǰĿ¼�������(���ڲ����Ƿ���ͬ���ļ�����)
+					//出口1：对当前目录搜索完毕(用于查找是否有同名文件存在)
 					if(dirSize == 0)
 					{
-						//����ǰĿ¼���������(û���ҵ���Ӧ��)����ֻ��·���������һ��û���ҵ�(Ҫ�������ļ���)���򴴽��ļ�
+						//若当前目录索搜索完毕(没有找到相应项)，且只是路径名的最后一段没有找到(要创建的文件名)，则创建文件
 						if(flag == File.CREATFILE && curPos == path.Length)
 						{
-							//�·���һ��inode���ƿ飬���ظ�inode��
+							//新分配一个inode控制块，返回该inode号
                             try
                             {
                                 fileInodeNo = _inode.FetchFreeInode();
@@ -117,15 +117,15 @@ namespace Build
                             {
                                 Console.WriteLine(ex.Message);
                             }
-                            //����inode�Ż�ȡ��Ӧ��inode������������һ��ͻ�ȡ��һ��Ŀ¼��inode��
+                            //根据inode号获取对应的inode（搜索到了哪一层就获取哪一层目录的inode）
                             _inode.GetInodeFromDisk(fileInode, fileInodeNo);
-                            //��֮ǰɨ��;���п�����򷵻���ƫ�ƣ�����ͷ��ص�ǰinode�Ĵ�С(��Ҫ�Ե�ǰinode��������)
+                            //若之前扫描途中有空闲项，则返回其偏移，否则就返回当前inode的大小(即要对当前inode进行扩充)
                             if (freeFlag == 0)
                                 return dirInode._i_size;
                             else
                                 return firstFreeOffset;
 						}
-                         //����2������ǰĿ¼�������(û���ҵ���Ӧ��)�����м�·��û���ҵ��������
+                         //出口2：若当前目录搜索完毕(没有找到相应项)，且中间路径没有找到，则出错
 						else
 						{
 							Error.ErrorType = Error.SEARCHDIR;
@@ -133,7 +133,7 @@ namespace Build
 						}
 					}
 
-					//������һ�飬��Ҫ�����¿�
+					//搜索完一块，需要读入新块
 					if(offset % 512 == 0)
 					{
                         _diskFile.OpenFile();
@@ -152,12 +152,12 @@ namespace Build
 						}
 					}
 
-					//��ʾ��ƥ��
+					//表示不匹配
 					if(!match)
 					{
 						dirSize--;
-                        //���֮ǰ��Ŀ¼��Ϊ�գ�������first_free_offset���
-                        //+4����Ϊÿ��Ŀ¼���ǰ�ĸ��ֽ���inode��
+                        //如果之前的目录项为空，则将其用first_free_offset标记
+                        //+4是因为每个目录项的前四个字节是inode号
                         if (buffer[offset % 512 + 4] == '\0' && firstFreeOffset == 0)
                         {
                             firstFreeOffset = offset;
@@ -166,7 +166,7 @@ namespace Build
                         offset += 32;
 						continue;
 					}
-                    //�ڵ�ǰĿ¼���ҵ��˺�dirPathƥ���Ŀ¼��
+                    //在当前目录中找到了和dirPath匹配的目录项
 					else
 					{
 						break;
@@ -179,33 +179,33 @@ namespace Build
 					ino[k] = buffer[offset%512 + k];
 				}
                 
-				/* ����3��
-                 * ɾ������
-                 * pathPoint == path.Length��ʾ��Ŀ¼���Ѿ��������*/
+				/* 出口3：
+                 * 删除操作
+                 * pathPoint == path.Length表示：目录项已经搜索完毕*/
 				if(flag == File.DELETEFILE && curPos == path.Length)
 				{
-					//��ɾ���ļ���inode��
+					//需删除文件的inode号
 					fileInodeNo = (int)Helper.Bytes2Struct(ino,typeof(int));
 					return offset;
 				}
                 
-				/* ����4��
-                 * ͬһĿ¼�µ��ļ�����ͬ���Ҳ���Ҫ��ɾ�������������
-                 * pathPoint == path.Length��ʾ��Ŀ¼���Ѿ��������*/
+				/* 出口4：
+                 * 同一目录下的文件名相同，且不是要做删除操作，则出错
+                 * pathPoint == path.Length表示：目录项已经搜索完毕*/
 				if(flag !=  File.DELETEFILE && curPos == path.Length)
 				{
 					Error.ErrorType = Error.SAMEFILENAME;
 					return -1;
 				}
 
-                //��������¼�Ŀ¼�������dirInodeNo��dirInode��Ϊ��ǰĿ¼
+                //如果还有下级目录，则更新dirInodeNo与dirInode，为当前目录
 				dirInodeNo = (int)Helper.Bytes2Struct(ino,typeof(int));
 				_inode.GetInodeFromDisk(dirInode,dirInodeNo);
 			}
 		}
 
 		/// <summary>
-		/// ��ʵ��ַת��
+		/// 虚实地址转换
 		/// </summary>\
         /// 
 		/// <param name="DirInode"></param>
@@ -216,15 +216,15 @@ namespace Build
 			int blockNum;
             byte[] blockNumBuf = new byte[4];
 
-			//ֱ������0~5�һ�μ������6~7����μ������8~9��
-			//ֱ�����������õ��߼����Ϊ0~5�飬һ�μ������������6~261��
-			//���μ������������128*2+6~128*128*2+128*2+6-1��
+			//直接索引0~5项，一次间接索引6~7项，二次间接索引8~9项
+			//直接索引所引用的逻辑块号为0~5块，一次间接引用索引项6~261块
+			//二次间接引用索引项128*2+6~128*128*2+128*2+6-1项
 			
-			//ֱ������
+			//直接索引
 			if(itemNum < 6)
 			{
 				blockNum = dirInode._i_addr[itemNum];
-				//������߼��黹û����Ӧ����������֮��Ӧ�������һ��������
+				//如果该逻辑块还没有相应的物理块与之对应，则分配一个物理块
 				if(blockNum == 0)
 				{
                     try
@@ -239,21 +239,21 @@ namespace Build
 				}
 				return blockNum;
 			}
-            //�������bn>=6
+            //间接引用bn>=6
 			else
 			{
                 int firstIndex;
-				//һ�μ�ӿ�
+				//一次间接块
 				if(itemNum - 262 < 0)
 				{	
-					firstIndex = ((itemNum - 6) / 128) + 6; //6��7
+					firstIndex = ((itemNum - 6) / 128) + 6; //6或7
 				}
-				else//���μ�ӿ�
+				else//二次间接块
 				{
-					firstIndex = ((itemNum - 262) / (128*128)) + 8; //8��9
+					firstIndex = ((itemNum - 262) / (128*128)) + 8; //8或9
 				}
 
-				//����Ϊ��,������������һ����п�
+				//该项为空,则到数据区分配一块空闲块
 				if(dirInode._i_addr[firstIndex] == 0)
 				{
                     try
@@ -267,7 +267,7 @@ namespace Build
 				}
 				blockNum = dirInode._i_addr[firstIndex];
 
-				//����Ƕ��μ�����������ٻ�ȡ����������Ŀ��
+				//如果是二次间接索引，则再获取二级索引块的块号
 				if(firstIndex >= 8)
 				{
 					int secondIndex = ((itemNum - 262) / 128)%128; //0-128
@@ -299,12 +299,12 @@ namespace Build
 			}
 
             int directIndex;
-			//һ�μ�ӿ�
+			//一次间接块
 			if(itemNum - 262 < 0)
 			{
 				directIndex = ((itemNum - 6) % 128);
 			}
-			else//���μ�ӿ�
+			else//二次间接块
 			{
 				directIndex = ((itemNum - 262) % 128);
 			}
@@ -315,7 +315,7 @@ namespace Build
             _diskFile.CloseFile();
             int tmpBlockNum = (int)Helper.Bytes2Struct(blockNumBuf, typeof(int));
             
-            //����Ŀ¼������Ϊ�գ������
+            //若该目录索引项为空，则分配
 			if(tmpBlockNum == 0)
 			{
                 try

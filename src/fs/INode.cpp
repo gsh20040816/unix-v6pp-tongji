@@ -4,22 +4,22 @@
 #include "Kernel.h"
 
 /*==============================class Inode===================================*/
-/*	Ԥ����Ŀ�ţ�����ͨ�ļ�����Ԥ�������ڵ�������š���Ӳ�̶��ԣ����ǵ�ǰ�����飨����������һ�������飨������*/
+/*	预读块的块号，对普通文件这是预读块所在的物理块号。对硬盘而言，这是当前物理块（扇区）的下一个物理块（扇区）*/
 int Inode::rablock = 0;
 
-/* �ڴ�� i�ڵ�*/
+/* 内存打开 i节点*/
 Inode::Inode()
 {
-	/* ���Inode�����е����� */
+	/* 清空Inode对象中的数据 */
 	// this->Clean(); 
-	/* ȥ��this->Clean();�����ɣ�
-	 * Inode::Clean()�ض�����IAlloc()������·���DiskInode��ԭ�����ݣ�
-	 * �����ļ���Ϣ��Clean()�����в�Ӧ�����i_dev, i_number, i_flag, i_count,
-	 * ���������ڴ�Inode����DiskInode�����ľ��ļ���Ϣ����Inode�๹�캯����Ҫ
-	 * �����ʼ��Ϊ��Чֵ��
+	/* 去除this->Clean();的理由：
+	 * Inode::Clean()特定用于IAlloc()中清空新分配DiskInode的原有数据，
+	 * 即旧文件信息。Clean()函数中不应当清除i_dev, i_number, i_flag, i_count,
+	 * 这是属于内存Inode而非DiskInode包含的旧文件信息，而Inode类构造函数需要
+	 * 将其初始化为无效值。
 	 */
 	
-	/* ��Inode����ĳ�Ա������ʼ��Ϊ��Чֵ */
+	/* 将Inode对象的成员变量初始化为无效值 */
 	this->i_flag = 0;
 	this->i_mode = 0;
 	this->i_count = 0;
@@ -43,10 +43,10 @@ Inode::~Inode()
 
 void Inode::ReadI()
 {
-	int lbn;	/* �ļ��߼���� */
-	int bn;		/* lbn��Ӧ�������̿�� */
-	int offset;	/* ��ǰ�ַ�������ʼ����λ�� */
-	int nbytes;	/* �������û�Ŀ�����ֽ����� */
+	int lbn;	/* 文件逻辑块号 */
+	int bn;		/* lbn对应的物理盘块号 */
+	int offset;	/* 当前字符块内起始传送位置 */
+	int nbytes;	/* 传送至用户目标区字节数量 */
 	short dev;
 	Buf* pBuf;
 	User& u = Kernel::Instance().GetUser();
@@ -55,13 +55,13 @@ void Inode::ReadI()
 
 	if( 0 == u.u_IOParam.m_Count )
 	{
-		/* ��Ҫ���ֽ���Ϊ�㣬�򷵻� */
+		/* 需要读字节数为零，则返回 */
 		return;
 	}
 
 	this->i_flag |= Inode::IACC;
 
-	/* ������ַ��豸�ļ� ���������������*/
+	/* 如果是字符设备文件 ，调用外设读函数*/
 	if( (this->i_mode & Inode::IFMT) == Inode::IFCHR )
 	{
 		short major = Utility::GetMajor(this->i_addr[0]);
@@ -70,28 +70,28 @@ void Inode::ReadI()
 		return;
 	}
 
-	/* һ��һ���ַ���ض�������ȫ�����ݣ�ֱ�������ļ�β */
+	/* 一次一个字符块地读入所需全部数据，直至遇到文件尾 */
 	while( User::NOERROR == u.u_error && u.u_IOParam.m_Count != 0)
 	{
 		lbn = bn = u.u_IOParam.m_Offset / Inode::BLOCK_SIZE;
 		offset = u.u_IOParam.m_Offset % Inode::BLOCK_SIZE;
-		/* ���͵��û������ֽ�������ȡ�������ʣ���ֽ����뵱ǰ�ַ�������Ч�ֽ�����Сֵ */
-		nbytes = Utility::Min(Inode::BLOCK_SIZE - offset /* ������Ч�ֽ��� */, u.u_IOParam.m_Count);
+		/* 传送到用户区的字节数量，取读请求的剩余字节数与当前字符块内有效字节数较小值 */
+		nbytes = Utility::Min(Inode::BLOCK_SIZE - offset /* 块内有效字节数 */, u.u_IOParam.m_Count);
 
 		if( (this->i_mode & Inode::IFMT) != Inode::IFBLK )
-		{	/* �������������豸�ļ� */
+		{	/* 如果不是特殊块设备文件 */
 		
 			int remain = this->i_size - u.u_IOParam.m_Offset;
-			/* ����Ѷ��������ļ���β */
+			/* 如果已读到超过文件结尾 */
 			if( remain <= 0)
 			{
 				return;
 			}
-			/* ���͵��ֽ�������ȡ����ʣ���ļ��ĳ��� */
+			/* 传送的字节数量还取决于剩余文件的长度 */
 			nbytes = Utility::Min(nbytes, remain);
 
-			/* ���߼����lbnת���������̿��bn ��Bmap������Inode::rablock����UNIX��Ϊ��ȡԤ����Ŀ���̫��ʱ��
-			 * �����Ԥ������ʱ Inode::rablock ֵΪ 0��
+			/* 将逻辑块号lbn转换成物理盘块号bn ，Bmap有设置Inode::rablock。当UNIX认为获取预读块的开销太大时，
+			 * 会放弃预读，此时 Inode::rablock 值为 0。
 			 * */
 			if( (bn = this->Bmap(lbn)) == 0 )
 			{
@@ -99,57 +99,57 @@ void Inode::ReadI()
 			}
 			dev = this->i_dev;
 		}
-		else	/* �����������豸�ļ� */
+		else	/* 如果是特殊块设备文件 */
 		{
-			dev = this->i_addr[0];	/* ������豸�ļ�i_addr[0]�д�ŵ����豸�� */
+			dev = this->i_addr[0];	/* 特殊块设备文件i_addr[0]中存放的是设备号 */
 			Inode::rablock = bn + 1;
 		}
 
-		if( this->i_lastr + 1 == lbn )	/* �����˳����������Ԥ�� */
+		if( this->i_lastr + 1 == lbn )	/* 如果是顺序读，则进行预读 */
 		{
-			/* ����ǰ�飬��Ԥ����һ�� */
+			/* 读当前块，并预读下一块 */
 			pBuf = bufMgr.Breada(dev, bn, Inode::rablock);
 		}
 		else
 		{
 			pBuf = bufMgr.Bread(dev, bn);
 		}
-		/* ��¼�����ȡ�ַ�����߼���� */
+		/* 记录最近读取字符块的逻辑块号 */
 		this->i_lastr = lbn;
 
-		/* ������������ʼ��λ�� */
+		/* 缓存中数据起始读位置 */
 		unsigned char* start = pBuf->b_addr + offset;
 		
-		/* ������: �ӻ������������û�Ŀ����
-		 * i386оƬ��ͬһ��ҳ��ӳ���û��ռ���ں˿ռ䣬��һ��Ӳ���ϵĲ��� ʹ��i386��ʵ�� iomove����
-		 * ��PDP-11Ҫ��������*/
+		/* 读操作: 从缓冲区拷贝到用户目标区
+		 * i386芯片用同一张页表映射用户空间和内核空间，这一点硬件上的差异 使得i386上实现 iomove操作
+		 * 比PDP-11要容易许多*/
 		Utility::IOMove(start, u.u_IOParam.m_Base, nbytes);
 
-		/* �ô����ֽ���nbytes���¶�дλ�� */
+		/* 用传送字节数nbytes更新读写位置 */
 		u.u_IOParam.m_Base += nbytes;
 		u.u_IOParam.m_Offset += nbytes;
 		u.u_IOParam.m_Count -= nbytes;
 
-		bufMgr.Brelse(pBuf);	/* ʹ���껺�棬�ͷŸ���Դ */
+		bufMgr.Brelse(pBuf);	/* 使用完缓存，释放该资源 */
 	}
 }
 
 void Inode::WriteI()
 {
-	int lbn;	/* �ļ��߼���� */
-	int bn;		/* lbn��Ӧ�������̿�� */
-	int offset;	/* ��ǰ�ַ�������ʼ����λ�� */
-	int nbytes;	/* �����ֽ����� */
+	int lbn;	/* 文件逻辑块号 */
+	int bn;		/* lbn对应的物理盘块号 */
+	int offset;	/* 当前字符块内起始传送位置 */
+	int nbytes;	/* 传送字节数量 */
 	short dev;
 	Buf* pBuf;
 	User& u = Kernel::Instance().GetUser();
 	BufferManager& bufMgr = Kernel::Instance().GetBufferManager();
 	DeviceManager& devMgr = Kernel::Instance().GetDeviceManager();
 
-	/* ����Inode�����ʱ�־λ */
+	/* 设置Inode被访问标志位 */
 	this->i_flag |= (Inode::IACC | Inode::IUPD);
 
-	/* ���ַ��豸�ķ��� */
+	/* 对字符设备的访问 */
 	if( (this->i_mode & Inode::IFMT) == Inode::IFCHR )
 	{
 		short major = Utility::GetMajor(this->i_addr[0]);
@@ -160,7 +160,7 @@ void Inode::WriteI()
 
 	if( 0 == u.u_IOParam.m_Count)
 	{
-		/* ��Ҫ���ֽ���Ϊ�㣬�򷵻� */
+		/* 需要读字节数为零，则返回 */
 		return;
 	}
 
@@ -171,9 +171,9 @@ void Inode::WriteI()
 		nbytes = Utility::Min(Inode::BLOCK_SIZE - offset, u.u_IOParam.m_Count);
 
 		if( (this->i_mode & Inode::IFMT) != Inode::IFBLK )
-		{	/* ��ͨ�ļ� */
+		{	/* 普通文件 */
 
-			/* ���߼����lbnת���������̿��bn */
+			/* 将逻辑块号lbn转换成物理盘块号bn */
 			if( (bn = this->Bmap(lbn)) == 0 )
 			{
 				return;
@@ -181,60 +181,60 @@ void Inode::WriteI()
 			dev = this->i_dev;
 		}
 		else
-		{	/* ���豸�ļ���Ҳ����Ӳ�� */
+		{	/* 块设备文件，也就是硬盘 */
 			dev = this->i_addr[0];
 		}
 
 		if(Inode::BLOCK_SIZE == nbytes)
 		{
-			/* ���д������������һ���ַ��飬��Ϊ����仺�� */
+			/* 如果写入数据正好满一个字符块，则为其分配缓存 */
 			pBuf = bufMgr.GetBlk(dev, bn);
 		}
 		else
 		{
-			/* д�����ݲ���һ���ַ��飬�ȶ���д���������ַ����Ա�������Ҫ��д�����ݣ� */
+			/* 写入数据不满一个字符块，先读后写（读出该字符块以保护不需要重写的数据） */
 			pBuf = bufMgr.Bread(dev, bn);
 		}
 
-		/* ���������ݵ���ʼдλ�� */
+		/* 缓存中数据的起始写位置 */
 		unsigned char* start = pBuf->b_addr + offset;
 
-		/* д����: ���û�Ŀ�����������ݵ������� */
+		/* 写操作: 从用户目标区拷贝数据到缓冲区 */
 		Utility::IOMove(u.u_IOParam.m_Base, start, nbytes);
 
-		/* �ô����ֽ���nbytes���¶�дλ�� */
+		/* 用传送字节数nbytes更新读写位置 */
 		u.u_IOParam.m_Base += nbytes;
 		u.u_IOParam.m_Offset += nbytes;
 		u.u_IOParam.m_Count -= nbytes;
 
-		if( u.u_error != User::NOERROR )	/* д�����г��� */
+		if( u.u_error != User::NOERROR )	/* 写过程中出错 */
 		{
 			bufMgr.Brelse(pBuf);
 		}
-		else if( (u.u_IOParam.m_Offset % Inode::BLOCK_SIZE) == 0 )	/* ���д��һ���ַ��� */
+		else if( (u.u_IOParam.m_Offset % Inode::BLOCK_SIZE) == 0 )	/* 如果写满一个字符块 */
 		{
-			/* ���첽��ʽ���ַ���д����̣����̲���ȴ�I/O�������������Լ�������ִ�� */
+			/* 以异步方式将字符块写入磁盘，进程不需等待I/O操作结束，可以继续往下执行 */
 			bufMgr.Bawrite(pBuf);
 		}
-		else /* ���������δд�� */
+		else /* 如果缓冲区未写满 */
 		{
-			/* ��������Ϊ�ӳ�д�������ڽ���I/O�������ַ�������������� */
+			/* 将缓存标记为延迟写，不急于进行I/O操作将字符块输出到磁盘上 */
 			bufMgr.Bdwrite(pBuf);
 		}
 
-		/* ��ͨ�ļ��������� */
+		/* 普通文件长度增加 */
 		if( (this->i_size < u.u_IOParam.m_Offset) && (this->i_mode & (Inode::IFBLK & Inode::IFCHR)) == 0 )
 		{
 			this->i_size = u.u_IOParam.m_Offset;
 		}
 
 		/* 
-		 * ֮ǰ�����ж��̿��ܵ��½����л����ڽ���˯���ڼ䵱ǰ�ڴ�Inode����
-		 * ��ͬ�������Inode���ڴ���Ҫ�������ø��±�־λ��
-		 * ����û�б�Ҫѽ����ʹwriteϵͳ����û��������iput����i_count����0֮��ŻὫ�ڴ�i�ڵ�ͬ���ش��̡�������
-		 * �ļ�û��close֮ǰ�ǲ��ᷢ���ġ�
-		 * ���ǵ�ϵͳ��writeϵͳ���������͸������ܳ�����������ˡ�
-		 * ��������ȥ����
+		 * 之前过程中读盘可能导致进程切换，在进程睡眠期间当前内存Inode可能
+		 * 被同步到外存Inode，在此需要重新设置更新标志位。
+		 * 好像没有必要呀！即使write系统调用没有上锁，iput看到i_count减到0之后才会将内存i节点同步回磁盘。而这在
+		 * 文件没有close之前是不会发生的。
+		 * 我们的系统对write系统调用上锁就更不可能出现这种情况了。
+		 * 真的想把它去掉。
 		 */
 		this->i_flag |= Inode::IUPD;
 	}
@@ -244,22 +244,22 @@ int Inode::Bmap(int lbn)
 {
 	Buf* pFirstBuf;
 	Buf* pSecondBuf;
-	int phyBlkno;	/* ת����������̿�� */
-	int* iTable;	/* ���ڷ��������̿���һ�μ�ӡ����μ�������� */
+	int phyBlkno;	/* 转换后的物理盘块号 */
+	int* iTable;	/* 用于访问索引盘块中一次间接、两次间接索引表 */
 	int index;
 	User& u = Kernel::Instance().GetUser();
 	BufferManager& bufMgr = Kernel::Instance().GetBufferManager();
 	FileSystem& fileSys = Kernel::Instance().GetFileSystem();
 	
 	/* 
-	 * Unix V6++���ļ������ṹ��(С�͡����ͺ;����ļ�)
-	 * (1) i_addr[0] - i_addr[5]Ϊֱ�����������ļ����ȷ�Χ��0 - 6���̿飻
+	 * Unix V6++的文件索引结构：(小型、大型和巨型文件)
+	 * (1) i_addr[0] - i_addr[5]为直接索引表，文件长度范围是0 - 6个盘块；
 	 * 
-	 * (2) i_addr[6] - i_addr[7]���һ�μ�����������ڴ��̿�ţ�ÿ���̿�
-	 * �ϴ��128���ļ������̿�ţ������ļ����ȷ�Χ��7 - (128 * 2 + 6)���̿飻
+	 * (2) i_addr[6] - i_addr[7]存放一次间接索引表所在磁盘块号，每磁盘块
+	 * 上存放128个文件数据盘块号，此类文件长度范围是7 - (128 * 2 + 6)个盘块；
 	 *
-	 * (3) i_addr[8] - i_addr[9]��Ŷ��μ�����������ڴ��̿�ţ�ÿ�����μ��
-	 * ��������¼128��һ�μ�����������ڴ��̿�ţ������ļ����ȷ�Χ��
+	 * (3) i_addr[8] - i_addr[9]存放二次间接索引表所在磁盘块号，每个二次间接
+	 * 索引表记录128个一次间接索引表所在磁盘块号，此类文件长度范围是
 	 * (128 * 2 + 6 ) < size <= (128 * 128 * 2 + 128 * 2 + 6)
 	 */
 
@@ -269,112 +269,112 @@ int Inode::Bmap(int lbn)
 		return 0;
 	}
 
-	if(lbn < 6)		/* �����С���ļ����ӻ���������i_addr[0-5]�л�������̿�ż��� */
+	if(lbn < 6)		/* 如果是小型文件，从基本索引表i_addr[0-5]中获得物理盘块号即可 */
 	{
 		phyBlkno = this->i_addr[lbn];
 
 		/* 
-		 * ������߼���Ż�û����Ӧ�������̿����֮��Ӧ�������һ�������顣
-		 * ��ͨ�������ڶ��ļ���д�룬��д��λ�ó����ļ���С�����Ե�ǰ
-		 * �ļ���������д�룬����Ҫ�������Ĵ��̿飬��Ϊ֮�����߼����
-		 * �������̿��֮���ӳ�䡣
+		 * 如果该逻辑块号还没有相应的物理盘块号与之对应，则分配一个物理块。
+		 * 这通常发生在对文件的写入，当写入位置超出文件大小，即对当前
+		 * 文件进行扩充写入，就需要分配额外的磁盘块，并为之建立逻辑块号
+		 * 与物理盘块号之间的映射。
 		 */
 		if( phyBlkno == 0 && (pFirstBuf = fileSys.Alloc(this->i_dev)) != NULL )
 		{
 			/* 
-			 * ��Ϊ����ܿ������ϻ�Ҫ�õ��˴��·�������ݿ飬���Բ��������������
-			 * �����ϣ����ǽ�������Ϊ�ӳ�д��ʽ���������Լ���ϵͳ��I/O������
+			 * 因为后面很可能马上还要用到此处新分配的数据块，所以不急于立刻输出到
+			 * 磁盘上；而是将缓存标记为延迟写方式，这样可以减少系统的I/O操作。
 			 */
 			bufMgr.Bdwrite(pFirstBuf);
 			phyBlkno = pFirstBuf->b_blkno;
-			/* ���߼����lbnӳ�䵽�����̿��phyBlkno */
+			/* 将逻辑块号lbn映射到物理盘块号phyBlkno */
 			this->i_addr[lbn] = phyBlkno;
 			this->i_flag |= Inode::IUPD;
 		}
-		/* �ҵ�Ԥ�����Ӧ�������̿�� */
+		/* 找到预读块对应的物理盘块号 */
 		Inode::rablock = 0;
 		if(lbn <= 4)
 		{
 			/* 
-			 * i_addr[0] - i_addr[5]Ϊֱ�������������Ԥ�����Ӧ������ſ��Դ�
-			 * ֱ���������л�ã����¼��Inode::rablock�С������Ҫ�����I/O����
-			 * �����������飬���Եò�ֵ̫���ˡ�Ư����
+			 * i_addr[0] - i_addr[5]为直接索引表。如果预读块对应物理块号可以从
+			 * 直接索引表中获得，则记录在Inode::rablock中。如果需要额外的I/O开销
+			 * 读入间接索引块，就显得不太值得了。漂亮！
 			 */
 			Inode::rablock = this->i_addr[lbn + 1];
 		}
 
 		return phyBlkno;
 	}
-	else	/* lbn >= 6 ���͡������ļ� */
+	else	/* lbn >= 6 大型、巨型文件 */
 	{
-		/* �����߼����lbn��Ӧi_addr[]�е����� */
+		/* 计算逻辑块号lbn对应i_addr[]中的索引 */
 
-		if(lbn < Inode::LARGE_FILE_BLOCK)	/* �����ļ�: ���Ƚ���7 - (128 * 2 + 6)���̿�֮�� */
+		if(lbn < Inode::LARGE_FILE_BLOCK)	/* 大型文件: 长度介于7 - (128 * 2 + 6)个盘块之间 */
 		{
 			index = (lbn - Inode::SMALL_FILE_BLOCK) / Inode::ADDRESS_PER_INDEX_BLOCK + 6;
 		}
-		else	/* �����ļ�: ���Ƚ���263 - (128 * 128 * 2 + 128 * 2 + 6)���̿�֮�� */
+		else	/* 巨型文件: 长度介于263 - (128 * 128 * 2 + 128 * 2 + 6)个盘块之间 */
 		{
 			index = (lbn - Inode::LARGE_FILE_BLOCK) / (Inode::ADDRESS_PER_INDEX_BLOCK * Inode::ADDRESS_PER_INDEX_BLOCK) + 8;
 		}
 
 		phyBlkno = this->i_addr[index];
-		/* ������Ϊ�㣬���ʾ��������Ӧ�ļ���������� */
+		/* 若该项为零，则表示不存在相应的间接索引表块 */
 		if( 0 == phyBlkno )
 		{
 			this->i_flag |= Inode::IUPD;
-			/* ����һ�����̿��ż�������� */
+			/* 分配一空闲盘块存放间接索引表 */
 			if( (pFirstBuf = fileSys.Alloc(this->i_dev)) == NULL )
 			{
-				return 0;	/* ����ʧ�� */
+				return 0;	/* 分配失败 */
 			}
-			/* i_addr[index]�м�¼����������������̿�� */
+			/* i_addr[index]中记录间接索引表的物理盘块号 */
 			this->i_addr[index] = pFirstBuf->b_blkno;
 		}
 		else
 		{
-			/* �����洢������������ַ��� */
+			/* 读出存储间接索引表的字符块 */
 			pFirstBuf = bufMgr.Bread(this->i_dev, phyBlkno);
 		}
-		/* ��ȡ��������ַ */
+		/* 获取缓冲区首址 */
 		iTable = (int *)pFirstBuf->b_addr;
 
 		if(index >= 8)	/* ASSERT: 8 <= index <= 9 */
 		{
 			/* 
-			 * ���ھ����ļ��������pFirstBuf���Ƕ��μ����������
-			 * ��������߼���ţ����ɶ��μ���������ҵ�һ�μ��������
+			 * 对于巨型文件的情况，pFirstBuf中是二次间接索引表，
+			 * 还需根据逻辑块号，经由二次间接索引表找到一次间接索引表
 			 */
 			index = ( (lbn - Inode::LARGE_FILE_BLOCK) / Inode::ADDRESS_PER_INDEX_BLOCK ) % Inode::ADDRESS_PER_INDEX_BLOCK;
 
-			/* iTableָ�򻺴��еĶ��μ��������������Ϊ�㣬������һ�μ�������� */
+			/* iTable指向缓存中的二次间接索引表。该项为零，不存在一次间接索引表 */
 			phyBlkno = iTable[index];
 			if( 0 == phyBlkno )
 			{
 				if( (pSecondBuf = fileSys.Alloc(this->i_dev)) == NULL)
 				{
-					/* ����һ�μ�����������̿�ʧ�ܣ��ͷŻ����еĶ��μ����������Ȼ�󷵻� */
+					/* 分配一次间接索引表磁盘块失败，释放缓存中的二次间接索引表，然后返回 */
 					bufMgr.Brelse(pFirstBuf);
 					return 0;
 				}
-				/* ���·����һ�μ�����������̿�ţ�������μ����������Ӧ�� */
+				/* 将新分配的一次间接索引表磁盘块号，记入二次间接索引表相应项 */
 				iTable[index] = pSecondBuf->b_blkno;
-				/* �����ĺ�Ķ��μ���������ӳ�д��ʽ��������� */
+				/* 将更改后的二次间接索引表延迟写方式输出到磁盘 */
 				bufMgr.Bdwrite(pFirstBuf);
 			}
 			else
 			{
-				/* �ͷŶ��μ��������ռ�õĻ��棬������һ�μ�������� */
+				/* 释放二次间接索引表占用的缓存，并读入一次间接索引表 */
 				bufMgr.Brelse(pFirstBuf);
 				pSecondBuf = bufMgr.Bread(this->i_dev, phyBlkno);
 			}
 
 			pFirstBuf = pSecondBuf;
-			/* ��iTableָ��һ�μ�������� */
+			/* 令iTable指向一次间接索引表 */
 			iTable = (int *)pSecondBuf->b_addr;
 		}
 
-		/* �����߼����lbn����λ��һ�μ���������еı������index */
+		/* 计算逻辑块号lbn最终位于一次间接索引表中的表项序号index */
 
 		if( lbn < Inode::LARGE_FILE_BLOCK )
 		{
@@ -387,19 +387,19 @@ int Inode::Bmap(int lbn)
 
 		if( (phyBlkno = iTable[index]) == 0 && (pSecondBuf = fileSys.Alloc(this->i_dev)) != NULL)
 		{
-			/* �����䵽���ļ������̿�ŵǼ���һ�μ���������� */
+			/* 将分配到的文件数据盘块号登记在一次间接索引表中 */
 			phyBlkno = pSecondBuf->b_blkno;
 			iTable[index] = phyBlkno;
-			/* �������̿顢���ĺ��һ�μ�����������ӳ�д��ʽ��������� */
+			/* 将数据盘块、更改后的一次间接索引表用延迟写方式输出到磁盘 */
 			bufMgr.Bdwrite(pSecondBuf);
 			bufMgr.Bdwrite(pFirstBuf);
 		}
 		else
 		{
-			/* �ͷ�һ�μ��������ռ�û��� */
+			/* 释放一次间接索引表占用缓存 */
 			bufMgr.Brelse(pFirstBuf);
 		}
-		/* �ҵ�Ԥ�����Ӧ�������̿�ţ������ȡԤ�������Ҫ�����һ��for����������IO�������㣬���� */
+		/* 找到预读块对应的物理盘块号，如果获取预读块号需要额外的一次for间接索引块的IO，不合算，放弃 */
 		Inode::rablock = 0;
 		if( index + 1 < Inode::ADDRESS_PER_INDEX_BLOCK)
 		{
@@ -416,17 +416,17 @@ void Inode::OpenI(int mode)
 	User& u = Kernel::Instance().GetUser();
 
 	/* 
-	 * ����������豸���ַ��豸�ļ���i_addr[]������
-	 * ���̿����������addr[0]�д�����豸��dev
+	 * 对于特殊块设备、字符设备文件，i_addr[]不再是
+	 * 磁盘块号索引表，addr[0]中存放了设备号dev
 	 */
 	dev = this->i_addr[0];
 
-	/* ��ȡ���豸�� */
+	/* 提取主设备号 */
 	short major = Utility::GetMajor(dev);
 
 	switch( this->i_mode & Inode::IFMT)
 	{
-	case Inode::IFCHR:	/* �ַ��豸���������ļ� */
+	case Inode::IFCHR:	/* 字符设备特殊类型文件 */
 		if (major >= devMgr.GetNChrDev())
 		{
 			u.u_error = User::ENXIO;   /* no such device */
@@ -435,16 +435,16 @@ void Inode::OpenI(int mode)
 		devMgr.GetCharDevice(major).Open(dev,mode);
 		break;
 
-	case Inode::IFBLK:	/* ���豸���������ļ� */
-		/* ����豸���Ƿ񳬳�ϵͳ�п��豸���� */
+	case Inode::IFBLK:	/* 块设备特殊类型文件 */
+		/* 检查设备号是否超出系统中块设备数量 */
 		if(major >= devMgr.GetNBlkDev())
 		{
 			u.u_error = User::ENXIO;    /* no such device */
 			return;
 		}
-		/* �������豸�Ż�ȡ��Ӧ�Ŀ��豸BlockDevice�������� */
+		/* 根据主设备号获取对应的块设备BlockDevice对象引用 */
 		BlockDevice& bdev = devMgr.GetBlockDevice(major);
-		/* ���ø��豸���ض���ʼ���߼� */
+		/* 调用该设备的特定初始化逻辑 */
 		bdev.Open(dev, mode);
 		break;
 	}
@@ -457,12 +457,12 @@ void Inode::CloseI(int mode)
 	short dev;
 	DeviceManager& devMgr = Kernel::Instance().GetDeviceManager();
 
-	/* addr[0]�д�����豸��dev */
+	/* addr[0]中存放了设备号dev */
 	dev = this->i_addr[0];
 
 	short major = Utility::GetMajor(dev);
 
-	/* ����ʹ�ø��ļ�,�ر������ļ� */
+	/* 不再使用该文件,关闭特殊文件 */
 	if(this->i_count <= 1)
 	{
 		switch( this->i_mode & Inode::IFMT)
@@ -472,9 +472,9 @@ void Inode::CloseI(int mode)
 			break;
 
 		case Inode::IFBLK:
-			/* �������豸�Ż�ȡ��Ӧ�Ŀ��豸BlockDevice�������� */
+			/* 根据主设备号获取对应的块设备BlockDevice对象引用 */
 			BlockDevice& bdev = devMgr.GetBlockDevice(major);
-			/* ���ø��豸���ض��ر��߼� */
+			/* 调用该设备的特定关闭逻辑 */
 			bdev.Close(dev, mode);
 			break;
 		}
@@ -488,22 +488,22 @@ void Inode::IUpdate(int time)
 	FileSystem& filesys = Kernel::Instance().GetFileSystem();
 	BufferManager& bufMgr = Kernel::Instance().GetBufferManager();
 
-	/* ��IUPD��IACC��־֮һ�����ã�����Ҫ������ӦDiskInode
-	 * Ŀ¼����������������;����Ŀ¼�ļ���IACC��IUPD��־ */
+	/* 当IUPD和IACC标志之一被设置，才需要更新相应DiskInode
+	 * 目录搜索，不会设置所途径的目录文件的IACC和IUPD标志 */
 	if( (this->i_flag & (Inode::IUPD | Inode::IACC))!= 0 )
 	{
 		if( filesys.GetFS(this->i_dev)->s_ronly != 0 )
 		{
-			/* ������ļ�ϵͳֻ�� */
+			/* 如果该文件系统只读 */
 			return;
 		}
 
-		/* ���ص�ע�ͣ��ڻ�������ҵ�������i�ڵ㣨this->i_number���Ļ����
-		 * ����һ�������Ļ���飬���δ����е�Bwrite()�ڽ������д�ش��̺���ͷŸû���顣
-		 * ���ô�Ÿ�DiskInode���ַ�����뻺���� */
+		/* 邓蓉的注释：在缓存池中找到包含本i节点（this->i_number）的缓存块
+		 * 这是一个上锁的缓存块，本段代码中的Bwrite()在将缓存块写回磁盘后会释放该缓存块。
+		 * 将该存放该DiskInode的字符块读入缓冲区 */
 		pBuf = bufMgr.Bread(this->i_dev, FileSystem::INODE_ZONE_START_SECTOR + this->i_number / FileSystem::INODE_NUMBER_PER_SECTOR);
 
-		/* ���ڴ�Inode�����е���Ϣ���Ƶ�dInode�У�Ȼ��dInode���ǻ����оɵ����Inode */
+		/* 将内存Inode副本中的信息复制到dInode中，然后将dInode覆盖缓存中旧的外存Inode */
 		dInode.d_mode = this->i_mode;
 		dInode.d_nlink = this->i_nlink;
 		dInode.d_uid = this->i_uid;
@@ -515,73 +515,73 @@ void Inode::IUpdate(int time)
 		}
 		if (this->i_flag & Inode::IACC)
 		{
-			/* ����������ʱ�� */
+			/* 更新最后访问时间 */
 			dInode.d_atime = time;
 		}
 		if (this->i_flag & Inode::IUPD)
 		{
-			/* ����������ʱ�� */
+			/* 更新最后访问时间 */
 			dInode.d_mtime = time;
 		}
 
-		/* ��pָ�򻺴����о����Inode��ƫ��λ�� */
+		/* 将p指向缓存区中旧外存Inode的偏移位置 */
 		unsigned char* p = pBuf->b_addr + (this->i_number % FileSystem::INODE_NUMBER_PER_SECTOR) * sizeof(DiskInode);
 		DiskInode* pNode = &dInode;
 
-		/* ��dInode�е������ݸ��ǻ����еľ����Inode */
+		/* 用dInode中的新数据覆盖缓存中的旧外存Inode */
 		Utility::DWordCopy( (int *)pNode, (int *)p, sizeof(DiskInode)/sizeof(int) );
 
-		/* ������д�������̣��ﵽ���¾����Inode��Ŀ�� */
+		/* 将缓存写回至磁盘，达到更新旧外存Inode的目的 */
 		bufMgr.Bwrite(pBuf);
 	}
 }
 
 void Inode::ITrunc()
 {
-	/* ���ɴ��̸��ٻ����ȡ���һ�μ�ӡ����μ���������Ĵ��̿� */
+	/* 经由磁盘高速缓存读取存放一次间接、两次间接索引表的磁盘块 */
 	BufferManager& bm = Kernel::Instance().GetBufferManager();
-	/* ��ȡg_FileSystem��������ã�ִ���ͷŴ��̿�Ĳ��� */
+	/* 获取g_FileSystem对象的引用，执行释放磁盘块的操作 */
 	FileSystem& filesys = Kernel::Instance().GetFileSystem();
 
-	/* ������ַ��豸���߿��豸���˳� */
+	/* 如果是字符设备或者块设备则退出 */
 	if( this->i_mode & (Inode::IFCHR & Inode::IFBLK) )
 	{
 		return;
 	}
 
-	/* ����FILO��ʽ�ͷţ��Ծ���ʹ��SuperBlock�м�¼�Ŀ����̿��������
+	/* 采用FILO方式释放，以尽量使得SuperBlock中记录的空闲盘块号连续。
 	 * 
-	 * Unix V6++���ļ������ṹ��(С�͡����ͺ;����ļ�)
-	 * (1) i_addr[0] - i_addr[5]Ϊֱ�����������ļ����ȷ�Χ��0 - 6���̿飻
+	 * Unix V6++的文件索引结构：(小型、大型和巨型文件)
+	 * (1) i_addr[0] - i_addr[5]为直接索引表，文件长度范围是0 - 6个盘块；
 	 * 
-	 * (2) i_addr[6] - i_addr[7]���һ�μ�����������ڴ��̿�ţ�ÿ���̿�
-	 * �ϴ��128���ļ������̿�ţ������ļ����ȷ�Χ��7 - (128 * 2 + 6)���̿飻
+	 * (2) i_addr[6] - i_addr[7]存放一次间接索引表所在磁盘块号，每磁盘块
+	 * 上存放128个文件数据盘块号，此类文件长度范围是7 - (128 * 2 + 6)个盘块；
 	 *
-	 * (3) i_addr[8] - i_addr[9]��Ŷ��μ�����������ڴ��̿�ţ�ÿ�����μ��
-	 * ��������¼128��һ�μ�����������ڴ��̿�ţ������ļ����ȷ�Χ��
+	 * (3) i_addr[8] - i_addr[9]存放二次间接索引表所在磁盘块号，每个二次间接
+	 * 索引表记录128个一次间接索引表所在磁盘块号，此类文件长度范围是
 	 * (128 * 2 + 6 ) < size <= (128 * 128 * 2 + 128 * 2 + 6)
 	 */
-	for(int i = 9; i >= 0; i--)		/* ��i_addr[9]��i_addr[0] */
+	for(int i = 9; i >= 0; i--)		/* 从i_addr[9]到i_addr[0] */
 	{
-		/* ���i_addr[]�е�i��������� */
+		/* 如果i_addr[]中第i项存在索引 */
 		if( this->i_addr[i] != 0 )
 		{
-			/* �����i_addr[]�е�һ�μ�ӡ����μ�������� */
+			/* 如果是i_addr[]中的一次间接、两次间接索引项 */
 			if( i >= 6 && i <= 9 )
 			{
-				/* ��������������뻺�� */
+				/* 将间接索引表读入缓存 */
 				Buf* pFirstBuf = bm.Bread(this->i_dev, this->i_addr[i]);
-				/* ��ȡ��������ַ */
+				/* 获取缓冲区首址 */
 				int* pFirst = (int *)pFirstBuf->b_addr;
 
-				/* ÿ�ż����������¼ 512/sizeof(int) = 128�����̿�ţ�������ȫ��128�����̿� */
+				/* 每张间接索引表记录 512/sizeof(int) = 128个磁盘块号，遍历这全部128个磁盘块 */
 				for(int j = 128 - 1; j >= 0; j--)
 				{
-					if( pFirst[j] != 0)	/* �������������� */
+					if( pFirst[j] != 0)	/* 如果该项存在索引 */
 					{
 						/* 
-						 * ��������μ����������i_addr[8]��i_addr[9]�
-						 * ��ô���ַ����¼����128��һ�μ����������ŵĴ��̿��
+						 * 如果是两次间接索引表，i_addr[8]或i_addr[9]项，
+						 * 那么该字符块记录的是128个一次间接索引表存放的磁盘块号
 						 */
 						if( i >= 8 && i <= 9)
 						{
@@ -592,11 +592,11 @@ void Inode::ITrunc()
 							{
 								if(pSecond[k] != 0)
 								{
-									/* �ͷ�ָ���Ĵ��̿� */
+									/* 释放指定的磁盘块 */
 									filesys.Free(this->i_dev, pSecond[k]);
 								}
 							}
-							/* ����ʹ����ϣ��ͷ��Ա㱻��������ʹ�� */
+							/* 缓存使用完毕，释放以便被其它进程使用 */
 							bm.Brelse(pSecondBuf);
 						}
 						filesys.Free(this->i_dev, pFirst[j]);
@@ -604,25 +604,25 @@ void Inode::ITrunc()
 				}
 				bm.Brelse(pFirstBuf);
 			}
-			/* �ͷ�����������ռ�õĴ��̿� */
+			/* 释放索引表本身占用的磁盘块 */
 			filesys.Free(this->i_dev, this->i_addr[i]);
-			/* 0��ʾ����������� */
+			/* 0表示该项不包含索引 */
 			this->i_addr[i] = 0;
 		}
 	}
 	
-	/* �̿��ͷ���ϣ��ļ���С���� */
+	/* 盘块释放完毕，文件大小清零 */
 	this->i_size = 0;
-	/* ����IUPD��־λ����ʾ���ڴ�Inode��Ҫͬ������Ӧ���Inode */
+	/* 增设IUPD标志位，表示此内存Inode需要同步到相应外存Inode */
 	this->i_flag |= Inode::IUPD;
-	/* ����ļ���־ ��ԭ����RWXRWXRWX����*/
+	/* 清大文件标志 和原来的RWXRWXRWX比特*/
 	this->i_mode &= ~(Inode::ILARG & Inode::IRWXU & Inode::IRWXG & Inode::IRWXO);
 	this->i_nlink = 1;
 }
 
 void Inode::NFrele()
 {
-	/* ����pipe��Inode,���һ�����Ӧ���� */
+	/* 解锁pipe或Inode,并且唤醒相应进程 */
 	this->i_flag &= ~Inode::ILOCK;
 
 	if (this->i_flag & Inode::IWANT)
@@ -646,7 +646,7 @@ void Inode::NFlock()
 
 void Inode::Prele()
 {
-	/* ����pipe��Inode,���һ�����Ӧ���� */
+	/* 解锁pipe或Inode,并且唤醒相应进程 */
 	this->i_flag &= ~Inode::ILOCK;
 
 	if (this->i_flag & Inode::IWANT)
@@ -671,10 +671,10 @@ void Inode::Plock()
 void Inode::Clean()
 {
 	/* 
-	 * Inode::Clean()�ض�����IAlloc()������·���DiskInode��ԭ�����ݣ�
-	 * �����ļ���Ϣ��Clean()�����в�Ӧ�����i_dev, i_number, i_flag, i_count,
-	 * ���������ڴ�Inode����DiskInode�����ľ��ļ���Ϣ����Inode�๹�캯����Ҫ
-	 * �����ʼ��Ϊ��Чֵ��
+	 * Inode::Clean()特定用于IAlloc()中清空新分配DiskInode的原有数据，
+	 * 即旧文件信息。Clean()函数中不应当清除i_dev, i_number, i_flag, i_count,
+	 * 这是属于内存Inode而非DiskInode包含的旧文件信息，而Inode类构造函数需要
+	 * 将其初始化为无效值。
 	 */
 
 	// this->i_flag = 0;
@@ -698,12 +698,12 @@ void Inode::ICopy(Buf *bp, int inumber)
 	DiskInode dInode;
 	DiskInode* pNode = &dInode;
 
-	/* ��pָ�򻺴����б��Ϊinumber���Inode��ƫ��λ�� */
+	/* 将p指向缓存区中编号为inumber外存Inode的偏移位置 */
 	unsigned char* p = bp->b_addr + (inumber % FileSystem::INODE_NUMBER_PER_SECTOR) * sizeof(DiskInode);
-	/* �����������Inode���ݿ�������ʱ����dInode�У���4�ֽڿ��� */
+	/* 将缓存中外存Inode数据拷贝到临时变量dInode中，按4字节拷贝 */
 	Utility::DWordCopy( (int *)p, (int *)pNode, sizeof(DiskInode)/sizeof(int) );
 
-	/* �����Inode����dInode����Ϣ���Ƶ��ڴ�Inode�� */
+	/* 将外存Inode变量dInode中信息复制到内存Inode中 */
 	this->i_mode = dInode.d_mode;
 	this->i_nlink = dInode.d_nlink;
 	this->i_uid = dInode.d_uid;
@@ -721,11 +721,11 @@ void Inode::ICopy(Buf *bp, int inumber)
 DiskInode::DiskInode()
 {
 	/* 
-	 * ���DiskInodeû�й��캯�����ᷢ�����½��Ѳ���Ĵ���
-	 * DiskInode��Ϊ�ֲ�����ռ�ݺ���Stack Frame�е��ڴ�ռ䣬����
-	 * ��οռ�û�б���ȷ��ʼ�����Ծɱ�������ǰջ���ݣ����ڲ�����
-	 * DiskInode�����ֶζ��ᱻ���£���DiskInodeд�ص�������ʱ������
-	 * ����ǰջ����һͬд�أ�����д�ؽ������Ī����������ݡ�
+	 * 如果DiskInode没有构造函数，会发生如下较难察觉的错误：
+	 * DiskInode作为局部变量占据函数Stack Frame中的内存空间，但是
+	 * 这段空间没有被正确初始化，仍旧保留着先前栈内容，由于并不是
+	 * DiskInode所有字段都会被更新，将DiskInode写回到磁盘上时，可能
+	 * 将先前栈内容一同写回，导致写回结果出现莫名其妙的数据。
 	 */
 	this->d_mode = 0;
 	this->d_nlink = 0;

@@ -4,78 +4,78 @@ using System.Collections.Generic;
 namespace Build
 {
 	/// <summary>
-	/// superblock µÄÕªÒªËµÃ÷¡£
+	/// superblock çš„æ‘˜è¦è¯´æ˜ã€‚
 	/// </summary>
 	public class Superblock
 	{
 		/// <summary>
-		/// inodeÇøÕ¼ÓÃµÄ´ÅÅÌ¿éÊı
+		/// inodeåŒºå ç”¨çš„ç£ç›˜å—æ•°
 		/// </summary>
         public int _s_isize;
 
 		/// <summary>
-		/// ÅÌ¿é×ÜÊı
+		/// ç›˜å—æ€»æ•°
 		/// </summary>
 		public int _s_fsize;
 
 		/// <summary>
-		///Ö±½Ó¹ÜÀíµÄ¿ÕÏĞ¿éÊı 
+		///ç›´æ¥ç®¡ç†çš„ç©ºé—²å—æ•° 
 		/// </summary>
 		public int _s_nfree;
 
 		/// <summary>
-		/// ¿ÕÏĞ¿éË÷Òı±í
+		/// ç©ºé—²å—ç´¢å¼•è¡¨
 		/// </summary>
 		public int[] _s_free;
 
 		/// <summary>
-		/// Ö±½Ó¹ÜÀíµÄinodeÊı
+		/// ç›´æ¥ç®¡ç†çš„inodeæ•°
 		/// </summary>
 		public int _s_ninode;
 
 		/// <summary>
-		/// ¿ÕÏĞinodeË÷Òı±í
+		/// ç©ºé—²inodeç´¢å¼•è¡¨
 		/// </summary>
 		public int[] _s_inode;
 
 		/// <summary>
-		/// ·âËø±êÖ¾¡ª¡ª¿ÕÏĞ¿é
+		/// å°é”æ ‡å¿—â€”â€”ç©ºé—²å—
 		/// </summary>
 		public int _s_flock;
 
 		/// <summary>
-		/// ·âËøinode±êÖ¾
+		/// å°é”inodeæ ‡å¿—
 		/// </summary>
 		public int _s_ilock;
 
 		/// <summary>
-		/// ÒÑ±»ĞŞ¸Ä
+		/// å·²è¢«ä¿®æ”¹
 		/// </summary>
 		public int _s_fmod;
 
 		/// <summary>
-		/// Ö»¶Á±êÖ¾
+		/// åªè¯»æ ‡å¿—
 		/// </summary>
 		public int _s_ronly;
 
 		/// <summary>
-		/// ×îºóÒ»´ÎĞŞ¸ÄÊ±¼ä£¬´ËÊ±Îª°²×°Ê±¼ä
+		/// æœ€åä¸€æ¬¡ä¿®æ”¹æ—¶é—´ï¼Œæ­¤æ—¶ä¸ºå®‰è£…æ—¶é—´
 		/// </summary>
 		public int _s_time;
 
         /// <summary>
-        /// ×îºóµÄÌî³äÎ»
+        /// æœ€åçš„å¡«å……ä½
         /// </summary>
         public int[] _s_padding;
 
 
         /// <summary>
-        /// °üº¬Ò»¸ö¶ÁĞ´ÎÄ¼şÀà
+        /// åŒ…å«ä¸€ä¸ªè¯»å†™æ–‡ä»¶ç±»
         /// </summary>
         private Disk _diskFile;
 
         /// <summary>
-        /// ¹¹Ôìº¯Êı
+        /// æ„é€ å‡½æ•°
         /// </summary>
 		public Superblock(Disk diskFile)
 		{
@@ -91,7 +91,7 @@ namespace Build
 			_s_ronly = 0;
 			_s_time = Helper.GetCurrentTime();
 
-            //Init padding(ÕâÀïpaddingµÄÄÚÈİÓÃÓÚÏòOSÄÚºË´úÂë´«µİÒ»Ğ©Êı¾İĞÅÏ¢)
+            //Init padding(è¿™é‡Œpaddingçš„å†…å®¹ç”¨äºå‘OSå†…æ ¸ä»£ç ä¼ é€’ä¸€äº›æ•°æ®ä¿¡æ¯)
             _s_padding = new int[47];
             InitPadding();
 
@@ -99,90 +99,90 @@ namespace Build
 		}
 
         /// <summary>
-        ///paddingÌî³äÊı×éµÄ³õÊ¼»¯º¯Êı 
+        ///paddingå¡«å……æ•°ç»„çš„åˆå§‹åŒ–å‡½æ•° 
         /// </summary>
         private void InitPadding()
         {
-            // ±íÃ÷s_paddindÊÇ·ñ×ö¹ıĞŞ¸Ä
+            // è¡¨æ˜s_paddindæ˜¯å¦åšè¿‡ä¿®æ”¹
             _s_padding[0] = 1;
-            // ´ÅÅÌ×ÜÉÈÇøÊı
+            // ç£ç›˜æ€»æ‰‡åŒºæ•°
             _s_padding[1] = MachinePara.Cylinders * MachinePara.Heads * MachinePara.Spt;
-            //InodeÇøÆğÊ¼Î»ÖÃ
+            //InodeåŒºèµ·å§‹ä½ç½®
             _s_padding[2] = MachinePara.SuperBlockSize + MachinePara.BootAndKernelSize;
-            //InodeÇø´óĞ¡
+            //InodeåŒºå¤§å°
             _s_padding[3] = MachinePara.InodeSize;
-            //DataÇøÆğÊ¼Î»ÖÃ
+            //DataåŒºèµ·å§‹ä½ç½®
             _s_padding[4] = _s_padding[2] + _s_padding[3];
-            //DataÇø´óĞ¡
+            //DataåŒºå¤§å°
             _s_padding[5] = _s_padding[1] - _s_padding[4] - MachinePara.SwapSize;
-            //SwapÇøÆğÊ¼Î»ÖÃ
+            //SwapåŒºèµ·å§‹ä½ç½®
             _s_padding[6] = _s_padding[4] + _s_padding[5];
-            //SwapÇø´óĞ¡
+            //SwapåŒºå¤§å°
             _s_padding[7] = MachinePara.SwapSize;
         }
 
         /// <summary>
-        /// ½«µ±Ç°µÄ³¬¼¶¿ìĞÅÏ¢¸üĞÂµ½´ÅÅÌ
+        /// å°†å½“å‰çš„è¶…çº§å¿«ä¿¡æ¯æ›´æ–°åˆ°ç£ç›˜
         /// </summary>
 		public void UpdateSuperBlockToDisk()
 		{
 			byte[] writeTo;
 
-			//¶¨Î»µ½³¬¼¶¿éÆğÊ¼Î»ÖÃ
+			//å®šä½åˆ°è¶…çº§å—èµ·å§‹ä½ç½®
             _diskFile.OpenFile();
 			_diskFile.SeekFilePosition(MachinePara.BootAndKernelSize*512, System.IO.SeekOrigin.Begin);
 
-			//inodeÇøÕ¼¾İµÄ´ÅÅÌ¿éÊı
+			//inodeåŒºå æ®çš„ç£ç›˜å—æ•°
 			writeTo = Helper.Struct2Bytes(_s_isize);
 			_diskFile.WriteFile(ref writeTo, 0, 4);
 
-			//×ÜµÄ´ÅÅÌ¿éÊı£¬ÎªÉÈÇøÊıµÄÒ»°ë
+			//æ€»çš„ç£ç›˜å—æ•°ï¼Œä¸ºæ‰‡åŒºæ•°çš„ä¸€åŠ
 			writeTo = Helper.Struct2Bytes(_s_fsize);
 			_diskFile.WriteFile(ref writeTo, 0, 4);
 
-			//µÃµ½Ö±½Ó¹ÜÀí¿éÊı
+			//å¾—åˆ°ç›´æ¥ç®¡ç†å—æ•°
 			writeTo = Helper.Struct2Bytes(_s_nfree);
 			_diskFile.WriteFile(ref writeTo, 0, 4);
 
-			//µÃµ½¿ÕÏĞÁĞ±í
+			//å¾—åˆ°ç©ºé—²åˆ—è¡¨
 			for (int i = 0; i < 100; ++i)
 			{
 				writeTo = Helper.Struct2Bytes(_s_free[i]);
 				_diskFile.WriteFile(ref writeTo, 0, 4);
 			}
  
-			//µÃµ½Ö±½Ó¹ÜÀíµÄinodeeÊıÁ¿
+			//å¾—åˆ°ç›´æ¥ç®¡ç†çš„inodeeæ•°é‡
 			writeTo = Helper.Struct2Bytes(_s_ninode);
 			_diskFile.WriteFile(ref writeTo, 0, 4);
 
-			//µÃµ½¿ÕÏĞinodeÁĞ±í
+			//å¾—åˆ°ç©ºé—²inodeåˆ—è¡¨
 			for (int i = 0; i < 100; ++i)
 			{
 				writeTo = Helper.Struct2Bytes(_s_inode[i]);
 				_diskFile.WriteFile(ref writeTo, 0, 4);
 			}
 
-			//·âËø±êÖ¾
+			//å°é”æ ‡å¿—
 			writeTo = Helper.Struct2Bytes(_s_flock);
 			_diskFile.WriteFile(ref writeTo, 0, 4);
            
-			//inode·âËø±êÖ¾
+			//inodeå°é”æ ‡å¿—
 			writeTo = Helper.Struct2Bytes(_s_ilock);
 			_diskFile.WriteFile(ref writeTo, 0, 4);
 
-			//ÒÑĞŞ¸Ä±êÖ¾
+			//å·²ä¿®æ”¹æ ‡å¿—
 			writeTo = Helper.Struct2Bytes(_s_fmod);
 			_diskFile.WriteFile(ref writeTo, 0, 4);
 
-			//Ö»¶Á±êÖ¾
+			//åªè¯»æ ‡å¿—
 			writeTo = Helper.Struct2Bytes(_s_ronly);
 			_diskFile.WriteFile(ref writeTo, 0, 4);
 
-			//×îºóĞŞ¸ÄÊ±¼ä
+			//æœ€åä¿®æ”¹æ—¶é—´
 			writeTo = Helper.Struct2Bytes(_s_time);
 			_diskFile.WriteFile(ref writeTo, 0, 4);
 
-            //Ìî³ä×Ö¶Î
+            //å¡«å……å­—æ®µ
             if (_s_padding[0] == 1)
             {
                 for (int i = 0; i < 47; i++)
@@ -196,31 +196,31 @@ namespace Build
 		}
 
         /// <summary>
-        /// ´Ó´ÅÅÌ¶Á³öµ±Ç°³¬¼¶¿éµÄÄÚÈİ(ÔİÎŞÒıÓÃ)
+        /// ä»ç£ç›˜è¯»å‡ºå½“å‰è¶…çº§å—çš„å†…å®¹(æš‚æ— å¼•ç”¨)
         /// </summary>
         public void ReadSuperBlock()
         {
             byte[] read;
-            //¶¨Î»µ½³¬¼¶¿éÆğÊ¼Î»ÖÃ
+            //å®šä½åˆ°è¶…çº§å—èµ·å§‹ä½ç½®
             _diskFile.OpenFile();
             _diskFile.SeekFilePosition(MachinePara.BootAndKernelSize * 512, System.IO.SeekOrigin.Begin);
 
-            //inodeÇøÕ¼¾İµÄ´ÅÅÌ¿éÊı
+            //inodeåŒºå æ®çš„ç£ç›˜å—æ•°
             read = new byte[4];           
             _diskFile.ReadFile(ref read, 0, 4);
             _s_isize = (int)Helper.Bytes2Struct(read,typeof(int));
 
-            //×ÜµÄ´ÅÅÌ¿éÊı£¬ÎªÉÈÇøÊıµÄÒ»°ë
+            //æ€»çš„ç£ç›˜å—æ•°ï¼Œä¸ºæ‰‡åŒºæ•°çš„ä¸€åŠ
             read = new byte[4];
             _diskFile.ReadFile(ref read, 0, 4);
             _s_fsize = (int)Helper.Bytes2Struct(read, typeof(int));
 
-            //µÃµ½Ö±½Ó¹ÜÀí¿éÊı
+            //å¾—åˆ°ç›´æ¥ç®¡ç†å—æ•°
             read = new byte[4];
             _diskFile.ReadFile(ref read, 0, 4);
             _s_nfree = (int)Helper.Bytes2Struct(read, typeof(int));
 
-            //µÃµ½¿ÕÏĞÁĞ±í
+            //å¾—åˆ°ç©ºé—²åˆ—è¡¨
             for (int i = 0; i < 100; ++i)
             {
                 read = new byte[4];
@@ -228,12 +228,12 @@ namespace Build
                 _s_free[i] = (int)Helper.Bytes2Struct(read, typeof(int));
             }
 
-            //µÃµ½Ö±½Ó¹ÜÀíµÄinodeÊıÁ¿
+            //å¾—åˆ°ç›´æ¥ç®¡ç†çš„inodeæ•°é‡
             read = new byte[4];
             _diskFile.ReadFile(ref read, 0, 4);
             _s_ninode = (int)Helper.Bytes2Struct(read, typeof(int));
 
-            //µÃµ½¿ÕÏĞinodeÁĞ±í
+            //å¾—åˆ°ç©ºé—²inodeåˆ—è¡¨
             for (int i = 0; i < 100; ++i)
             {
                 read = new byte[4];
@@ -241,27 +241,27 @@ namespace Build
                 _s_inode[i] = (int)Helper.Bytes2Struct(read, typeof(int));
             }
 
-            //·âËø±êÖ¾
+            //å°é”æ ‡å¿—
             read = new byte[4];
             _diskFile.ReadFile(ref read, 0, 4);
             _s_flock = (int)Helper.Bytes2Struct(read, typeof(int));
 
-            //inode·âËø±êÖ¾
+            //inodeå°é”æ ‡å¿—
             read = new byte[4];
             _diskFile.ReadFile(ref read, 0, 4);
             _s_ilock = (int)Helper.Bytes2Struct(read, typeof(int));
 
-            //ÒÑĞŞ¸Ä±êÖ¾
+            //å·²ä¿®æ”¹æ ‡å¿—
             read = new byte[4];
             _diskFile.ReadFile(ref read, 0, 4);
             _s_fmod = (int)Helper.Bytes2Struct(read, typeof(int));
 
-            //Ö»¶Á±êÖ¾
+            //åªè¯»æ ‡å¿—
             read = new byte[4];
             _diskFile.ReadFile(ref read, 0, 4);
             _s_ronly = (int)Helper.Bytes2Struct(read, typeof(int));
 
-            //×îºóĞŞ¸ÄÊ±¼ä
+            //æœ€åä¿®æ”¹æ—¶é—´
             read = new byte[4];
             _diskFile.ReadFile(ref read, 0, 4);
             _s_time = (int)Helper.Bytes2Struct(read, typeof(int));

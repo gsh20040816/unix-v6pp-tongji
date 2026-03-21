@@ -3,17 +3,17 @@ using System;
 namespace Build
 {
 	/// <summary>
-	/// commonfile µÄÕªÒªËµÃ÷¡£
+	/// commonfile çš„æ‘˜è¦è¯´æ˜ã€‚
 	/// </summary>
 	public class CommonFile : File
 	{
 		/// <summary>
-		/// ÒªĞ´ÈëµÄÔ´ÎÄ¼ş
+		/// è¦å†™å…¥çš„æºæ–‡ä»¶
 		/// </summary>
 		protected RWFiles _origFile;
 
         /// <summary>
-        /// ¹¹Ôìº¯Êı
+        /// æ„é€ å‡½æ•°
         /// </summary>
         /// <param name="tsb"></param>
         /// <param name="tid"></param>
@@ -27,7 +27,7 @@ namespace Build
 		}
 
 		/// <summary>
-		/// ÉèÖÃÆÕÍ¨ÎÄ¼şµÄinode
+		/// è®¾ç½®æ™®é€šæ–‡ä»¶çš„inode
 		/// </summary>
 		protected override void SetCommonFileInode()
 		{
@@ -42,14 +42,14 @@ namespace Build
                     return;
                 }
                 _fileInode._i_size = (int)(_origFile.ReturnFileLength());
-                //Ğ´ÎÄ¼ş
+                //å†™æ–‡ä»¶
                 WriteFileItem();
                 _origFile.CloseFile();
             }
 		}
 
         /// <summary>
-        /// Ğ´ÈëÎÄ¼şÏî
+        /// å†™å…¥æ–‡ä»¶é¡¹
         /// </summary>
         private void WriteFileItem()
 		{

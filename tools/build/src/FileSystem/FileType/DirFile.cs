@@ -3,15 +3,15 @@ using System;
 namespace Build
 {
 	/// <summary>
-	/// dir µÄÕªÒªËµÃ÷¡£
+	/// dir çš„æ‘˜è¦è¯´æ˜ã€‚
 	/// </summary>
 	public class DirFile : File
 	{
-        //¹æ¶¨¸ùÄ¿Â¼Ö»ÄÜ´´½¨Ò»´Î
+        //è§„å®šæ ¹ç›®å½•åªèƒ½åˆ›å»ºä¸€æ¬¡
         private static bool RootCreated = false;
 
         /// <summary>
-        /// ¹¹Ôìº¯Êı
+        /// æ„é€ å‡½æ•°
         /// </summary>
         /// <param name="tsb"></param>
         /// <param name="tid"></param>
@@ -22,7 +22,7 @@ namespace Build
 		{}
 
         /// <summary>
-        /// ÉèÖÃÎÄ¼şInode
+        /// è®¾ç½®æ–‡ä»¶Inode
         /// </summary>
 		protected override void SetCommonFileInode()
 		{
@@ -31,20 +31,20 @@ namespace Build
 		}
 
         /// <summary>
-        /// ´´½¨Ä¿Â¼
+        /// åˆ›å»ºç›®å½•
         /// </summary>
         public void CreateDirectory()
         {
             if (_createFilePath != "")
                 CreateFile();
-            //¸ùÄ¿Â¼´´½¨
+            //æ ¹ç›®å½•åˆ›å»º
             else if (!RootCreated)
             {
-                /*ÓÉÓÚ¸ùÄ¿Â¼×ÜÊÇµÚÒ»¸ö±»´´½¨µÄÄ¿Â¼£¬
-                 *¶øÊÜ¹ÜÀíµÄinodeÊı×éÔÚ³õÊ¼»¯µÄÊ±ºòµÚÒ»¸ö³ÉÔ±±»ÉèÖÃÎªÁË0£¬
-                  ËùÒÔµÈÓÚÖ±½Ó¾Í½«0ºÅinode·Ö¸øÁË¸ùÄ¿Â¼*/
+                /*ç”±äºæ ¹ç›®å½•æ€»æ˜¯ç¬¬ä¸€ä¸ªè¢«åˆ›å»ºçš„ç›®å½•ï¼Œ
+                 *è€Œå—ç®¡ç†çš„inodeæ•°ç»„åœ¨åˆå§‹åŒ–çš„æ—¶å€™ç¬¬ä¸€ä¸ªæˆå‘˜è¢«è®¾ç½®ä¸ºäº†0ï¼Œ
+                  æ‰€ä»¥ç­‰äºç›´æ¥å°±å°†0å·inodeåˆ†ç»™äº†æ ¹ç›®å½•*/
                 _fileInodeNo = _inodeblock.FetchFreeInode();
-                //Ğ´ĞÂ½¨µÄinode£¬²¢Ğ´Èë´ÅÅÌ
+                //å†™æ–°å»ºçš„inodeï¼Œå¹¶å†™å…¥ç£ç›˜
                 SetCommonFileInode();
                 _inodeblock.CleanInodeAddr(_fileInode);
                 _inodeblock.UpdateInodeToDisk(_fileInode, _fileInodeNo);

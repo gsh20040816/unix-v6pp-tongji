@@ -14,7 +14,7 @@ void ExecuteTLST( struct commandNode* node, struct commandNode* parent, int* pip
 {
 	if ( node->left >= 0 )
 	{
-		//ËÆºõÕâÀïÓ¦¸ÃÅÐ¶Ïnode½ÚµãÊÇ·ñÓÐpinÊôÐÔ£¬ÒÔ±ã¸´ÖÆ¸ø×ó×Ó½Úµã
+		//ä¼¼ä¹Žè¿™é‡Œåº”è¯¥åˆ¤æ–­nodeèŠ‚ç‚¹æ˜¯å¦æœ‰pinå±žæ€§ï¼Œä»¥ä¾¿å¤åˆ¶ç»™å·¦å­èŠ‚ç‚¹
 		ExecuteCommand( &commandNodes[node->left], node, pipes);		
 	}	
 	if ( node->right >= 0 )
@@ -119,7 +119,7 @@ void ExecuteTCOM( struct commandNode* node, struct commandNode* parent, int* pip
 		{
 			exit(0);
 		}
-		/* ËÑË÷binÄ¿Â¼ */
+		/* æœç´¢binç›®å½• */
 		pathname[0] = 0;
 		strcat(pathname, "/bin/");
 		strcat(pathname, node->args[0]);

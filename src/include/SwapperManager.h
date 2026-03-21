@@ -8,7 +8,7 @@ class SwapperManager
 {
 public:
 	/* static non-const member */
-	/* !hard code!Éè¶¨´ÅÅÌ´Ó18000#¿ªÊ¼µÄ2000¸öÉÈÇø×÷Îª½»»»Çø */
+	/* !hard code!è®¾å®šç£ç›˜ä»Ž18000#å¼€å§‹çš„2000ä¸ªæ‰‡åŒºä½œä¸ºäº¤æ¢åŒº */
 	static unsigned int SWAPPER_ZONE_START_BLOCK;
 	static unsigned int SWAPPER_ZONE_SIZE;
 
@@ -21,25 +21,25 @@ public:
 	SwapperManager(Allocator* pAllocator);
 	~SwapperManager();
 
-	/* ³õÊ¼»¯MapNode map[0]Îª´ÅÅÌ½»»»ÇøÆðÊ¼µØÖ·¡¢´óÐ¡ */
+	/* åˆå§‹åŒ–MapNode map[0]ä¸ºç£ç›˜äº¤æ¢åŒºèµ·å§‹åœ°å€ã€å¤§å° */
 	int Initialize();
 	/* 
-	 * ½»»»Çø¿Õ¼ä·ÖÅä
+	 * äº¤æ¢åŒºç©ºé—´åˆ†é…
 	 * 
-	 * size:  ÇëÇó·ÖÅä½»»»Çø´óÐ¡(µ¥Î»: byte)£¬Êµ¼Ê·ÖÅäµÄ½»»»Çø´óÐ¡ÒÔ
-	 * ´ÅÅÌ¿éÎªµ¥Î»£¬¸ù¾Ý²ÎÊýsize´óÐ¡£¬ÏòÉÏÈ¡ÕûÖÁ´ÅÅÌ¿é´óÐ¡µÄÕûÊý±¶¡£
+	 * size:  è¯·æ±‚åˆ†é…äº¤æ¢åŒºå¤§å°(å•ä½: byte)ï¼Œå®žé™…åˆ†é…çš„äº¤æ¢åŒºå¤§å°ä»¥
+	 * ç£ç›˜å—ä¸ºå•ä½ï¼Œæ ¹æ®å‚æ•°sizeå¤§å°ï¼Œå‘ä¸Šå–æ•´è‡³ç£ç›˜å—å¤§å°çš„æ•´æ•°å€ã€‚
 	 * 
-	 * ·µ»ØÖµ: ·ÖÅäµ½µÄ½»»»ÇøÆðÊ¼ÅÌ¿éºÅ£¬·µ»Ø0±íÊ¾·ÖÅäÊ§°Ü¡£
+	 * è¿”å›žå€¼: åˆ†é…åˆ°çš„äº¤æ¢åŒºèµ·å§‹ç›˜å—å·ï¼Œè¿”å›ž0è¡¨ç¤ºåˆ†é…å¤±è´¥ã€‚
 	 */
 	int AllocSwap(unsigned long size);
 	/* 
-	 * ½»»»Çø¿Õ¼äÊÍ·Å
+	 * äº¤æ¢åŒºç©ºé—´é‡Šæ”¾
 	 * 
-	 * size:  ÊÍ·Å½»»»Çø´óÐ¡(µ¥Î»: byte)£¬Êµ¼ÊÊÍ·ÅµÄ½»»»Çø´óÐ¡ÒÔ
-	 * ´ÅÅÌ¿éÎªµ¥Î»£¬¸ù¾Ý²ÎÊýsize´óÐ¡£¬ÏòÉÏÈ¡ÕûÖÁ´ÅÅÌ¿é´óÐ¡µÄÕûÊý±¶¡£
-	 * startBlock: ÊÍ·Å½»»»ÇøÆðÊ¼ÅÌ¿éºÅ
+	 * size:  é‡Šæ”¾äº¤æ¢åŒºå¤§å°(å•ä½: byte)ï¼Œå®žé™…é‡Šæ”¾çš„äº¤æ¢åŒºå¤§å°ä»¥
+	 * ç£ç›˜å—ä¸ºå•ä½ï¼Œæ ¹æ®å‚æ•°sizeå¤§å°ï¼Œå‘ä¸Šå–æ•´è‡³ç£ç›˜å—å¤§å°çš„æ•´æ•°å€ã€‚
+	 * startBlock: é‡Šæ”¾äº¤æ¢åŒºèµ·å§‹ç›˜å—å·
 	 * 
-	 * ·µ»ØÖµ: ÊÍ·Å½»»»Çø²Ù×÷×ÜÄÜ³É¹¦£¬·µ»Ø0£¬µ«Í¨³£ºöÂÔÆä·µ»ØÖµ¡£
+	 * è¿”å›žå€¼: é‡Šæ”¾äº¤æ¢åŒºæ“ä½œæ€»èƒ½æˆåŠŸï¼Œè¿”å›ž0ï¼Œä½†é€šå¸¸å¿½ç•¥å…¶è¿”å›žå€¼ã€‚
 	 */
 	int FreeSwap(unsigned long size, int startBlock);
 

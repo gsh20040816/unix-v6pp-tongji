@@ -7,18 +7,18 @@
 #define FLOAT_DOWN_OVERFLOW_EXPONENT -127
 
 unsigned int float_getSign(float f);
-/* 得到尾数部分 */
+/* 寰楀埌灏炬暟閮ㄥ垎 */
 unsigned int float_getMantissa(float f);
-/* 得到阶码部分 */
+/* 寰楀埌闃剁爜閮ㄥ垎 */
 int float_getExponent(float f);
-/* 得到整数部分 */
+/* 寰楀埌鏁存暟閮ㄥ垎 */
 float float_getLeft(float f);
-/* 得到小数部分 */
+/* 寰楀埌灏忔暟閮ㄥ垎 */
 float float_getRight(float f);
 int float_isZero(float f);
-/* 上溢 */
+/* 涓婃孩 */
 int float_isUpOverFlow(float f);
-/* 下溢 */
+/* 涓嬫孩 */
 int float_isDownOverFlow(float f);
 
 #endif

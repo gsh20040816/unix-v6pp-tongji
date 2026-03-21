@@ -13,12 +13,12 @@ namespace MakeImage
             spb = aSpb;
         }
 
-        /* ½¨Á¢¡°Õ»µÄÕ»¡±¡£ÓÃÊ®Áù½øÖÆ±à¼­Æ÷±È½Ï£¬
-         * ÓëÄÚºËÖĞMakeFS()Éú³ÉµÄÍêÈ«Ò»ÖÂ£¬¿É·ÅĞÄÊ¹ÓÃ¡£
+        /* å»ºç«‹â€œæ ˆçš„æ ˆâ€ã€‚ç”¨åå…­è¿›åˆ¶ç¼–è¾‘å™¨æ¯”è¾ƒï¼Œ
+         * ä¸å†…æ ¸ä¸­MakeFS()ç”Ÿæˆçš„å®Œå…¨ä¸€è‡´ï¼Œå¯æ”¾å¿ƒä½¿ç”¨ã€‚
          */
         public void FreeAllBlock()
         {
-            /* ×îºóÒ»×éÓÃs_free[0] = 0×÷Îª½áÊø±êÖ¾ */
+            /* æœ€åä¸€ç»„ç”¨s_free[0] = 0ä½œä¸ºç»“æŸæ ‡å¿— */
             spb.s_free[0] = 0;
             spb.s_nfree++;
 
@@ -28,7 +28,7 @@ namespace MakeImage
             }
         }
 
-        /* ÊÍ·ÅÒ»¸ö¿ÕÏĞÅÌ¿é£¬Ğ§¹ûµÈÍ¬ÓÚFileSystem::Free()º¯Êı */
+        /* é‡Šæ”¾ä¸€ä¸ªç©ºé—²ç›˜å—ï¼Œæ•ˆæœç­‰åŒäºFileSystem::Free()å‡½æ•° */
         public void Free(int blkno)
         {
             spb.s_fmod = 1;
@@ -53,21 +53,21 @@ namespace MakeImage
             spb.s_fmod = 1;
         }
 
-        /* ·ÖÅäÒ»¸ö¿ÕÏĞÅÌ¿é£¬·µ»ØÅÌ¿éºÅ */
+        /* åˆ†é…ä¸€ä¸ªç©ºé—²ç›˜å—ï¼Œè¿”å›ç›˜å—å· */
         public int Alloc()
         {
             int blkno = -1;
 
             blkno = spb.s_free[--spb.s_nfree];
 
-            /* ºÄ¾¡ËùÓĞ¿ÕÏĞÅÌ¿é */
+            /* è€—å°½æ‰€æœ‰ç©ºé—²ç›˜å— */
             if(0 == blkno)
             {
                 Console.WriteLine("No More Space!!\n");
                 return 0;
             }
 
-            /* Õ»ÒÑ¿Õ£¬ĞèÒª¶ÁÈëÏÂÒ»×é¿ÕÏĞÅÌ¿éµ½spb.s_free[100]ÖĞ */
+            /* æ ˆå·²ç©ºï¼Œéœ€è¦è¯»å…¥ä¸‹ä¸€ç»„ç©ºé—²ç›˜å—åˆ°spb.s_free[100]ä¸­ */
             if(spb.s_nfree <= 0)
             {
                 byte[] buffer = Tool.ReadSector(blkno);
@@ -80,7 +80,7 @@ namespace MakeImage
                 }
             }
 
-            /* ½«ĞÂÉêÇëµ½µÄÅÌ¿éÇåÁã */
+            /* å°†æ–°ç”³è¯·åˆ°çš„ç›˜å—æ¸…é›¶ */
             Tool.ClearBlock(blkno);
             spb.s_fmod = 1;
             return blkno;

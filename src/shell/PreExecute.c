@@ -73,6 +73,6 @@ char* NextKeyToken(char* input)
 char* TrimLeft( char* tp )
 {
 	char* p = tp;
-	while ( IsSpace(*p) && *p ) ++p;	/* È¥µô¶àÓàµÄ¿Õ¸ñ */
+	while ( IsSpace(*p) && *p ) ++p;	/* åŽ»æŽ‰å¤šä½™çš„ç©ºæ ¼ */
 	return p;
 }

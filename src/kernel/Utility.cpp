@@ -39,7 +39,7 @@ int Utility::StringLength(char* pString)
 		length++;
 	}
 
-	/* ·µ»Ø×Ö·û´®³¤¶È */
+	/* è¿”å›å­—ç¬¦ä¸²é•¿åº¦ */
 	return length;
 }
 
@@ -49,8 +49,8 @@ void Utility::CopySeg2(unsigned long src, unsigned long des)
 	
 
 	/*
-	 * ÏÈ±£´æÔ­ÓÃ»§Ì¬µÚÒ»Ò³ÓëµÚ¶şÒ³PageTableEntry£¬ÒòÎªÏÂÃæµÄ²Ù×÷
-	 * ½«»á½«srcËùÔÚÒ³Ó³Éäµ½0#Ä¿Â¼±íÏî£¬desÓ³Éäµ½1#±íÏî£¬×îºó½øĞĞcopy
+	 * å…ˆä¿å­˜åŸç”¨æˆ·æ€ç¬¬ä¸€é¡µä¸ç¬¬äºŒé¡µPageTableEntryï¼Œå› ä¸ºä¸‹é¢çš„æ“ä½œ
+	 * å°†ä¼šå°†srcæ‰€åœ¨é¡µæ˜ å°„åˆ°0#ç›®å½•è¡¨é¡¹ï¼Œdesæ˜ å°„åˆ°1#è¡¨é¡¹ï¼Œæœ€åè¿›è¡Œcopy
 	 */
 	unsigned long oriEntry1 = userPageTable[0].m_PageBaseAddress;
 	unsigned long oriEntry2 = userPageTable[1].m_PageBaseAddress;	
@@ -59,14 +59,14 @@ void Utility::CopySeg2(unsigned long src, unsigned long des)
 	userPageTable[1].m_PageBaseAddress = des / PageManager::PAGE_SIZE;
 
 	unsigned char* addressSrc = (unsigned char*)(src % PageManager::PAGE_SIZE);	
-	//µÚ¶şÒ³virtual addess´Ó4096¿ªÊ¼
+	//ç¬¬äºŒé¡µvirtual addessä»4096å¼€å§‹
 	unsigned char* addressDes = (unsigned char*)(PageManager::PAGE_SIZE + des % PageManager::PAGE_SIZE);	
-	//ĞèÒªË¢ĞÂÒ³±í»º´æ
+	//éœ€è¦åˆ·æ–°é¡µè¡¨ç¼“å­˜
 	FlushPageDirectory();
 
 	*addressDes = *addressSrc;
 	
-	//»Ö¸´Ô­Ò³±íÓ³Éä
+	//æ¢å¤åŸé¡µè¡¨æ˜ å°„
 	userPageTable[0].m_PageBaseAddress = oriEntry1;
 	userPageTable[1].m_PageBaseAddress = oriEntry2;
 	FlushPageDirectory();
@@ -77,8 +77,8 @@ void Utility::CopySeg(unsigned long src, unsigned long des)
 	PageTableEntry* PageTable = Machine::Instance().GetKernelPageTable().m_Entrys;
 
 	/*
-	 * ÏÈ±£´æÔ­ÓÃ»§Ì¬µÚÒ»Ò³ÓëµÚ¶şÒ³PageTableEntry£¬ÒòÎªÏÂÃæµÄ²Ù×÷
-	 * ½«»á½«srcËùÔÚÒ³Ó³Éäµ½0#Ä¿Â¼±íÏî£¬desÓ³Éäµ½1#±íÏî£¬×îºó½øĞĞcopy
+	 * å…ˆä¿å­˜åŸç”¨æˆ·æ€ç¬¬ä¸€é¡µä¸ç¬¬äºŒé¡µPageTableEntryï¼Œå› ä¸ºä¸‹é¢çš„æ“ä½œ
+	 * å°†ä¼šå°†srcæ‰€åœ¨é¡µæ˜ å°„åˆ°0#ç›®å½•è¡¨é¡¹ï¼Œdesæ˜ å°„åˆ°1#è¡¨é¡¹ï¼Œæœ€åè¿›è¡Œcopy
 	 */
 	unsigned long oriEntry1 = PageTable[borrowedPTE].m_PageBaseAddress;
 	unsigned long oriEntry2 = PageTable[borrowedPTE + 1].m_PageBaseAddress;
@@ -89,12 +89,12 @@ void Utility::CopySeg(unsigned long src, unsigned long des)
 	unsigned char* addressSrc = (unsigned char*)(0xC0000000 + borrowedPTE*PageManager::PAGE_SIZE + src % PageManager::PAGE_SIZE);
 
 	unsigned char* addressDes = (unsigned char*)(0xC0000000 + (borrowedPTE + 1)*PageManager::PAGE_SIZE + des % PageManager::PAGE_SIZE);
-	//ĞèÒªË¢ĞÂÒ³±í»º´æ
+	//éœ€è¦åˆ·æ–°é¡µè¡¨ç¼“å­˜
 	FlushPageDirectory();
 
 	*addressDes = *addressSrc;
 
-	//»Ö¸´Ô­Ò³±íÓ³Éä
+	//æ¢å¤åŸé¡µè¡¨æ˜ å°„
 	PageTable[borrowedPTE].m_PageBaseAddress = oriEntry1;
 	PageTable[(borrowedPTE + 1)].m_PageBaseAddress = oriEntry2;
 	FlushPageDirectory();
@@ -116,15 +116,15 @@ short Utility::GetMinor(const short dev)
 
 short Utility::SetMajor(short dev, const short value)
 {
-	dev &= 0x00FF;	/*  Çå³ıdevÖĞÔ­ÏÈ¸ß8±ÈÌØ */
+	dev &= 0x00FF;	/*  æ¸…é™¤devä¸­åŸå…ˆé«˜8æ¯”ç‰¹ */
 	dev |= (value << 8);
 	return dev;
 }
 
 short Utility::SetMinor(short dev, const short value)
 {
-	dev &= 0xFF00;	/*  Çå³ıdevÖĞÔ­ÏÈµÍ8±ÈÌØ */
-	dev |= (value & 0x00FF);	/* ½ö±£ÁôvalueÖĞµÄµÍ8Î» */
+	dev &= 0xFF00;	/*  æ¸…é™¤devä¸­åŸå…ˆä½8æ¯”ç‰¹ */
+	dev |= (value & 0x00FF);	/* ä»…ä¿ç•™valueä¸­çš„ä½8ä½ */
 	return dev;
 }
 
@@ -177,7 +177,7 @@ unsigned int Utility::MakeKernelTime( struct SystemTime* pTime )
 {
 	unsigned int timeInSeconds = 0;
 	unsigned int days;
-	int currentYear = 2000 + pTime->Year;	/* YearÖĞÖ»ÓĞÄê·İºó2Î» */
+	int currentYear = 2000 + pTime->Year;	/* Yearä¸­åªæœ‰å¹´ä»½å2ä½ */
 
 	/* compute hours, minutes, seconds */
 	timeInSeconds += pTime->Second;
@@ -200,7 +200,7 @@ unsigned int Utility::MakeKernelTime( struct SystemTime* pTime )
 	return timeInSeconds;
 }
 
-/* Ä³¸öÔÂ·İÇ°¾­¹ıµÄÌìÊı£¬µÚ0Ïî²»Ê¹ÓÃ£¬Î´ÄÉÈë¼ÆËãÈòÄê2ÔÂ·İ29Ìì */
+/* æŸä¸ªæœˆä»½å‰ç»è¿‡çš„å¤©æ•°ï¼Œç¬¬0é¡¹ä¸ä½¿ç”¨ï¼Œæœªçº³å…¥è®¡ç®—é—°å¹´2æœˆä»½29å¤© */
 const unsigned int Utility::DaysBeforeMonth[13] = {0xFFFFFFFF/* Unused */, 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
 
 bool Utility::IsLeapYear( int year )

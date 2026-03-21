@@ -4,7 +4,7 @@
 #include "Video.h"
 
 /*==============================class OpenFileTable===================================*/
-/* ÏµÍ³È«¾Ö´ò¿ªÎÄ¼ş±í¶ÔÏóÊµÀıµÄ¶¨Òå */
+/* ç³»ç»Ÿå…¨å±€æ‰“å¼€æ–‡ä»¶è¡¨å¯¹è±¡å®ä¾‹çš„å®šä¹‰ */
 OpenFileTable g_OpenFileTable;
 
 OpenFileTable::OpenFileTable()
@@ -17,30 +17,30 @@ OpenFileTable::~OpenFileTable()
 	//nothing to do here
 }
 
-/*×÷ÓÃ£º½ø³Ì´ò¿ªÎÄ¼şÃèÊö·û±íÖĞÕÒµÄ¿ÕÏĞÏî  Ö® ÏÂ±ê  Ğ´Èë u_ar0[EAX]*/
+/*ä½œç”¨ï¼šè¿›ç¨‹æ‰“å¼€æ–‡ä»¶æè¿°ç¬¦è¡¨ä¸­æ‰¾çš„ç©ºé—²é¡¹  ä¹‹ ä¸‹æ ‡  å†™å…¥ u_ar0[EAX]*/
 File* OpenFileTable::FAlloc()
 {
 	int fd;
 	User& u = Kernel::Instance().GetUser();
 
-	/* ÔÚ½ø³Ì´ò¿ªÎÄ¼şÃèÊö·û±íÖĞ»ñÈ¡Ò»¸ö¿ÕÏĞÏî */
+	/* åœ¨è¿›ç¨‹æ‰“å¼€æ–‡ä»¶æè¿°ç¬¦è¡¨ä¸­è·å–ä¸€ä¸ªç©ºé—²é¡¹ */
 	fd = u.u_ofiles.AllocFreeSlot();
 
-	if(fd < 0)	/* Èç¹ûÑ°ÕÒ¿ÕÏĞÏîÊ§°Ü */
+	if(fd < 0)	/* å¦‚æœå¯»æ‰¾ç©ºé—²é¡¹å¤±è´¥ */
 	{
 		return NULL;
 	}
 
 	for(int i = 0; i < OpenFileTable::NFILE; i++)
 	{
-		/* f_count==0±íÊ¾¸ÃÏî¿ÕÏĞ */
+		/* f_count==0è¡¨ç¤ºè¯¥é¡¹ç©ºé—² */
 		if(this->m_File[i].f_count == 0)
 		{
-			/* ½¨Á¢ÃèÊö·ûºÍFile½á¹¹µÄ¹´Á¬¹ØÏµ */
+			/* å»ºç«‹æè¿°ç¬¦å’ŒFileç»“æ„çš„å‹¾è¿å…³ç³» */
 			u.u_ofiles.SetF(fd, &this->m_File[i]);
-			/* Ôö¼Ó¶Ôfile½á¹¹µÄÒıÓÃ¼ÆÊı */
+			/* å¢åŠ å¯¹fileç»“æ„çš„å¼•ç”¨è®¡æ•° */
 			this->m_File[i].f_count++;
-			/* Çå¿ÕÎÄ¼ş¶Á¡¢Ğ´Î»ÖÃ */
+			/* æ¸…ç©ºæ–‡ä»¶è¯»ã€å†™ä½ç½® */
 			this->m_File[i].f_offset = 0;
 			return (&this->m_File[i]);
 		}
@@ -56,7 +56,7 @@ void OpenFileTable::CloseF(File *pFile)
 	Inode* pNode;
 	ProcessManager& procMgr = Kernel::Instance().GetProcessManager();
 
-	/* ¹ÜµÀÀàĞÍ */
+	/* ç®¡é“ç±»å‹ */
 	if(pFile->f_flag & File::FPIPE)
 	{
 		pNode = pFile->f_inode;
@@ -68,19 +68,19 @@ void OpenFileTable::CloseF(File *pFile)
 	if(pFile->f_count <= 1)
 	{
 		/* 
-		 * Èç¹ûµ±Ç°½ø³ÌÊÇ×îºóÒ»¸öÒıÓÃ¸ÃÎÄ¼şµÄ½ø³Ì£¬
-		 * ¶ÔÌØÊâ¿éÉè±¸¡¢×Ö·ûÉè±¸ÎÄ¼şµ÷ÓÃÏàÓ¦µÄ¹Ø±Õº¯Êı
+		 * å¦‚æœå½“å‰è¿›ç¨‹æ˜¯æœ€åä¸€ä¸ªå¼•ç”¨è¯¥æ–‡ä»¶çš„è¿›ç¨‹ï¼Œ
+		 * å¯¹ç‰¹æ®Šå—è®¾å¤‡ã€å­—ç¬¦è®¾å¤‡æ–‡ä»¶è°ƒç”¨ç›¸åº”çš„å…³é—­å‡½æ•°
 		 */
 		pFile->f_inode->CloseI(pFile->f_flag & File::FWRITE);
 		g_InodeTable.IPut(pFile->f_inode);
 	}
 
-	/* ÒıÓÃµ±Ç°FileµÄ½ø³ÌÊı¼õ1 */
+	/* å¼•ç”¨å½“å‰Fileçš„è¿›ç¨‹æ•°å‡1 */
 	pFile->f_count--;
 }
 
 /*==============================class InodeTable===================================*/
-/*  ¶¨ÒåÄÚ´æInode±íµÄÊµÀı */
+/*  å®šä¹‰å†…å­˜Inodeè¡¨çš„å®ä¾‹ */
 InodeTable g_InodeTable;
 
 InodeTable::InodeTable()
@@ -95,7 +95,7 @@ InodeTable::~InodeTable()
 
 void InodeTable::Initialize()
 {
-	/* »ñÈ¡¶Ôg_FileSystemµÄÒıÓÃ */
+	/* è·å–å¯¹g_FileSystemçš„å¼•ç”¨ */
 	this->m_FileSystem = &Kernel::Instance().GetFileSystem();
 }
 
@@ -106,63 +106,63 @@ Inode* InodeTable::IGet(short dev, int inumber)
 
 	while(true)
 	{
-		/* ¼ì²éÖ¸¶¨Éè±¸devÖĞ±àºÅÎªinumberµÄÍâ´æInodeÊÇ·ñÓĞÄÚ´æ¿½±´ */
+		/* æ£€æŸ¥æŒ‡å®šè®¾å¤‡devä¸­ç¼–å·ä¸ºinumberçš„å¤–å­˜Inodeæ˜¯å¦æœ‰å†…å­˜æ‹·è´ */
 		int index = this->IsLoaded(dev, inumber);
-		if(index >= 0)	/* ÕÒµ½ÄÚ´æ¿½±´ */
+		if(index >= 0)	/* æ‰¾åˆ°å†…å­˜æ‹·è´ */
 		{
 			pInode = &(this->m_Inode[index]);
-			/* Èç¹û¸ÃÄÚ´æInode±»ÉÏËø */
+			/* å¦‚æœè¯¥å†…å­˜Inodeè¢«ä¸Šé” */
 			if( pInode->i_flag & Inode::ILOCK )
 			{
-				/* ÔöÉèIWANT±êÖ¾£¬È»ºóË¯Ãß */
+				/* å¢è®¾IWANTæ ‡å¿—ï¼Œç„¶åç¡çœ  */
 				pInode->i_flag |= Inode::IWANT;
 				
 				u.u_procp->Sleep((unsigned long)&pInode, ProcessManager::PINOD);
 				
-				/* »Øµ½whileÑ­»·£¬ĞèÒªÖØĞÂËÑË÷£¬ÒòÎª¸ÃÄÚ´æInode¿ÉÄÜÒÑ¾­Ê§Ğ§ */
+				/* å›åˆ°whileå¾ªç¯ï¼Œéœ€è¦é‡æ–°æœç´¢ï¼Œå› ä¸ºè¯¥å†…å­˜Inodeå¯èƒ½å·²ç»å¤±æ•ˆ */
 				continue;
 			}
 
-			/* Èç¹û¸ÃÄÚ´æInodeÓÃÓÚÁ¬½Ó×ÓÎÄ¼şÏµÍ³£¬²éÕÒ¸ÃInode¶ÔÓ¦µÄMount×°Åä¿é */
+			/* å¦‚æœè¯¥å†…å­˜Inodeç”¨äºè¿æ¥å­æ–‡ä»¶ç³»ç»Ÿï¼ŒæŸ¥æ‰¾è¯¥Inodeå¯¹åº”çš„Mountè£…é…å— */
 			if( pInode->i_flag & Inode::IMOUNT )
 			{
 				Mount* pMount = this->m_FileSystem->GetMount(pInode);
 				if(NULL == pMount)
 				{
-					/* Ã»ÓĞÕÒµ½ */
+					/* æ²¡æœ‰æ‰¾åˆ° */
 					Utility::Panic("No Mount Tab...");
 				}
 				else
 				{
-					/* ½«²ÎÊıÉèÎª×ÓÎÄ¼şÏµÍ³Éè±¸ºÅ¡¢¸ùÄ¿Â¼Inode±àºÅ */
+					/* å°†å‚æ•°è®¾ä¸ºå­æ–‡ä»¶ç³»ç»Ÿè®¾å¤‡å·ã€æ ¹ç›®å½•Inodeç¼–å· */
 					dev = pMount->m_dev;
 					inumber = FileSystem::ROOTINO;
-					/* »Øµ½whileÑ­»·£¬ÒÔĞÂdev£¬inumberÖµÖØĞÂËÑË÷ */
+					/* å›åˆ°whileå¾ªç¯ï¼Œä»¥æ–°devï¼Œinumberå€¼é‡æ–°æœç´¢ */
 					continue;
 				}
 			}
 
 			/* 
-			 * ³ÌĞòÖ´ĞĞµ½ÕâÀï±íÊ¾£ºÄÚ´æInode¸ßËÙ»º´æÖĞÕÒµ½ÏàÓ¦ÄÚ´æInode£¬
-			 * Ôö¼ÓÆäÒıÓÃ¼ÆÊı£¬ÔöÉèILOCK±êÖ¾²¢·µ»ØÖ®
+			 * ç¨‹åºæ‰§è¡Œåˆ°è¿™é‡Œè¡¨ç¤ºï¼šå†…å­˜Inodeé«˜é€Ÿç¼“å­˜ä¸­æ‰¾åˆ°ç›¸åº”å†…å­˜Inodeï¼Œ
+			 * å¢åŠ å…¶å¼•ç”¨è®¡æ•°ï¼Œå¢è®¾ILOCKæ ‡å¿—å¹¶è¿”å›ä¹‹
 			 */
 			pInode->i_count++;
 			pInode->i_flag |= Inode::ILOCK;
 			return pInode;
 		}
-		else	/* Ã»ÓĞInodeµÄÄÚ´æ¿½±´£¬Ôò·ÖÅäÒ»¸ö¿ÕÏĞÄÚ´æInode */
+		else	/* æ²¡æœ‰Inodeçš„å†…å­˜æ‹·è´ï¼Œåˆ™åˆ†é…ä¸€ä¸ªç©ºé—²å†…å­˜Inode */
 		{
 			pInode = this->GetFreeInode();
-			/* ÈôÄÚ´æInode±íÒÑÂú£¬·ÖÅä¿ÕÏĞInodeÊ§°Ü */
+			/* è‹¥å†…å­˜Inodeè¡¨å·²æ»¡ï¼Œåˆ†é…ç©ºé—²Inodeå¤±è´¥ */
 			if(NULL == pInode)
 			{
 				Diagnose::Write("Inode Table Overflow !\n");
 				u.u_error = User::ENFILE;
 				return NULL;
 			}
-			else	/* ·ÖÅä¿ÕÏĞInode³É¹¦£¬½«Íâ´æInode¶ÁÈëĞÂ·ÖÅäµÄÄÚ´æInode */
+			else	/* åˆ†é…ç©ºé—²InodeæˆåŠŸï¼Œå°†å¤–å­˜Inodeè¯»å…¥æ–°åˆ†é…çš„å†…å­˜Inode */
 			{
-				/* ÉèÖÃĞÂµÄÉè±¸ºÅ¡¢Íâ´æInode±àºÅ£¬Ôö¼ÓÒıÓÃ¼ÆÊı£¬¶ÔË÷Òı½ÚµãÉÏËø */
+				/* è®¾ç½®æ–°çš„è®¾å¤‡å·ã€å¤–å­˜Inodeç¼–å·ï¼Œå¢åŠ å¼•ç”¨è®¡æ•°ï¼Œå¯¹ç´¢å¼•èŠ‚ç‚¹ä¸Šé” */
 				pInode->i_dev = dev;
 				pInode->i_number = inumber;
 				pInode->i_flag = Inode::ILOCK;
@@ -170,22 +170,22 @@ Inode* InodeTable::IGet(short dev, int inumber)
 				pInode->i_lastr = -1;
 
 				BufferManager& bm = Kernel::Instance().GetBufferManager();
-				/* ½«¸ÃÍâ´æInode¶ÁÈë»º³åÇø */
+				/* å°†è¯¥å¤–å­˜Inodeè¯»å…¥ç¼“å†²åŒº */
 				Buf* pBuf = bm.Bread(dev, FileSystem::INODE_ZONE_START_SECTOR + inumber / FileSystem::INODE_NUMBER_PER_SECTOR );
 
-				/* Èç¹û·¢ÉúI/O´íÎó */
+				/* å¦‚æœå‘ç”ŸI/Oé”™è¯¯ */
 				if(pBuf->b_flags & Buf::B_ERROR)
 				{
-					/* ÊÍ·Å»º´æ */
+					/* é‡Šæ”¾ç¼“å­˜ */
 					bm.Brelse(pBuf);
-					/* ÊÍ·ÅÕ¼¾İµÄÄÚ´æInode */
+					/* é‡Šæ”¾å æ®çš„å†…å­˜Inode */
 					this->IPut(pInode);
 					return NULL;
 				}
 
-				/* ½«»º³åÇøÖĞµÄÍâ´æInodeĞÅÏ¢¿½±´µ½ĞÂ·ÖÅäµÄÄÚ´æInodeÖĞ */
+				/* å°†ç¼“å†²åŒºä¸­çš„å¤–å­˜Inodeä¿¡æ¯æ‹·è´åˆ°æ–°åˆ†é…çš„å†…å­˜Inodeä¸­ */
 				pInode->ICopy(pBuf, inumber);
-				/* ÊÍ·Å»º´æ */
+				/* é‡Šæ”¾ç¼“å­˜ */
 				bm.Brelse(pBuf);
 				return pInode;
 			}
@@ -194,46 +194,46 @@ Inode* InodeTable::IGet(short dev, int inumber)
 	return NULL;	/* GCC likes it! */
 }
 
-/* closeÎÄ¼şÊ±»áµ÷ÓÃIput
- *      Ö÷Òª×öµÄ²Ù×÷£ºÄÚ´æi½Úµã¼ÆÊı i_count--£»ÈôÎª0£¬ÊÍ·ÅÄÚ´æ i½Úµã¡¢ÈôÓĞ¸Ä¶¯Ğ´»Ø´ÅÅÌ
- * ËÑË÷ÎÄ¼şÍ¾¾¶µÄËùÓĞÄ¿Â¼ÎÄ¼ş£¬ËÑË÷¾­¹ıºó¶¼»áIputÆäÄÚ´æi½Úµã¡£Â·¾¶ÃûµÄµ¹ÊıµÚ2¸öÂ·¾¶·ÖÁ¿Ò»¶¨ÊÇ¸ö
- *   Ä¿Â¼ÎÄ¼ş£¬Èç¹ûÊÇÔÚÆäÖĞ´´½¨ĞÂÎÄ¼ş¡¢»òÊÇÉ¾³ıÒ»¸öÒÑÓĞÎÄ¼ş£»ÔÙÈç¹ûÊÇÔÚÆäÖĞ´´½¨É¾³ı×ÓÄ¿Â¼¡£ÄÇÃ´
- *   	±ØĞë½«Õâ¸öÄ¿Â¼ÎÄ¼şËù¶ÔÓ¦µÄÄÚ´æ i½ÚµãĞ´»Ø´ÅÅÌ¡£
- *   	Õâ¸öÄ¿Â¼ÎÄ¼şÎŞÂÛÊÇ·ñ¾­Àú¹ı¸ü¸Ä£¬ÎÒÃÇ±ØĞë½«ËüµÄi½ÚµãĞ´»Ø´ÅÅÌ¡£
+/* closeæ–‡ä»¶æ—¶ä¼šè°ƒç”¨Iput
+ *      ä¸»è¦åšçš„æ“ä½œï¼šå†…å­˜ièŠ‚ç‚¹è®¡æ•° i_count--ï¼›è‹¥ä¸º0ï¼Œé‡Šæ”¾å†…å­˜ ièŠ‚ç‚¹ã€è‹¥æœ‰æ”¹åŠ¨å†™å›ç£ç›˜
+ * æœç´¢æ–‡ä»¶é€”å¾„çš„æ‰€æœ‰ç›®å½•æ–‡ä»¶ï¼Œæœç´¢ç»è¿‡åéƒ½ä¼šIputå…¶å†…å­˜ièŠ‚ç‚¹ã€‚è·¯å¾„åçš„å€’æ•°ç¬¬2ä¸ªè·¯å¾„åˆ†é‡ä¸€å®šæ˜¯ä¸ª
+ *   ç›®å½•æ–‡ä»¶ï¼Œå¦‚æœæ˜¯åœ¨å…¶ä¸­åˆ›å»ºæ–°æ–‡ä»¶ã€æˆ–æ˜¯åˆ é™¤ä¸€ä¸ªå·²æœ‰æ–‡ä»¶ï¼›å†å¦‚æœæ˜¯åœ¨å…¶ä¸­åˆ›å»ºåˆ é™¤å­ç›®å½•ã€‚é‚£ä¹ˆ
+ *   	å¿…é¡»å°†è¿™ä¸ªç›®å½•æ–‡ä»¶æ‰€å¯¹åº”çš„å†…å­˜ ièŠ‚ç‚¹å†™å›ç£ç›˜ã€‚
+ *   	è¿™ä¸ªç›®å½•æ–‡ä»¶æ— è®ºæ˜¯å¦ç»å†è¿‡æ›´æ”¹ï¼Œæˆ‘ä»¬å¿…é¡»å°†å®ƒçš„ièŠ‚ç‚¹å†™å›ç£ç›˜ã€‚
  * */
 void InodeTable::IPut(Inode *pNode)
 {
-	/* µ±Ç°½ø³ÌÎªÒıÓÃ¸ÃÄÚ´æInodeµÄÎ¨Ò»½ø³Ì£¬ÇÒ×¼±¸ÊÍ·Å¸ÃÄÚ´æInode */
+	/* å½“å‰è¿›ç¨‹ä¸ºå¼•ç”¨è¯¥å†…å­˜Inodeçš„å”¯ä¸€è¿›ç¨‹ï¼Œä¸”å‡†å¤‡é‡Šæ”¾è¯¥å†…å­˜Inode */
 	if(pNode->i_count == 1)
 	{
 		/* 
-		 * ÉÏËø£¬ÒòÎªÔÚÕû¸öÊÍ·Å¹ı³ÌÖĞ¿ÉÄÜÒòÎª´ÅÅÌ²Ù×÷¶øÊ¹µÃ¸Ã½ø³ÌË¯Ãß£¬
-		 * ´ËÊ±ÓĞ¿ÉÄÜÁíÒ»¸ö½ø³Ì»á¶Ô¸ÃÄÚ´æInode½øĞĞ²Ù×÷£¬Õâ½«ÓĞ¿ÉÄÜµ¼ÖÂ´íÎó¡£
+		 * ä¸Šé”ï¼Œå› ä¸ºåœ¨æ•´ä¸ªé‡Šæ”¾è¿‡ç¨‹ä¸­å¯èƒ½å› ä¸ºç£ç›˜æ“ä½œè€Œä½¿å¾—è¯¥è¿›ç¨‹ç¡çœ ï¼Œ
+		 * æ­¤æ—¶æœ‰å¯èƒ½å¦ä¸€ä¸ªè¿›ç¨‹ä¼šå¯¹è¯¥å†…å­˜Inodeè¿›è¡Œæ“ä½œï¼Œè¿™å°†æœ‰å¯èƒ½å¯¼è‡´é”™è¯¯ã€‚
 		 */
 		pNode->i_flag |= Inode::ILOCK;
 
-		/* ¸ÃÎÄ¼şÒÑ¾­Ã»ÓĞÄ¿Â¼Â·¾¶Ö¸ÏòËü */
+		/* è¯¥æ–‡ä»¶å·²ç»æ²¡æœ‰ç›®å½•è·¯å¾„æŒ‡å‘å®ƒ */
 		if(pNode->i_nlink <= 0)
 		{
-			/* ÊÍ·Å¸ÃÎÄ¼şÕ¼¾İµÄÊı¾İÅÌ¿é */
+			/* é‡Šæ”¾è¯¥æ–‡ä»¶å æ®çš„æ•°æ®ç›˜å— */
 			pNode->ITrunc();
 			pNode->i_mode = 0;
-			/* ÊÍ·Å¶ÔÓ¦µÄÍâ´æInode */
+			/* é‡Šæ”¾å¯¹åº”çš„å¤–å­˜Inode */
 			this->m_FileSystem->IFree(pNode->i_dev, pNode->i_number);
 		}
 
-		/* ¸üĞÂÍâ´æInodeĞÅÏ¢ */
+		/* æ›´æ–°å¤–å­˜Inodeä¿¡æ¯ */
 		pNode->IUpdate(Time::time);
 
-		/* ½âËøÄÚ´æInode£¬²¢ÇÒ»½ĞÑµÈ´ı½ø³Ì */
+		/* è§£é”å†…å­˜Inodeï¼Œå¹¶ä¸”å”¤é†’ç­‰å¾…è¿›ç¨‹ */
 		pNode->Prele();
-		/* Çå³ıÄÚ´æInodeµÄËùÓĞ±êÖ¾Î» */
+		/* æ¸…é™¤å†…å­˜Inodeçš„æ‰€æœ‰æ ‡å¿—ä½ */
 		pNode->i_flag = 0;
-		/* ÕâÊÇÄÚ´æinode¿ÕÏĞµÄ±êÖ¾Ö®Ò»£¬ÁíÒ»¸öÊÇi_count == 0 */
+		/* è¿™æ˜¯å†…å­˜inodeç©ºé—²çš„æ ‡å¿—ä¹‹ä¸€ï¼Œå¦ä¸€ä¸ªæ˜¯i_count == 0 */
 		pNode->i_number = -1;
 	}
 
-	/* ¼õÉÙÄÚ´æInodeµÄÒıÓÃ¼ÆÊı£¬»½ĞÑµÈ´ı½ø³Ì */
+	/* å‡å°‘å†…å­˜Inodeçš„å¼•ç”¨è®¡æ•°ï¼Œå”¤é†’ç­‰å¾…è¿›ç¨‹ */
 	pNode->i_count--;
 	pNode->Prele();
 }
@@ -243,16 +243,16 @@ void InodeTable::UpdateInodeTable()
 	for(int i = 0; i < InodeTable::NINODE; i++)
 	{
 		/* 
-		 * Èç¹ûInode¶ÔÏóÃ»ÓĞ±»ÉÏËø£¬¼´µ±Ç°Î´±»ÆäËü½ø³ÌÊ¹ÓÃ£¬¿ÉÒÔÍ¬²½µ½Íâ´æInode£»
-		 * ²¢ÇÒcount²»µÈÓÚ0£¬count == 0ÒâÎ¶×Å¸ÃÄÚ´æInodeÎ´±»ÈÎºÎ´ò¿ªÎÄ¼şÒıÓÃ£¬ÎŞĞèÍ¬²½¡£
+		 * å¦‚æœInodeå¯¹è±¡æ²¡æœ‰è¢«ä¸Šé”ï¼Œå³å½“å‰æœªè¢«å…¶å®ƒè¿›ç¨‹ä½¿ç”¨ï¼Œå¯ä»¥åŒæ­¥åˆ°å¤–å­˜Inodeï¼›
+		 * å¹¶ä¸”countä¸ç­‰äº0ï¼Œcount == 0æ„å‘³ç€è¯¥å†…å­˜Inodeæœªè¢«ä»»ä½•æ‰“å¼€æ–‡ä»¶å¼•ç”¨ï¼Œæ— éœ€åŒæ­¥ã€‚
 		 */
 		if( (this->m_Inode[i].i_flag & Inode::ILOCK) == 0 && this->m_Inode[i].i_count != 0 )
 		{
-			/* ½«ÄÚ´æInodeÉÏËøºóÍ¬²½µ½Íâ´æInode */
+			/* å°†å†…å­˜Inodeä¸Šé”ååŒæ­¥åˆ°å¤–å­˜Inode */
 			this->m_Inode[i].i_flag |= Inode::ILOCK;
 			this->m_Inode[i].IUpdate(Time::time);
 
-			/* ¶ÔÄÚ´æInode½âËø */
+			/* å¯¹å†…å­˜Inodeè§£é” */
 			this->m_Inode[i].Prele();
 		}
 	}
@@ -260,7 +260,7 @@ void InodeTable::UpdateInodeTable()
 
 int InodeTable::IsLoaded(short dev, int inumber)
 {
-	/* Ñ°ÕÒÖ¸¶¨Íâ´æInodeµÄÄÚ´æ¿½±´ */
+	/* å¯»æ‰¾æŒ‡å®šå¤–å­˜Inodeçš„å†…å­˜æ‹·è´ */
 	for(int i = 0; i < InodeTable::NINODE; i++)
 	{
 		if( this->m_Inode[i].i_dev == dev && this->m_Inode[i].i_number == inumber && this->m_Inode[i].i_count != 0 )
@@ -275,11 +275,11 @@ Inode* InodeTable::GetFreeInode()
 {
 	for(int i = 0; i < InodeTable::NINODE; i++)
 	{
-		/* Èç¹û¸ÃÄÚ´æInodeÒıÓÃ¼ÆÊıÎªÁã£¬Ôò¸ÃInode±íÊ¾¿ÕÏĞ */
+		/* å¦‚æœè¯¥å†…å­˜Inodeå¼•ç”¨è®¡æ•°ä¸ºé›¶ï¼Œåˆ™è¯¥Inodeè¡¨ç¤ºç©ºé—² */
 		if(this->m_Inode[i].i_count == 0)
 		{
 			return &(this->m_Inode[i]);
 		}
 	}
-	return NULL;	/* Ñ°ÕÒÊ§°Ü */
+	return NULL;	/* å¯»æ‰¾å¤±è´¥ */
 }

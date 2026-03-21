@@ -130,9 +130,9 @@ public:
 	PEParser(unsigned long peAddress);
 	unsigned long Parse();
 	/*
-	 *@comment ½«ParseºóµÄexe¶¨Î»µ½ÄÚ´æÖĞÕıÈ·µÄÎ»ÖÃ
-	 *@Important ÔÚRelocateÖ®Ç°ĞèÒªÊ×ÏÈµ÷ÓÃParse()ÒÔµÃµ½ËùĞèÒªµÄ
-	 * exe¸÷¸ösectionµÄĞÅÏ¢£¬Í¬Ê±ĞèÒªÊ×ÏÈmapºÃÒ³±í£¬·ñÔò»áÊ§°Ü
+	 *@comment å°†Parseåçš„exeå®šä½åˆ°å†…å­˜ä¸­æ­£ç¡®çš„ä½ç½®
+	 *@Important åœ¨Relocateä¹‹å‰éœ€è¦é¦–å…ˆè°ƒç”¨Parse()ä»¥å¾—åˆ°æ‰€éœ€è¦çš„
+	 * exeå„ä¸ªsectionçš„ä¿¡æ¯ï¼ŒåŒæ—¶éœ€è¦é¦–å…ˆmapå¥½é¡µè¡¨ï¼Œå¦åˆ™ä¼šå¤±è´¥
 	 */
 	unsigned int Relocate();
 	unsigned int Relocate(Inode* p_inode, int sharedText);

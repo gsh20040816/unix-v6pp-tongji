@@ -1,14 +1,14 @@
 #ifndef TTY_H
 #define TTY_H
 
-/* ×Ö·û»º³å¶ÓÁĞ */
+/* å­—ç¬¦ç¼“å†²é˜Ÿåˆ— */
 class TTy_Queue
 {
 public:
 	/* 
-	 * TTY_BUF_SIZEÈ¡Öµ±ØĞëÎª2µÄn´ÎÃİ£¬ÕâÑù²Å¿É±£Ö¤
-	 * TTY_BUF_SIZE - 1¶ş½øÖÆ±ÈÌØÈ«²¿Îª1£¬·ñÔòCharNum()
-	 * º¯ÊıÖĞµÄ&ÔËËã½á¹û²»ÕıÈ·¡£
+	 * TTY_BUF_SIZEå–å€¼å¿…é¡»ä¸º2çš„næ¬¡å¹‚ï¼Œè¿™æ ·æ‰å¯ä¿è¯
+	 * TTY_BUF_SIZE - 1äºŒè¿›åˆ¶æ¯”ç‰¹å…¨éƒ¨ä¸º1ï¼Œå¦åˆ™CharNum()
+	 * å‡½æ•°ä¸­çš„&è¿ç®—ç»“æœä¸æ­£ç¡®ã€‚
 	 */
 	static const unsigned int TTY_BUF_SIZE = 512;
 
@@ -19,22 +19,22 @@ public:
 	/* Destructors */
 	~TTy_Queue();
 
-	/* ´Ó×Ö·û»º´æÖĞÈ¡³ö×Ö·û */
+	/* ä»å­—ç¬¦ç¼“å­˜ä¸­å–å‡ºå­—ç¬¦ */
 	char GetChar();
 
-	/* ½«ÊäÈë×Ö·û·Åµ½×Ö·û»º´æÖĞ */
+	/* å°†è¾“å…¥å­—ç¬¦æ”¾åˆ°å­—ç¬¦ç¼“å­˜ä¸­ */
 	void PutChar(char ch);
 
-	/* »º´æÖĞÎ´È¡³öµÄ×Ö·ûÊı */
+	/* ç¼“å­˜ä¸­æœªå–å‡ºçš„å­—ç¬¦æ•° */
 	int CharNum();
 
-	/* ·µ»Ø»º´æÖĞ¼´½«È¡³ö×Ö·ûµÄµØÖ· */
+	/* è¿”å›ç¼“å­˜ä¸­å³å°†å–å‡ºå­—ç¬¦çš„åœ°å€ */
 	char* CurrentChar();
 
 public:
-	unsigned int m_Head;	/* Ö¸Ïò×Ö·û»º´æÊı×éÖĞÏÂÒ»¸öÓÃÓÚ´æ·Å½ÓÊÕ×Ö·ûµÄÎ»ÖÃ */
-	unsigned int m_Tail;	/* Ö¸Ïò×Ö·û»º´æÊı×éÖĞÏÂÒ»¸öÒªÈ¡³ö×Ö·ûµÄÎ»ÖÃ */
-	char m_CharBuf[TTY_BUF_SIZE];	/* ×Ö·û»º´æÊı×é */
+	unsigned int m_Head;	/* æŒ‡å‘å­—ç¬¦ç¼“å­˜æ•°ç»„ä¸­ä¸‹ä¸€ä¸ªç”¨äºå­˜æ”¾æ¥æ”¶å­—ç¬¦çš„ä½ç½® */
+	unsigned int m_Tail;	/* æŒ‡å‘å­—ç¬¦ç¼“å­˜æ•°ç»„ä¸­ä¸‹ä¸€ä¸ªè¦å–å‡ºå­—ç¬¦çš„ä½ç½® */
+	char m_CharBuf[TTY_BUF_SIZE];	/* å­—ç¬¦ç¼“å­˜æ•°ç»„ */
 };
 
 
@@ -44,18 +44,18 @@ class TTy
 public:
 	static const unsigned int CANBSIZ = 256;
 
-	/* ×Ö·û»º´æ¶ÓÁĞ×Ö·ûÊıÏŞÖÆ */
+	/* å­—ç¬¦ç¼“å­˜é˜Ÿåˆ—å­—ç¬¦æ•°é™åˆ¶ */
 	static const int TTHIWAT = 512;
 	static const int TTLOWAT = 30;
 	static const int TTYHOG = 256;
 
-	static const char CERASE = '\b';	/* ¶¨Òå²Á³ı¼ü */
-	static const char CEOT = 0x04;		/* ÎÄ¼ş½áÊø·û */
+	static const char CERASE = '\b';	/* å®šä¹‰æ“¦é™¤é”® */
+	static const char CEOT = 0x04;		/* æ–‡ä»¶ç»“æŸç¬¦ */
 	static const char CKILL = 0x15;
 	static const char CINTR = 0x7f;
 	static const char GET_ERROR = -1;
 
-	/* modes (t_flagsÉèÖÃ) */
+	/* modes (t_flagsè®¾ç½®) */
 	static const int HUPCL = 0x1;
 	static const int XTABS = 0x2;
 	static const int LCASE = 0x4;
@@ -63,7 +63,7 @@ public:
 	static const int CRMOD = 0x10;
 	static const int RAW =  0x20;
 
-	/* Internal state bits (t_stateÉèÖÃ) */
+	/* Internal state bits (t_stateè®¾ç½®) */
 	static const int ISOPEN = 0x1;
 	static const int CARR_ON = 0x2;
 
@@ -75,26 +75,26 @@ public:
 	/* Destructors */
 	~TTy();
 
-	/* ttyÉè±¸µÄÍ¨ÓÃ¶Áº¯Êı£¬ÓÉ¸÷¸ö×Ö·ûÉè±¸µÄ¶ÁĞ´º¯Êıµ÷ÓÃ */
+	/* ttyè®¾å¤‡çš„é€šç”¨è¯»å‡½æ•°ï¼Œç”±å„ä¸ªå­—ç¬¦è®¾å¤‡çš„è¯»å†™å‡½æ•°è°ƒç”¨ */
 	void TTRead();
 
-	/* ttyÉè±¸µÄÍ¨ÓÃĞ´º¯Êı£¬ÓÉ¸÷¸ö×Ö·ûÉè±¸µÄ¶ÁĞ´º¯Êıµ÷ÓÃ */
+	/* ttyè®¾å¤‡çš„é€šç”¨å†™å‡½æ•°ï¼Œç”±å„ä¸ªå­—ç¬¦è®¾å¤‡çš„è¯»å†™å‡½æ•°è°ƒç”¨ */
 	void TTWrite();
 
-	/* ÊäÈë×Ö·û³õ²½´¦Àí³ÌĞò */
+	/* è¾“å…¥å­—ç¬¦åˆæ­¥å¤„ç†ç¨‹åº */
 	void TTyInput(char ch);
 
-	/* Êä³ö×Ö·û´¦Àí³ÌĞò */
+	/* è¾“å‡ºå­—ç¬¦å¤„ç†ç¨‹åº */
 	void TTyOutput(char ch);
 
-	/* ttyÉè±¸µÄÆô¶¯º¯Êı£¬²»¹ıÔÚÕâ¸ö²Ù×÷ÏµÍ³ÖĞ£¬Ö»ÊÇÎªÁË±£Ö¤ÒÆÖ²½á¹¹µÄÍêÕûĞÔ */
+	/* ttyè®¾å¤‡çš„å¯åŠ¨å‡½æ•°ï¼Œä¸è¿‡åœ¨è¿™ä¸ªæ“ä½œç³»ç»Ÿä¸­ï¼Œåªæ˜¯ä¸ºäº†ä¿è¯ç§»æ¤ç»“æ„çš„å®Œæ•´æ€§ */
 	void TTStart();
 
-	/* Çå¿ÕTTYËùÓĞ»º´æÄÚÈİ */
+	/* æ¸…ç©ºTTYæ‰€æœ‰ç¼“å­˜å†…å®¹ */
 	void FlushTTy();
 
 
-	/* ĞĞ¹æÔò³ÌĞò£¬¶ÔÊäÈëµÄ×Ö·û½øĞĞ´¦Àí£¬±ÈÈçÉ¾³ıĞĞ»òÕßbackspace */
+	/* è¡Œè§„åˆ™ç¨‹åºï¼Œå¯¹è¾“å…¥çš„å­—ç¬¦è¿›è¡Œå¤„ç†ï¼Œæ¯”å¦‚åˆ é™¤è¡Œæˆ–è€…backspace */
 	int Canon();
 
 	int PassC(char ch);
@@ -102,21 +102,21 @@ public:
 	char CPass();
 
 public:
-	TTy_Queue t_rawq;	/* Ô­Ê¼ÊäÈë×Ö·û»º´æ¶ÓÁĞ */
-	TTy_Queue t_canq;	/* ±ê×¼ÊäÈë×Ö·û»º´æ¶ÓÁĞ */
-	TTy_Queue t_outq;	/* Êä³ö×Ö·û»º´æ¶ÓÁĞ */
+	TTy_Queue t_rawq;	/* åŸå§‹è¾“å…¥å­—ç¬¦ç¼“å­˜é˜Ÿåˆ— */
+	TTy_Queue t_canq;	/* æ ‡å‡†è¾“å…¥å­—ç¬¦ç¼“å­˜é˜Ÿåˆ— */
+	TTy_Queue t_outq;	/* è¾“å‡ºå­—ç¬¦ç¼“å­˜é˜Ÿåˆ— */
 
-	int t_flags;	/* ×Ö·ûÉè±¸¹¤×÷±êÖ¾×Ö */
-	int t_delct;	/* Ô­Ê¼ÊäÈë×Ö·û¶ÓÁĞÖĞµÄ¶¨½ç·ûÊı */
+	int t_flags;	/* å­—ç¬¦è®¾å¤‡å·¥ä½œæ ‡å¿—å­— */
+	int t_delct;	/* åŸå§‹è¾“å…¥å­—ç¬¦é˜Ÿåˆ—ä¸­çš„å®šç•Œç¬¦æ•° */
 
-	char t_erase;	/* ²Á³ı¼ü×Ö·û */
-	char t_kill;	/* É¾³ıÕûĞĞ×Ö·û */
+	char t_erase;	/* æ“¦é™¤é”®å­—ç¬¦ */
+	char t_kill;	/* åˆ é™¤æ•´è¡Œå­—ç¬¦ */
 
-	int t_state;	/* Éè±¸×´Ì¬×Ö */
-	short dev;		/* Éè±¸ºÅ */
+	int t_state;	/* è®¾å¤‡çŠ¶æ€å­— */
+	short dev;		/* è®¾å¤‡å· */
 
 
-	char Canonb[CANBSIZ];	/* ¶ÔÊäÈë×Ö·û´¦ÀíµÄ¹¤×÷»º´æ */
+	char Canonb[CANBSIZ];	/* å¯¹è¾“å…¥å­—ç¬¦å¤„ç†çš„å·¥ä½œç¼“å­˜ */
 };
 
 #endif

@@ -7,7 +7,7 @@ start:
 		
 		cli
 
-		;´ò¿ªa20 µØÖ·Ïß
+		;æ‰“å¼€a20 åœ°å€çº¿
 		in al,92h
 		or al,00000010b
 		out 92h, al
@@ -30,9 +30,9 @@ _startup:
 		mov es, ax
 		mov ss, ax
 
-		mov	ecx, KERNEL_SIZE 	;cx = ÉÈÇøÊıKERNEL_SIZE£¬×÷ÎªloopµÄ´ÎÊı
-		mov eax, 1				;LBAÑ°Ö·Ä£Ê½ÏÂsector±àºÅ´Ó0¿ªÊ¼¡£  #0ÊÇÒıµ¼ÉÈÇø£¬#1ÉÈÇø¿ªÊ¼²ÅÊÇkernelµÄÊ×ÉÈÇø
-		mov ebx, 0x100000		;Ä¿±ê´æ·ÅµØÖ·´Ó1M´¦¿ªÊ¼£¬Ã¿´ÎloopµİÔö512 bytes
+		mov	ecx, KERNEL_SIZE 	;cx = æ‰‡åŒºæ•°KERNEL_SIZEï¼Œä½œä¸ºloopçš„æ¬¡æ•°
+		mov eax, 1				;LBAå¯»å€æ¨¡å¼ä¸‹sectorç¼–å·ä»0å¼€å§‹ã€‚  #0æ˜¯å¼•å¯¼æ‰‡åŒºï¼Œ#1æ‰‡åŒºå¼€å§‹æ‰æ˜¯kernelçš„é¦–æ‰‡åŒº
+		mov ebx, 0x100000		;ç›®æ ‡å­˜æ”¾åœ°å€ä»1Må¤„å¼€å§‹ï¼Œæ¯æ¬¡loopé€’å¢512 bytes
 _load_kernel:
 		push eax
 		inc eax
@@ -42,7 +42,7 @@ _load_kernel:
 		call _load_sector
 		loop _load_kernel		
 		
-		;ĞŞ¸ÄËùÓĞ¼Ä´æÆ÷µ½¸ßÎ»µØÖ·
+		;ä¿®æ”¹æ‰€æœ‰å¯„å­˜å™¨åˆ°é«˜ä½åœ°å€
 		mov ax, 0x20
 		mov ds, ax
 		mov es, ax
@@ -59,32 +59,32 @@ _load_sector:
 	push edi
 	push eax		
 	
-	mov al,1		;¶Á1¸öÉÈÇø
-	mov dx,1f2h		;ÉÈÇøÊı¼Ä´æÆ÷ 0x1f2
+	mov al,1		;è¯»1ä¸ªæ‰‡åŒº
+	mov dx,1f2h		;æ‰‡åŒºæ•°å¯„å­˜å™¨ 0x1f2
 	out dx,al
 	
-	mov eax,[ebp+12] ;[ebp+12]¶ÔÓ¦ÉÏÃæmov eax, 1   push eaxÖ¸ÁîÈëÕ»µÄÖµ£¬eaxÎªÒª¶ÁÈëµÄÉÈÇøºÅ
-					;LBA28(Linear Block Addressing)Ä£Ê½ÊäÈëÉÈÇøºÅµÄBits 7~0£¬ ¹²28 BitsÉÈÇøºÅ
-	inc dx			;ÉÈÇøºÅ¼Ä´æÆ÷ 0x1f3
+	mov eax,[ebp+12] ;[ebp+12]å¯¹åº”ä¸Šé¢mov eax, 1   push eaxæŒ‡ä»¤å…¥æ ˆçš„å€¼ï¼Œeaxä¸ºè¦è¯»å…¥çš„æ‰‡åŒºå·
+					;LBA28(Linear Block Addressing)æ¨¡å¼è¾“å…¥æ‰‡åŒºå·çš„Bits 7~0ï¼Œ å…±28 Bitsæ‰‡åŒºå·
+	inc dx			;æ‰‡åŒºå·å¯„å­˜å™¨ 0x1f3
 	out dx,al
 	
-	shr eax,8		;LBA28(Linear Block Addressing)Ä£Ê½ÊäÈëÉÈÇøºÅµÄBits 15~8 ·ÅÈëALÖĞ£¬ ¹²28 BitsÉÈÇøºÅ
-	inc dx			;Port£ºDX = 0x1f3+1 = 0x1f4  
+	shr eax,8		;LBA28(Linear Block Addressing)æ¨¡å¼è¾“å…¥æ‰‡åŒºå·çš„Bits 15~8 æ”¾å…¥ALä¸­ï¼Œ å…±28 Bitsæ‰‡åŒºå·
+	inc dx			;Portï¼šDX = 0x1f3+1 = 0x1f4  
 	out dx,al
 	
-	shr eax,8		;LBA28(Linear Block Addressing)Ä£Ê½ÊäÈëÉÈÇøºÅµÄBits 23~16·ÅÈëALÖĞ£¬ ¹²28 BitsÉÈÇøºÅ
-	inc dx			;Port£ºDX = 0x1f4+1 = 0x1f5 
+	shr eax,8		;LBA28(Linear Block Addressing)æ¨¡å¼è¾“å…¥æ‰‡åŒºå·çš„Bits 23~16æ”¾å…¥ALä¸­ï¼Œ å…±28 Bitsæ‰‡åŒºå·
+	inc dx			;Portï¼šDX = 0x1f4+1 = 0x1f5 
 	out dx,al
 	
 	shr eax,8
 	and al,0x0f
-	or al,11100000b ;Bit(7ºÍ5)Îª1±íÊ¾ÊÇIDE½Ó¿Ú£¬Bit(6)Îª1±íÊ¾¿ªÆôLBA28Ä£Ê½£¬Bit(4)Îª1±íÊ¾Ö÷ÅÌ¡£
-					;Bit(3~0)ÎªLBA28ÖĞµÄBit27~24Î»
-	inc dx			;Port£ºDX = 0x1f5+1 = 0x1f6 
+	or al,11100000b ;Bit(7å’Œ5)ä¸º1è¡¨ç¤ºæ˜¯IDEæ¥å£ï¼ŒBit(6)ä¸º1è¡¨ç¤ºå¼€å¯LBA28æ¨¡å¼ï¼ŒBit(4)ä¸º1è¡¨ç¤ºä¸»ç›˜ã€‚
+					;Bit(3~0)ä¸ºLBA28ä¸­çš„Bit27~24ä½
+	inc dx			;Portï¼šDX = 0x1f5+1 = 0x1f6 
 	out dx,al
 	
-	mov al,0x20		;0x20±íÊ¾¶Á1¸ösector£¬0x30±íÊ¾Ğ´1¸ösector
-	inc dx			;Port£ºDX = 0x1f6+1 = 0x1f7 
+	mov al,0x20		;0x20è¡¨ç¤ºè¯»1ä¸ªsectorï¼Œ0x30è¡¨ç¤ºå†™1ä¸ªsector
+	inc dx			;Portï¼šDX = 0x1f6+1 = 0x1f7 
 	out dx,al
 	
 .test:
@@ -98,7 +98,7 @@ _load_sector:
 	
 	mov ecx,512/4
 	mov dx,0x1f0
-	mov edi,[ebp+8]	;È¡µÃcallÇ°ÈëÕ»²ÎÊı[ebp+8] = 0x100000  = 1MB
+	mov edi,[ebp+8]	;å–å¾—callå‰å…¥æ ˆå‚æ•°[ebp+8] = 0x100000  = 1MB
 	rep insd
 	xor ax,ax
 	jmp .load_exit

@@ -18,13 +18,13 @@ void ATADriver::ATAHandler(struct pt_regs *reg, struct pt_context *context)
 	
 	if( atab->d_active == 0 )
 	{
-		return;		/* Ã»ÓĞÇëÇóÏî */
+		return;		/* æ²¡æœ‰è¯·æ±‚é¡¹ */
 	}
 
-	bp = atab->d_actf;		/* »ñÈ¡±¾´ÎÖĞ¶Ï¶ÔÓ¦µÄI/OÇëÇóBuf */
-	atab->d_active = 0;		/* ±íÊ¾Éè±¸ÒÑ¾­¿ÕÏĞ */
+	bp = atab->d_actf;		/* è·å–æœ¬æ¬¡ä¸­æ–­å¯¹åº”çš„I/Oè¯·æ±‚Buf */
+	atab->d_active = 0;		/* è¡¨ç¤ºè®¾å¤‡å·²ç»ç©ºé—² */
 
-	/* ¼ì²éI/O²Ù×÷Ö´ĞĞ¹ı³ÌÖĞ´ÅÅÌ¿ØÖÆÆ÷»òÕßDMA¿ØÖÆÆ÷ÊÇ·ñ³ö´í */
+	/* æ£€æŸ¥I/Oæ“ä½œæ‰§è¡Œè¿‡ç¨‹ä¸­ç£ç›˜æ§åˆ¶å™¨æˆ–è€…DMAæ§åˆ¶å™¨æ˜¯å¦å‡ºé”™ */
 	if( ATADriver::IsError() || DMA::IsError() )
 	{
 		if(++atab->d_errcnt <= 10)
@@ -35,11 +35,11 @@ void ATADriver::ATAHandler(struct pt_regs *reg, struct pt_context *context)
 		bp->b_flags |= Buf::B_ERROR;
 	}
 	
-	atab->d_errcnt = 0;		/* ´íÎó¼ÆÊıÆ÷¹éÁã */
-	atab->d_actf = bp->av_forw;		/* ´ÓI/OÇëÇó¶ÓÁĞÖĞÈ¡³öÒÑÍê³ÉµÄI/OÇëÇóBuf */
-	Kernel::Instance().GetBufferManager().IODone(bp);	/* I/O½áÊøÉÆºó¹¤×÷ */
-	bdev.Start();	/* Æô¶¯I/OÇëÇó¶ÓÁĞÖĞÏÂÒ»¸öI/OÇëÇó */
-	/* ¶ÔÖ÷¡¢´Ó8259AÖĞ¶Ï¿ØÖÆĞ¾Æ¬·Ö±ğ·¢ËÍEOIÃüÁî¡£ */
+	atab->d_errcnt = 0;		/* é”™è¯¯è®¡æ•°å™¨å½’é›¶ */
+	atab->d_actf = bp->av_forw;		/* ä»I/Oè¯·æ±‚é˜Ÿåˆ—ä¸­å–å‡ºå·²å®Œæˆçš„I/Oè¯·æ±‚Buf */
+	Kernel::Instance().GetBufferManager().IODone(bp);	/* I/Oç»“æŸå–„åå·¥ä½œ */
+	bdev.Start();	/* å¯åŠ¨I/Oè¯·æ±‚é˜Ÿåˆ—ä¸­ä¸‹ä¸€ä¸ªI/Oè¯·æ±‚ */
+	/* å¯¹ä¸»ã€ä»8259Aä¸­æ–­æ§åˆ¶èŠ¯ç‰‡åˆ†åˆ«å‘é€EOIå‘½ä»¤ã€‚ */
 	IOPort::OutByte(Chip8259A::MASTER_IO_PORT_1, Chip8259A::EOI);
 	IOPort::OutByte(Chip8259A::SLAVE_IO_PORT_1, Chip8259A::EOI);
 	return;
@@ -52,7 +52,7 @@ void ATADriver::DevStart(struct Buf* bp)
 		Utility::Panic("Invalid Buf in DevStart()!");
 	}
 
-	/* µÈ´ı¿ØÖÆÆ÷½Ï³¤Ê±¼äÎ´¾ÍĞ÷£¬±íÊ¾³ö´í¡£ */
+	/* ç­‰å¾…æ§åˆ¶å™¨è¾ƒé•¿æ—¶é—´æœªå°±ç»ªï¼Œè¡¨ç¤ºå‡ºé”™ã€‚ */
 	if(ATADriver::IsControllerReady() == 0)
 	{
 		Utility::Panic("Disk Hang Up!");
@@ -60,49 +60,49 @@ void ATADriver::DevStart(struct Buf* bp)
 
 	short minor = Utility::GetMinor(bp->b_dev);
 
-	/* ¹¹ÔìÎïÀíÇøÓòÃèÊö·û±í(PRD Table) */
+	/* æ„é€ ç‰©ç†åŒºåŸŸæè¿°ç¬¦è¡¨(PRD Table) */
 	PhysicalRegionDescriptor prd;
 	static PRDTable table;
 	
-	/* ´«Èë²ÎÊıÎªBuf»º³åÇøµÄÊµ¼ÊÎïÀíµØÖ· */
+	/* ä¼ å…¥å‚æ•°ä¸ºBufç¼“å†²åŒºçš„å®é™…ç‰©ç†åœ°å€ */
 	/* 
-	 * ÓÉÓÚ½ø³ÌÍ¼ÏñÆğÊ¼µØÖ·p_addrËùÔÚÓÃ»§Ì¬¿Õ¼äµØÖ·Ğ¡ÓÚ0xC0000000£¬
-	 * ËùÒÔ²»ÄÜ²ÉÓÃ¶Ô´ı»º´æÍ¬ÑùµÄ·½·¨£ºÒ»ÂÉÏßĞÔµØÖ·¼õÈ¥0xC0000000Ëã³öÊµ¼ÊÎïÀíµØÖ·:
+	 * ç”±äºè¿›ç¨‹å›¾åƒèµ·å§‹åœ°å€p_addræ‰€åœ¨ç”¨æˆ·æ€ç©ºé—´åœ°å€å°äº0xC0000000ï¼Œ
+	 * æ‰€ä»¥ä¸èƒ½é‡‡ç”¨å¯¹å¾…ç¼“å­˜åŒæ ·çš„æ–¹æ³•ï¼šä¸€å¾‹çº¿æ€§åœ°å€å‡å»0xC0000000ç®—å‡ºå®é™…ç‰©ç†åœ°å€:
 	 * prd.SetBaseAddress((unsigned long)bp->b_addr - 0xC0000000); //Oops~
-	 * ¶øÇÒp_addrÖĞ´æ·ÅµÄ±¾Éí¾ÍÒÑ¾­ÊÇÎïÀíµØÖ·£¬ËùÒÔ²ÉÈ¡ÈçÏÂ·½·¨£¬ÓĞÔò¼õÖ®£¬ÎŞÔò±£³Ö¡£
+	 * è€Œä¸”p_addrä¸­å­˜æ”¾çš„æœ¬èº«å°±å·²ç»æ˜¯ç‰©ç†åœ°å€ï¼Œæ‰€ä»¥é‡‡å–å¦‚ä¸‹æ–¹æ³•ï¼Œæœ‰åˆ™å‡ä¹‹ï¼Œæ— åˆ™ä¿æŒã€‚
 	 */
 	prd.SetBaseAddress((unsigned long)bp->b_addr & ~0xC0000000);
 	prd.SetByteCount(bp->b_wcount);
 
 	/* 
-	 * ½«¹¹ÔìºÃµÄprdÃèÊö·û·Åµ½PRD TableµÄµÚ0ÏîÎ»ÖÃ£¬
-	 * ²¢ÇÒ±ê¼ÇÎª×îºóÒ»Ïî¡£(ÎÒÃÇÕâÀï½öÊ¹ÓÃÒ»¸öprdÃèÊö·û¼´¿É¡£) 
+	 * å°†æ„é€ å¥½çš„prdæè¿°ç¬¦æ”¾åˆ°PRD Tableçš„ç¬¬0é¡¹ä½ç½®ï¼Œ
+	 * å¹¶ä¸”æ ‡è®°ä¸ºæœ€åä¸€é¡¹ã€‚(æˆ‘ä»¬è¿™é‡Œä»…ä½¿ç”¨ä¸€ä¸ªprdæè¿°ç¬¦å³å¯ã€‚) 
 	 */
 	table.SetPhysicalRegionDescriptor(0, prd, true);
 
-	DMA::Reset();		/* ¸´Î»DMA¿ØÖÆÆ÷ */
+	DMA::Reset();		/* å¤ä½DMAæ§åˆ¶å™¨ */
 
-	/* ÉèÖÃÉÈÇøÊı */
+	/* è®¾ç½®æ‰‡åŒºæ•° */
 	IOPort::OutByte(ATADriver::NSECTOR_PORT, bp->b_wcount / BufferManager::BUFFER_SIZE);
-	/* ÉèÖÃLBA28Ñ°Ö·Ä£Ê½ÖĞ´ÅÅÌ¿éºÅµÄ0-7Î» */
+	/* è®¾ç½®LBA28å¯»å€æ¨¡å¼ä¸­ç£ç›˜å—å·çš„0-7ä½ */
 	IOPort::OutByte(ATADriver::BLKNO_PORT_1, bp->b_blkno & 0xFF);
-	/* ÉèÖÃLBA28Ñ°Ö·Ä£Ê½ÖĞ´ÅÅÌ¿éºÅµÄ8-15Î» */
+	/* è®¾ç½®LBA28å¯»å€æ¨¡å¼ä¸­ç£ç›˜å—å·çš„8-15ä½ */
 	IOPort::OutByte(ATADriver::BLKNO_PORT_2, (bp->b_blkno >> 8) & 0xFF);
-	/* ÉèÖÃLBA28Ñ°Ö·Ä£Ê½ÖĞ´ÅÅÌ¿éºÅµÄ16-23Î» */
+	/* è®¾ç½®LBA28å¯»å€æ¨¡å¼ä¸­ç£ç›˜å—å·çš„16-23ä½ */
 	IOPort::OutByte(ATADriver::BLKNO_PORT_3, (bp->b_blkno >> 16) & 0xFF);
-	/* ÉèÖÃATA´ÅÅÌ¹¤×÷Ä£Ê½¼Ä´æÆ÷£¬ÒÔ¼°LBA28ÖĞµÄ24-27Î» */
+	/* è®¾ç½®ATAç£ç›˜å·¥ä½œæ¨¡å¼å¯„å­˜å™¨ï¼Œä»¥åŠLBA28ä¸­çš„24-27ä½ */
 	IOPort::OutByte(ATADriver::MODE_PORT, ATADriver::MODE_IDE | ATADriver::MODE_LBA28 | (minor << 4) | ((bp->b_blkno >> 24) & 0x0F) );
 
-	/* Èç¹ûÊÇ¶Á²Ù×÷ */
+	/* å¦‚æœæ˜¯è¯»æ“ä½œ */
 	if( (bp->b_flags & Buf::B_READ) == Buf::B_READ )
 	{
-		/* ¸æËß´ÅÅÌ¿ØÖÆÆ÷µÄ¶Á¡¢Ğ´ÀàĞÍ£¬Æô¶¯I/O */
+		/* å‘Šè¯‰ç£ç›˜æ§åˆ¶å™¨çš„è¯»ã€å†™ç±»å‹ï¼Œå¯åŠ¨I/O */
 		IOPort::OutByte(ATADriver::CMD_PORT, ATADriver::HD_DMA_READ);
 		
-		/* ¸æËßDMA¿ØÖÆÆ÷µÄ¶Á¡¢Ğ´ÀàĞÍ£¬´«ÈëPRD TableµÄÎïÀíÆğÊ¼µØÖ·£¬Æô¶¯Ò»´ÎDMA */
+		/* å‘Šè¯‰DMAæ§åˆ¶å™¨çš„è¯»ã€å†™ç±»å‹ï¼Œä¼ å…¥PRD Tableçš„ç‰©ç†èµ·å§‹åœ°å€ï¼Œå¯åŠ¨ä¸€æ¬¡DMA */
 		DMA::Start(DMA::READ, table.GetPRDTableBaseAddress());
 	}
-	else	/* Èç¹ûÊÇĞ´²Ù×÷ */
+	else	/* å¦‚æœæ˜¯å†™æ“ä½œ */
 	{
 		IOPort::OutByte(ATADriver::CMD_PORT, ATADriver::HD_DMA_WRITE);
 		
@@ -123,7 +123,7 @@ int ATADriver::IsControllerReady()
 			return ticks;
 		}
 	}
-	return 0;	/* ¿ØÖÆÆ÷³¤Ê±¼äÎŞÏìÓ¦ */
+	return 0;	/* æ§åˆ¶å™¨é•¿æ—¶é—´æ— å“åº” */
 }
 
 bool ATADriver::IsError()
@@ -131,7 +131,7 @@ bool ATADriver::IsError()
 	unsigned char status = IOPort::InByte(ATADriver::STATUS_PORT);
 	if( (status & ATADriver::HD_ERROR) == ATADriver::HD_ERROR )
 	{
-		return true;	/* ³ö´í */
+		return true;	/* å‡ºé”™ */
 	}
-	return false;	/* Ã»ÓĞ³ö´í */
+	return false;	/* æ²¡æœ‰å‡ºé”™ */
 }

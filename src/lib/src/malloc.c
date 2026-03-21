@@ -17,9 +17,9 @@ struct flist *malloc_head = NULL;
 void* malloc(unsigned int size)
 {
     if (malloc_begin == NULL)
-    {   // 1¡¢Ê×´ÎÖ´ĞĞmalloc£¬ÆôÓÃ¶Ñ
+    {   // 1ã€é¦–æ¬¡æ‰§è¡Œmallocï¼Œå¯ç”¨å †
         malloc_begin = sbrk(0);
-        malloc_end = sbrk(PAGE_SIZE);  //3Ò³
+        malloc_end = sbrk(PAGE_SIZE);  //3é¡µ
         malloc_head = malloc_begin;
         malloc_head->size = sizeof(struct flist);
         malloc_head->nlink = NULL;
@@ -32,10 +32,10 @@ void* malloc(unsigned int size)
     size = ((size + 7) >> 3) << 3;
     struct flist* iter = malloc_head;
 
-    // 2¡¢·ÖÅä¶¯Ì¬ÄÚ´æ£¨ÕÒÒ»¸ö×ã¹»´óµÄ¿ÕÏĞÆ¬£©
+    // 2ã€åˆ†é…åŠ¨æ€å†…å­˜ï¼ˆæ‰¾ä¸€ä¸ªè¶³å¤Ÿå¤§çš„ç©ºé—²ç‰‡ï¼‰
     struct flist *temp;
     while( iter->nlink != NULL )
-    {   // ËÑË÷Á´±í
+    {   // æœç´¢é“¾è¡¨
         if ((int)(iter->nlink) - iter->size - (int)iter >= size)
         {
             temp = (char *)iter + (iter->size);
@@ -50,7 +50,7 @@ void* malloc(unsigned int size)
     int remain;
 L1: remain = malloc_end - iter->size - (int)iter;
     if ( remain >= size)
-    {   // ×îºóÒ»¸öÄÚ´æÆ¬Ö®ºóµÄ¿Õ¼ä£¬×ã¹»Âğ£¿
+    {   // æœ€åä¸€ä¸ªå†…å­˜ç‰‡ä¹‹åçš„ç©ºé—´ï¼Œè¶³å¤Ÿå—ï¼Ÿ
         temp = (char *)iter + (iter->size);
         temp->nlink = NULL;
         iter->nlink = temp;
@@ -58,39 +58,39 @@ L1: remain = malloc_end - iter->size - (int)iter;
         return (char *)temp + sizeof(struct flist);
     }
 
-    // 3¡¢ÄÚ´æ·ÖÅä²»³É¹¦£¬Ö´ĞĞsbrkÏµÍ³µ÷ÓÃ£¬À©Õ¹¶Ñ¿Õ¼ä
+    // 3ã€å†…å­˜åˆ†é…ä¸æˆåŠŸï¼Œæ‰§è¡Œsbrkç³»ç»Ÿè°ƒç”¨ï¼Œæ‰©å±•å †ç©ºé—´
     int expand = size - remain;
-    expand = ((expand + PAGE_SIZE - 1) / PAGE_SIZE) * PAGE_SIZE;  // À©Õ¹3Ò³µÄÕûÊı±¶
+    expand = ((expand + PAGE_SIZE - 1) / PAGE_SIZE) * PAGE_SIZE;  // æ‰©å±•3é¡µçš„æ•´æ•°å€
     malloc_end = sbrk(expand);
-    goto L1;  // ·ÖÅä
+    goto L1;  // åˆ†é…
 }
 
-int free(void* addr)  // ÊÍ·ÅÒÔaddrÎªÊ×µØÖ·µÄ¶¯Ì¬ÄÚ´æ
+int free(void* addr)  // é‡Šæ”¾ä»¥addrä¸ºé¦–åœ°å€çš„åŠ¨æ€å†…å­˜
 {
-    char * real_addr = addr - 8;   // 1¡¢¶¨Î»ÊÍ·ÅÄÚ´æÆ¬Ê×µØÖ·
+    char * real_addr = addr - 8;   // 1ã€å®šä½é‡Šæ”¾å†…å­˜ç‰‡é¦–åœ°å€
     struct flist* iter = malloc_head;
-    struct flist* last;   // ÓÃÀ´¶¨Î»ÊÍ·ÅÄÚ´æÆ¬Ö®Ç°µÄÄÚ´æÆ¬
+    struct flist* last;   // ç”¨æ¥å®šä½é‡Šæ”¾å†…å­˜ç‰‡ä¹‹å‰çš„å†…å­˜ç‰‡
     if (addr == 0)
     {
         return -1;
     }
 
-    while(iter)  // ±éÀúÁ´±í
+    while(iter)  // éå†é“¾è¡¨
     {
-        if (iter == real_addr)   // 2¡¢ÕÒµ½ÊÍ·ÅµÄÄÚ´æÆ¬iter
+        if (iter == real_addr)   // 2ã€æ‰¾åˆ°é‡Šæ”¾çš„å†…å­˜ç‰‡iter
         {
-            last->nlink = iter->nlink;  // °Ñiter´ÓÁ´±íÀïÉ¾³ı
-            if (last->nlink == NULL)    // 3¡¢Èç¹û±»É¾³ıµÄÊÇ×îºóÒ»¸öÄÚ´æÆ¬
+            last->nlink = iter->nlink;  // æŠŠiterä»é“¾è¡¨é‡Œåˆ é™¤
+            if (last->nlink == NULL)    // 3ã€å¦‚æœè¢«åˆ é™¤çš„æ˜¯æœ€åä¸€ä¸ªå†…å­˜ç‰‡
             {
                 char *pos = (char *)last + last->size;
                 if (malloc_end - pos > PAGE_SIZE * 2)
-                {   // ÈôÉ¾³ıºó£¬¶Ñ¿Õ¼äÎ²²¿³öÏÖ³ß´ç´óÓÚ6Ò³µÄ¿ÕÏĞÆ¬£¬sbrkËõĞ¡¶Ñ¿Õ¼ä
+                {   // è‹¥åˆ é™¤åï¼Œå †ç©ºé—´å°¾éƒ¨å‡ºç°å°ºå¯¸å¤§äº6é¡µçš„ç©ºé—²ç‰‡ï¼Œsbrkç¼©å°å †ç©ºé—´
                     malloc_end = sbrk(-((malloc_end - pos) / PAGE_SIZE * PAGE_SIZE));
                 }
             }
             return 0;
         }
-        last = iter;   // lastºÍ iterÍ¬²½ºóÒÆ
+        last = iter;   // lastå’Œ iteråŒæ­¥åç§»
         iter = iter->nlink;
     }
     return -1;

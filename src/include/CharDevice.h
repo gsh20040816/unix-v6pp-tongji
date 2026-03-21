@@ -9,8 +9,8 @@ public:
 	CharDevice();
 	virtual ~CharDevice();
 	/* 
-	 * ¶¨ÒåÎªĞéº¯Êı£¬ÓÉÅÉÉúÀà½øĞĞoverrideÊµÏÖÉè±¸
-	 * ÌØ¶¨²Ù×÷¡£Õı³£Çé¿öÏÂ£¬»ùÀàÖĞº¯Êı²»Ó¦±»µ÷ÓÃµ½¡£
+	 * å®šä¹‰ä¸ºè™šå‡½æ•°ï¼Œç”±æ´¾ç”Ÿç±»è¿›è¡Œoverrideå®ç°è®¾å¤‡
+	 * ç‰¹å®šæ“ä½œã€‚æ­£å¸¸æƒ…å†µä¸‹ï¼ŒåŸºç±»ä¸­å‡½æ•°ä¸åº”è¢«è°ƒç”¨åˆ°ã€‚
 	 */
 	virtual void Open(short dev, int mode);
 	virtual void Close(short dev, int mode);
@@ -19,7 +19,7 @@ public:
 	virtual void SgTTy(short dev, TTy* pTTy);
 
 public:
-	TTy* m_TTy;		/* Ö¸Ïò×Ö·ûÉè±¸TTy½á¹¹µÄÖ¸Õë */
+	TTy* m_TTy;		/* æŒ‡å‘å­—ç¬¦è®¾å¤‡TTyç»“æ„çš„æŒ‡é’ˆ */
 };
 
 
@@ -29,8 +29,8 @@ public:
 	ConsoleDevice();
 	virtual ~ConsoleDevice();
 	/* 
-	 * Override»ùÀàCharDeviceÖĞµÄĞéº¯Êı£¬ÊµÏÖ
-	 * ÅÉÉúÀàConsoleDeviceÌØ¶¨µÄÉè±¸²Ù×÷Âß¼­¡£
+	 * OverrideåŸºç±»CharDeviceä¸­çš„è™šå‡½æ•°ï¼Œå®ç°
+	 * æ´¾ç”Ÿç±»ConsoleDeviceç‰¹å®šçš„è®¾å¤‡æ“ä½œé€»è¾‘ã€‚
 	 */
 	void Open(short dev, int mode);
 	void Close(short dev, int mode);

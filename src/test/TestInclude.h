@@ -2,9 +2,9 @@
 #define TEST_INCLUDE_H
 
 /*
-�˴��г��������ڲ��Ե�*.hͷ�ļ���
-�ṩ���ں�Դ����(��main.cpp)ͳһ��Include�ӿڣ�
-�����ص���include test/Testxx.h��
+此处列出所有用于测试的*.h头文件，
+提供给内核源代码(如main.cpp)统一的Include接口，
+而不必到处include test/Testxx.h。
 */
 
 /* dev */

@@ -1,0 +1,14 @@
+{
+  "makefile.extensionOutputFolder": "./.vscode",
+  "files.encoding": "utf8",
+  "C_Cpp.default.compilerPath": "z:\\UNIX V6++V1\\MinGW\\bin\\g++.exe",
+  "C_Cpp.intelliSenseEngine": "disabled",
+  "clangd.arguments": [
+    "--compile-commands-dir=.vscode",
+    "--query-driver=Z:/UNIX V6++V1/MinGW/bin/*",
+    "--background-index",
+    "--header-insertion=never"
+  ]
+}
+
+}

@@ -31,14 +31,14 @@ void ProcessManager::Initialize()
 
 void ProcessManager::SetupProcessZero()
 {
-	//³õÊ¼»¯Process#0µÄProcessºÍUser½á¹¹
+	//åˆå§‹åŒ–Process#0çš„Processå’ŒUserç»“æ„
 	Process* pProcZero = &(this->process[0]);
 	pProcZero->p_stat = Process::SRUN;
 	pProcZero->p_flag = Process::SLOAD | Process::SSYS;
 	pProcZero->p_nice = 0;
 	pProcZero->p_time = 0;
 	pProcZero->p_pid = NextUniquePid();
-	//³ıppdaÇøÓëºËĞÄÕ»Íâ£¬½ø³ÌÃ»ÓĞÓÃ»§Ì¬²¿·Ö
+	//é™¤ppdaåŒºä¸æ ¸å¿ƒæ ˆå¤–ï¼Œè¿›ç¨‹æ²¡æœ‰ç”¨æˆ·æ€éƒ¨åˆ†
 	pProcZero->p_size = 0x1000;
 	pProcZero->p_addr = PROCESS_ZERO_PPDA_ADDRESS;
 	pProcZero->p_textp = NULL;
@@ -82,20 +82,20 @@ int ProcessManager::NewProc()
 
 	SaveU(u.u_rsav);
 
-	PageTable* pgTable = u.u_MemoryDescriptor.m_UserPageTableArray;  	// ½«¸¸½ø³ÌµÄÓÃ»§Ò³±íÖ¸Õëm_UserPageTableArray±¸·İÖÁpgTable
-	u.u_MemoryDescriptor.Initialize();  // Îª×Ó½ø³Ì·ÖÅäÒ³±í
+	PageTable* pgTable = u.u_MemoryDescriptor.m_UserPageTableArray;  	// å°†çˆ¶è¿›ç¨‹çš„ç”¨æˆ·é¡µè¡¨æŒ‡é’ˆm_UserPageTableArrayå¤‡ä»½è‡³pgTable
+	u.u_MemoryDescriptor.Initialize();  // ä¸ºå­è¿›ç¨‹åˆ†é…é¡µè¡¨
 
 	u.u_procp = child;
 
 	UserPageManager& userPageManager = Kernel::Instance().GetUserPageManager();
 
 	unsigned long srcAddress = current->p_addr;
-	unsigned long desAddress = userPageManager.AllocMemory(current->p_size);   // Îª×Ó½ø³ÌÍ¼Ïñ·ÖÅäÄÚ´æ
+	unsigned long desAddress = userPageManager.AllocMemory(current->p_size);   // ä¸ºå­è¿›ç¨‹å›¾åƒåˆ†é…å†…å­˜
 
-	if ( desAddress == 0 ) /* ²»³É¹¦£¬½«¸¸½ø³ÌÍ¼Ïñ¸´ÖÆµ½ÅÌ½»»»Çø¡£Õâ¿é»¹Ã»ºÃ */
+	if ( desAddress == 0 ) /* ä¸æˆåŠŸï¼Œå°†çˆ¶è¿›ç¨‹å›¾åƒå¤åˆ¶åˆ°ç›˜äº¤æ¢åŒºã€‚è¿™å—è¿˜æ²¡å¥½ */
 	{
 		current->p_stat = Process::SIDL;
-		/* ×Ó½ø³Ìp_addrÖ¸Ïò¸¸½ø³ÌÍ¼Ïñ£¬ÒòÎª×Ó½ø³Ì»»³öÖÁ½»»»ÇøĞèÒªÒÔ¸¸½ø³ÌÍ¼ÏñÎªÀ¶±¾ */
+		/* å­è¿›ç¨‹p_addræŒ‡å‘çˆ¶è¿›ç¨‹å›¾åƒï¼Œå› ä¸ºå­è¿›ç¨‹æ¢å‡ºè‡³äº¤æ¢åŒºéœ€è¦ä»¥çˆ¶è¿›ç¨‹å›¾åƒä¸ºè“æœ¬ */
 		child->p_addr = current->p_addr;
 		SaveU(u.u_ssav);
 		this->XSwap(child, false, 0);
@@ -103,7 +103,7 @@ int ProcessManager::NewProc()
 		current->p_stat = Process::SRUN;
 	}
 	else
-	{   // ³É¹¦£¬Îª×Ó½ø³ÌĞ´Ò³±í£¬¸´ÖÆ¸¸½ø³Ì¿É½»»»²¿·Ö
+	{   // æˆåŠŸï¼Œä¸ºå­è¿›ç¨‹å†™é¡µè¡¨ï¼Œå¤åˆ¶çˆ¶è¿›ç¨‹å¯äº¤æ¢éƒ¨åˆ†
 		int n = current->p_size;
 		child->p_addr = desAddress;
 
@@ -117,7 +117,7 @@ int ProcessManager::NewProc()
 			u.u_MemoryDescriptor.m_UserPageTableArray[0].m_Entrys[0].m_PageBaseAddress = 0;
 		}
 
-		/**  Õâ¸ö°æ±¾ÈİÒ×¶®
+		/**  è¿™ä¸ªç‰ˆæœ¬å®¹æ˜“æ‡‚
 		if ( NULL != pgTable )
 		{
 			Utility::MemCopy((unsigned long)pgTable, (unsigned long)u.u_MemoryDescriptor.m_UserPageTableArray, sizeof(PageTable) * MemoryDescriptor::USER_SPACE_PAGE_TABLE_CNT);
@@ -128,7 +128,7 @@ int ProcessManager::NewProc()
 				{
 					if ( pgTable[i].m_Entrys[j].m_ReadWriter == 1)
 						u.u_MemoryDescriptor.m_UserPageTableArray[i].m_Entrys[j].m_PageBaseAddress =
-								pgTable[i].m_Entrys[j].m_PageBaseAddress + ((desAddress >> 12) - (srcAddress >> 12));  // ×Ó½ø³ÌË½ÓĞµÄÊı¾İÒ³
+								pgTable[i].m_Entrys[j].m_PageBaseAddress + ((desAddress >> 12) - (srcAddress >> 12));  // å­è¿›ç¨‹ç§æœ‰çš„æ•°æ®é¡µ
 				}
 			}
 		}
@@ -146,41 +146,41 @@ int ProcessManager::NewProc()
 	return 0;
 }
 
-/* ÔÚ½ø³ÌÇĞ»»µÄ¹ı³ÌÖĞ£¬¸ù±¾Ã»ÓĞÓÃµ½TSS */
+/* åœ¨è¿›ç¨‹åˆ‡æ¢çš„è¿‡ç¨‹ä¸­ï¼Œæ ¹æœ¬æ²¡æœ‰ç”¨åˆ°TSS */
 int ProcessManager::Swtch()
 {	
 	//Diagnose::Write("Start Swtch()\n");
 	User& u = Kernel::Instance().GetUser();
 	SaveU(u.u_rsav);
 
-	/* 0#½ø³ÌÉÏÌ¨*/
+	/* 0#è¿›ç¨‹ä¸Šå°*/
 	Process* procZero = &process[0];
 
 	/* 
-	 * ½«SwtchUStruct()ºÍRetU()×÷ÎªÁÙ½çÇø£¬·ÀÖ¹±»ÖĞ¶Ï´ò¶Ï¡£
-	 * Èç¹ûÔÚRetU()»Ö¸´espÖ®ºó£¬ÉĞÎ´»Ö¸´ebpÊ±£¬ÖĞ¶Ï½øÈë»áµ¼ÖÂ
-	 * espºÍebp·Ö±ğÖ¸ÏòÁ½¸ö²»Í¬½ø³ÌµÄºËĞÄÕ»ÖĞÎ»ÖÃ¡£ good comment£¡
+	 * å°†SwtchUStruct()å’ŒRetU()ä½œä¸ºä¸´ç•ŒåŒºï¼Œé˜²æ­¢è¢«ä¸­æ–­æ‰“æ–­ã€‚
+	 * å¦‚æœåœ¨RetU()æ¢å¤espä¹‹åï¼Œå°šæœªæ¢å¤ebpæ—¶ï¼Œä¸­æ–­è¿›å…¥ä¼šå¯¼è‡´
+	 * espå’Œebpåˆ†åˆ«æŒ‡å‘ä¸¤ä¸ªä¸åŒè¿›ç¨‹çš„æ ¸å¿ƒæ ˆä¸­ä½ç½®ã€‚ good commentï¼
 	 *
-	 * ÎªÊ²Ã´£¬ÓÉ0#½ø³Ì³Ğµ£ÌôÑ¡¾ÍĞ÷½ø³ÌÉÏÌ¨µÄ²Ù×÷£¿
-	 * µ¥´Ó½ø³ÌÇĞ»»µÄ½Ç¶È£¬ÍêÈ«¿ÉÒÔÓÉÏÂÌ¨½ø³ÌÌôÑ¡¾ÍĞ÷½ø³ÌÉÏÌ¨¡£ µ«ÊÇ£¬¿¼ÂÇÊ±ÖÓÖĞ¶Ï¡£
-	 * Ò»ÃëÄ©µÄ ÀıĞĞ´¦Àí£¬×îºÃÏµÍ³idleÊ±£¬Æä´ÎÊÇÔÚÖ´ĞĞÓ¦ÓÃ³ÌĞò¹ı³ÌÖĞ£»²»¿ÉÒÔ·ÅÔÚÄÚºËÖ´ĞĞ¹ı³ÌÖĞ¡£
-	 * ÈçºÎÅĞ¶Ï£¿
-	 * ÄÚºËidleµÄ±êÖ¾£º  0#½ø³ÌÔÚË¯ÃßÌ¬Ö´ĞĞidle()×Ó³ÌĞò¡£
-	 * ¿´ TimeInterrupt.cppµÄLine 82.
-	 * ÈçÊÇ£¬±ØĞëÓÉ0#½ø³ÌÖ´ĞĞselect()¡£
+	 * ä¸ºä»€ä¹ˆï¼Œç”±0#è¿›ç¨‹æ‰¿æ‹…æŒ‘é€‰å°±ç»ªè¿›ç¨‹ä¸Šå°çš„æ“ä½œï¼Ÿ
+	 * å•ä»è¿›ç¨‹åˆ‡æ¢çš„è§’åº¦ï¼Œå®Œå…¨å¯ä»¥ç”±ä¸‹å°è¿›ç¨‹æŒ‘é€‰å°±ç»ªè¿›ç¨‹ä¸Šå°ã€‚ ä½†æ˜¯ï¼Œè€ƒè™‘æ—¶é’Ÿä¸­æ–­ã€‚
+	 * ä¸€ç§’æœ«çš„ ä¾‹è¡Œå¤„ç†ï¼Œæœ€å¥½ç³»ç»Ÿidleæ—¶ï¼Œå…¶æ¬¡æ˜¯åœ¨æ‰§è¡Œåº”ç”¨ç¨‹åºè¿‡ç¨‹ä¸­ï¼›ä¸å¯ä»¥æ”¾åœ¨å†…æ ¸æ‰§è¡Œè¿‡ç¨‹ä¸­ã€‚
+	 * å¦‚ä½•åˆ¤æ–­ï¼Ÿ
+	 * å†…æ ¸idleçš„æ ‡å¿—ï¼š  0#è¿›ç¨‹åœ¨ç¡çœ æ€æ‰§è¡Œidle()å­ç¨‹åºã€‚
+	 * çœ‹ TimeInterrupt.cppçš„Line 82.
+	 * å¦‚æ˜¯ï¼Œå¿…é¡»ç”±0#è¿›ç¨‹æ‰§è¡Œselect()ã€‚
 	 *
 	 */
 	X86Assembly::CLI();
 	SwtchUStruct(procZero);
-	/* Ô­À´µÄºêµ÷ÓÃÊÇÕâÑùĞ´µÄ   RetU(u0)£¬u0²ÎÊıÃ»ÓÃµ½£¬»áÒıÆğÆçÒå£¬É¾³ı */
+	/* åŸæ¥çš„å®è°ƒç”¨æ˜¯è¿™æ ·å†™çš„   RetU(u0)ï¼Œu0å‚æ•°æ²¡ç”¨åˆ°ï¼Œä¼šå¼•èµ·æ­§ä¹‰ï¼Œåˆ é™¤ */
 	RetU();
 	X86Assembly::STI();
 
-	/* ÌôÑ¡×îÊÊºÏÉÏÌ¨µÄ½ø³Ì */
+	/* æŒ‘é€‰æœ€é€‚åˆä¸Šå°çš„è¿›ç¨‹ */
 	Process* selected = Select();
 	//Diagnose::Write("Process id = %d Selected!\n", selected->p_pid);
 
-	/* »Ö¸´±»±£´æ½ø³ÌµÄÏÖ³¡ */
+	/* æ¢å¤è¢«ä¿å­˜è¿›ç¨‹çš„ç°åœº */
 	X86Assembly::CLI();
 	SwtchUStruct(selected);
 
@@ -208,8 +208,8 @@ int ProcessManager::Swtch()
 	}
 	
 	/* 
-	 * ±»fork³öµÄ½ø³ÌÔÚÉÏÌ¨Ö®Ç°»áÔÚ±»µ÷¶ÈÉÏÌ¨Ê±·µ»Ø1£¬
-	 * ²¢Í¬Ê±·µ»Øµ½NewProc()Ö´ĞĞµÄµØÖ·
+	 * è¢«forkå‡ºçš„è¿›ç¨‹åœ¨ä¸Šå°ä¹‹å‰ä¼šåœ¨è¢«è°ƒåº¦ä¸Šå°æ—¶è¿”å›1ï¼Œ
+	 * å¹¶åŒæ—¶è¿”å›åˆ°NewProc()æ‰§è¡Œçš„åœ°å€
 	 */
 	return 1;
 }
@@ -223,7 +223,7 @@ void ProcessManager::Sched()
 	unsigned long desAddress;
 
 	/* 
-	 * Ñ¡ÔñÔÚ½»»»Çø×¤ÁôÊ±¼ä×î³¤£¬´¦ÓÚ¾ÍĞ÷×´Ì¬µÄ½ø³Ì»»Èë
+	 * é€‰æ‹©åœ¨äº¤æ¢åŒºé©»ç•™æ—¶é—´æœ€é•¿ï¼Œå¤„äºå°±ç»ªçŠ¶æ€çš„è¿›ç¨‹æ¢å…¥
 	 */
 	goto loop;
 
@@ -243,7 +243,7 @@ loop:
 		}
 	}
 
-	/* Èç¹ûÃ»ÓĞ·ûºÏÌõ¼şµÄ½ø³Ì£¬0#½ø³ÌË¯ÃßµÈ´ıÓĞĞèÒª»»ÈëµÄ½ø³Ì */
+	/* å¦‚æœæ²¡æœ‰ç¬¦åˆæ¡ä»¶çš„è¿›ç¨‹ï¼Œ0#è¿›ç¨‹ç¡çœ ç­‰å¾…æœ‰éœ€è¦æ¢å…¥çš„è¿›ç¨‹ */
 	if ( -1 == seconds )
 	{
 		this->RunOut++;
@@ -251,19 +251,19 @@ loop:
 		goto loop;
 	}
 
-	/* Èç¹ûÓĞ½ø³ÌÂú×ãÌõ¼ş£¬ĞèÒª»»Èë£¬Ôò¼ì²éÊÇ·ñÓĞ×ã¹»ÄÚ´æ */
+	/* å¦‚æœæœ‰è¿›ç¨‹æ»¡è¶³æ¡ä»¶ï¼Œéœ€è¦æ¢å…¥ï¼Œåˆ™æ£€æŸ¥æ˜¯å¦æœ‰è¶³å¤Ÿå†…å­˜ */
 	X86Assembly::STI();
-	/* ¼ÆËã½ø³Ì»»ÈëĞèÒªµÄÄÚ´æ´óĞ¡ */
+	/* è®¡ç®—è¿›ç¨‹æ¢å…¥éœ€è¦çš„å†…å­˜å¤§å° */
 	size = pSelected->p_size;
 	/* 
-	 * Èç¹û´æÔÚ¹²ÏíÕıÎÄ¶Î£¬µ«ÊÇÃ»ÓĞ½ø³ÌÍ¼ÏñÔÚÄÚ´æÖĞ£¬ÒıÓÃ¸ÃÕıÎÄ¶ÎµÄ½ø³Ì£¬
-	 * ¼´¹²ÏíÕıÎÄ¶Î²»ÔÙÄÚ´æÖĞ£¬»»ÈëÊ±ĞèÒª¶ÁÈëÕıÎÄ¶ÎÔÚ½»»»ÇøÖĞµÄ¸±±¾
+	 * å¦‚æœå­˜åœ¨å…±äº«æ­£æ–‡æ®µï¼Œä½†æ˜¯æ²¡æœ‰è¿›ç¨‹å›¾åƒåœ¨å†…å­˜ä¸­ï¼Œå¼•ç”¨è¯¥æ­£æ–‡æ®µçš„è¿›ç¨‹ï¼Œ
+	 * å³å…±äº«æ­£æ–‡æ®µä¸å†å†…å­˜ä¸­ï¼Œæ¢å…¥æ—¶éœ€è¦è¯»å…¥æ­£æ–‡æ®µåœ¨äº¤æ¢åŒºä¸­çš„å‰¯æœ¬
 	 */
 	if ( pSelected->p_textp != NULL && 0 == pSelected->p_textp->x_ccount )
 	{
 		size += pSelected->p_textp->x_size;
 	}
-	/* Èç¹ûÄÚ´æ·ÖÅä³É¹¦£¬Ôò½øĞĞÊµ¼Ê»»Èë²Ù×÷ */
+	/* å¦‚æœå†…å­˜åˆ†é…æˆåŠŸï¼Œåˆ™è¿›è¡Œå®é™…æ¢å…¥æ“ä½œ */
 	desAddress = Kernel::Instance().GetUserPageManager().AllocMemory(size);
 	if ( NULL != desAddress )
 	{
@@ -271,9 +271,9 @@ loop:
 	}
 
 	/*
-	 * ·ÖÅäÄÚ´æÊ§°ÜÇé¿öÏÂ£¬»»³öÄÚ´æÖĞ½ø³Ì£¬ÌÚ³ö¿Õ¼ä¡£
-	 * »»³öÔ­Ôò£º´ÓÒ×µ½ÄÑ£»ÒÀ´Î½«µÍÓÅÏÈÈ¨Ë¯Ãß×´Ì¬(SWAIT)-->
-	 * ÔİÍ£×´Ì¬(SSTOP)-->¸ßÓÅÏÈÈ¨Ë¯Ãß×´Ì¬(SSLEEP)-->¾ÍĞ÷×´Ì¬(SRUN)½ø³Ì»»³ö¡£
+	 * åˆ†é…å†…å­˜å¤±è´¥æƒ…å†µä¸‹ï¼Œæ¢å‡ºå†…å­˜ä¸­è¿›ç¨‹ï¼Œè…¾å‡ºç©ºé—´ã€‚
+	 * æ¢å‡ºåŸåˆ™ï¼šä»æ˜“åˆ°éš¾ï¼›ä¾æ¬¡å°†ä½ä¼˜å…ˆæƒç¡çœ çŠ¶æ€(SWAIT)-->
+	 * æš‚åœçŠ¶æ€(SSTOP)-->é«˜ä¼˜å…ˆæƒç¡çœ çŠ¶æ€(SSLEEP)-->å°±ç»ªçŠ¶æ€(SRUN)è¿›ç¨‹æ¢å‡ºã€‚
 	 */
 	X86Assembly::CLI();
 	for ( int i = 0; i < ProcessManager::NPROC; i++ )
@@ -285,8 +285,8 @@ loop:
 	}
 
 	/* 
-	 * ÔÚ»»³ö¸ßÓÅÏÈÈ¨Ë¯Ãß×´Ì¬(SSLEEP)¡¢¾ÍĞ÷×´Ì¬(SRUN)½ø³Ì¶øÌÚ³öÄÚ´æÖ®Ç°£¬
-	 * ¼ì²é´ı»»Èë½ø³ÌÔÚ½»»»Çø×¤ÁôÊ±¼äÊÇ·ñÒÑ´ïµ½3Ãë£¬µÍÓÚÔò²»Óè»»Èë
+	 * åœ¨æ¢å‡ºé«˜ä¼˜å…ˆæƒç¡çœ çŠ¶æ€(SSLEEP)ã€å°±ç»ªçŠ¶æ€(SRUN)è¿›ç¨‹è€Œè…¾å‡ºå†…å­˜ä¹‹å‰ï¼Œ
+	 * æ£€æŸ¥å¾…æ¢å…¥è¿›ç¨‹åœ¨äº¤æ¢åŒºé©»ç•™æ—¶é—´æ˜¯å¦å·²è¾¾åˆ°3ç§’ï¼Œä½äºåˆ™ä¸äºˆæ¢å…¥
 	 */
 	if ( seconds < 3 )
 	{
@@ -303,44 +303,44 @@ loop:
 		}
 	}
 
-	/* Èç¹ûÒª»»³öSSLEEP¡¢SRUN×´Ì¬½ø³Ì£¬ÏÈ¼ì²é¸Ã½ø³Ì×¤ÁôÄÚ´æÊ±¼äÊÇ·ñ³¬¹ı2Ãë£¬·ñÔò²»Óè»»³ö */
+	/* å¦‚æœè¦æ¢å‡ºSSLEEPã€SRUNçŠ¶æ€è¿›ç¨‹ï¼Œå…ˆæ£€æŸ¥è¯¥è¿›ç¨‹é©»ç•™å†…å­˜æ—¶é—´æ˜¯å¦è¶…è¿‡2ç§’ï¼Œå¦åˆ™ä¸äºˆæ¢å‡º */
 	if ( seconds < 2 )
 	{
 		goto sloop;
 	}
 
-	/* »»³öpSelectedÖ¸ÏòµÄ±»Ñ¡ÖĞ½ø³Ì */
+	/* æ¢å‡ºpSelectedæŒ‡å‘çš„è¢«é€‰ä¸­è¿›ç¨‹ */
 found1:
 	X86Assembly::STI();
 	pSelected->p_flag &= ~Process::SLOAD;
 	this->XSwap(pSelected, true, 0);
-	/* ÌÚ³öÄÚ´æ¿Õ¼äºóÔÙ´Î³¢ÊÔ»»Èë½ø³Ì */
+	/* è…¾å‡ºå†…å­˜ç©ºé—´åå†æ¬¡å°è¯•æ¢å…¥è¿›ç¨‹ */
 	goto loop;
 
-	/* ÒÑ¾­·ÖÅäºÃ×ã¹»µÄÄÚ´æ£¬½øĞĞÊµ¼ÊµÄ»»Èë²Ù×÷ */
+	/* å·²ç»åˆ†é…å¥½è¶³å¤Ÿçš„å†…å­˜ï¼Œè¿›è¡Œå®é™…çš„æ¢å…¥æ“ä½œ */
 found2:
 	BufferManager& bufMgr = Kernel::Instance().GetBufferManager();
 	/* 
-	* Èç¹û´æÔÚ¹²ÏíÕıÎÄ¶Î£¬µ«ÊÇÃ»ÓĞ½ø³ÌÍ¼ÏñÔÚÄÚ´æÖĞ£¬ÒıÓÃ¸ÃÕıÎÄ¶ÎµÄ½ø³Ì£¬
-	* ¼´¹²ÏíÕıÎÄ¶Î²»ÔÙÄÚ´æÖĞ£¬»»ÈëÊ±ĞèÒª¶ÁÈëÕıÎÄ¶ÎÔÚ½»»»ÇøÖĞµÄ¸±±¾
+	* å¦‚æœå­˜åœ¨å…±äº«æ­£æ–‡æ®µï¼Œä½†æ˜¯æ²¡æœ‰è¿›ç¨‹å›¾åƒåœ¨å†…å­˜ä¸­ï¼Œå¼•ç”¨è¯¥æ­£æ–‡æ®µçš„è¿›ç¨‹ï¼Œ
+	* å³å…±äº«æ­£æ–‡æ®µä¸å†å†…å­˜ä¸­ï¼Œæ¢å…¥æ—¶éœ€è¦è¯»å…¥æ­£æ–‡æ®µåœ¨äº¤æ¢åŒºä¸­çš„å‰¯æœ¬
 	*/
 	if ( pSelected->p_textp != NULL )
 	{
 		Text* pText = pSelected->p_textp;
 		if ( pText->x_ccount == 0 )
 		{
-			/* ÒòÎª¹²ÏíÕıÎÄ¶Î£¬ºÍ½ø³Ìppda¡¢Êı¾İ¶Î¡¢¶ÑÕ»¶ÎÔÚ½»»»ÇøÖĞÊÇ·Ö¿ª´æ·ÅµÄ£¬ËùÒÔÏÈ»»Èë¹²ÏíÕıÎÄ¶Î */
+			/* å› ä¸ºå…±äº«æ­£æ–‡æ®µï¼Œå’Œè¿›ç¨‹ppdaã€æ•°æ®æ®µã€å †æ ˆæ®µåœ¨äº¤æ¢åŒºä¸­æ˜¯åˆ†å¼€å­˜æ”¾çš„ï¼Œæ‰€ä»¥å…ˆæ¢å…¥å…±äº«æ­£æ–‡æ®µ */
 			if ( bufMgr.Swap(pText->x_daddr, desAddress, pText->x_size, Buf::B_READ) == false )
 			{
 				goto err;
 			}
-			/* ¹²ÏíÕıÎÄ¶ÎÔÚÄÚ´æÖĞµÄÆğÊ¼µØÖ· */
+			/* å…±äº«æ­£æ–‡æ®µåœ¨å†…å­˜ä¸­çš„èµ·å§‹åœ°å€ */
 			pText->x_caddr = desAddress;
 			desAddress += pText->x_size;
 		}
 		pText->x_ccount++;
 	}
-	/* »»ÈëÊ£Óà²¿·ÖÍ¼Ïñ£ºppda¡¢Êı¾İ¶Î¡¢¶ÑÕ»¶Î */
+	/* æ¢å…¥å‰©ä½™éƒ¨åˆ†å›¾åƒï¼šppdaã€æ•°æ®æ®µã€å †æ ˆæ®µ */
 	if ( bufMgr.Swap(pSelected->p_addr /* blkno */, desAddress, pSelected->p_size, Buf::B_READ) == false )
 	{
 		goto err;
@@ -372,10 +372,10 @@ void ProcessManager::Wait()
 			{
 				Diagnose::Write("Process %d (Status:%d)  ",process[i].p_pid,process[i].p_stat);
 				hasChild = true;
-				/* Ë¯ÃßµÈ´ıÖ±ÖÁ×Ó½ø³Ì½áÊø */
+				/* ç¡çœ ç­‰å¾…ç›´è‡³å­è¿›ç¨‹ç»“æŸ */
 				if( Process::SZOMB == process[i].p_stat )
 				{
-					/* wait()ÏµÍ³µ÷ÓÃ·µ»Ø×Ó½ø³ÌµÄpid */
+					/* wait()ç³»ç»Ÿè°ƒç”¨è¿”å›å­è¿›ç¨‹çš„pid */
 					u.u_ar0[User::EAX] = process[i].p_pid;
 
 					process[i].p_stat = Process::SNULL;
@@ -384,20 +384,20 @@ void ProcessManager::Wait()
 					process[i].p_sig = 0;
 					process[i].p_flag = 0;
 
-					/* ¶ÁÈëswapperÖĞ×Ó½ø³Ìu½á¹¹¸±±¾ */
+					/* è¯»å…¥swapperä¸­å­è¿›ç¨‹uç»“æ„å‰¯æœ¬ */
 					Buf* pBuf = bufMgr.Bread(DeviceManager::ROOTDEV, process[i].p_addr);
 					swapperMgr.FreeSwap(BufferManager::BUFFER_SIZE, process[i].p_addr);
 					User* pUser = (User *)pBuf->b_addr;
 
-					/* °Ñ×Ó½ø³ÌµÄÊ±¼ä¼Óµ½¸¸½ø³ÌÉÏ */
+					/* æŠŠå­è¿›ç¨‹çš„æ—¶é—´åŠ åˆ°çˆ¶è¿›ç¨‹ä¸Š */
 					u.u_cstime += pUser->u_cstime +	pUser->u_stime;
 					u.u_cutime += pUser->u_cutime + pUser->u_utime;
 
 					int* pInt = (int *)u.u_arg[0];
-					/* »ñÈ¡×Ó½ø³Ìexit(int status)µÄ·µ»ØÖµ */
+					/* è·å–å­è¿›ç¨‹exit(int status)çš„è¿”å›å€¼ */
 					*pInt = pUser->u_arg[0];
 
-					/* Èç¹û´Ë´¦Ã»ÓĞBrelse()ÏµÍ³»á·¢ÉúÊ²Ã´-_- */
+					/* å¦‚æœæ­¤å¤„æ²¡æœ‰Brelse()ç³»ç»Ÿä¼šå‘ç”Ÿä»€ä¹ˆ-_- */
 					bufMgr.Brelse(pBuf);
 					Diagnose::Write("end wait\n");
 					return;
@@ -406,15 +406,15 @@ void ProcessManager::Wait()
 		}
 		if (true == hasChild)
 		{
-			/* Ë¯ÃßµÈ´ıÖ±ÖÁ×Ó½ø³Ì½áÊø */
+			/* ç¡çœ ç­‰å¾…ç›´è‡³å­è¿›ç¨‹ç»“æŸ */
 			Diagnose::Write("wait until child process Exit! ");
 			u.u_procp->Sleep((unsigned long)u.u_procp, ProcessManager::PWAIT);
 			Diagnose::Write("end sleep\n");
-			continue;	/* »Øµ½Íâ²ãwhile(true)Ñ­»· */
+			continue;	/* å›åˆ°å¤–å±‚while(true)å¾ªç¯ */
 		}
 		else
 		{
-			/* ²»´æÔÚĞèÒªµÈ´ı½áÊøµÄ×Ó½ø³Ì£¬ÉèÖÃ³ö´íÂë£¬wait()·µ»Ø */
+			/* ä¸å­˜åœ¨éœ€è¦ç­‰å¾…ç»“æŸçš„å­è¿›ç¨‹ï¼Œè®¾ç½®å‡ºé”™ç ï¼Œwait()è¿”å› */
 			u.u_error = User::ECHILD;
 			break;	/* Get out of while loop */
 		}
@@ -426,7 +426,7 @@ void ProcessManager::Fork()
 	User& u = Kernel::Instance().GetUser();
 	Process* child = NULL;;
 
-	/* Ñ°ÕÒ¿ÕÏĞµÄprocessÏî£¬×÷Îª×Ó½ø³ÌµÄ½ø³Ì¿ØÖÆ¿é */
+	/* å¯»æ‰¾ç©ºé—²çš„processé¡¹ï¼Œä½œä¸ºå­è¿›ç¨‹çš„è¿›ç¨‹æ§åˆ¶å— */
 	for ( int i = 0; i < ProcessManager::NPROC; i++ )
 	{
 		if ( this->process[i].p_stat == Process::SNULL )
@@ -437,14 +437,14 @@ void ProcessManager::Fork()
 	}
 	if ( child == NULL )
 	{
-		/* Ã»ÓĞ¿ÕÏĞprocess±íÏî£¬·µ»Ø */
+		/* æ²¡æœ‰ç©ºé—²processè¡¨é¡¹ï¼Œè¿”å› */
 		u.u_error = User::EAGAIN;
 		return;
 	}
 
-	if ( this->NewProc() )	/* ×Ó½ø³Ì·µ»Ø1£¬¸¸½ø³Ì·µ»Ø0 */
+	if ( this->NewProc() )	/* å­è¿›ç¨‹è¿”å›1ï¼Œçˆ¶è¿›ç¨‹è¿”å›0 */
 	{
-		/* ×Ó½ø³Ìfork()ÏµÍ³µ÷ÓÃ·µ»Ø0 */
+		/* å­è¿›ç¨‹fork()ç³»ç»Ÿè°ƒç”¨è¿”å›0 */
 		u.u_MemoryDescriptor.DisplayPageTable();
 		u.u_ar0[User::EAX] = 0;
 		u.u_cstime = 0;
@@ -454,7 +454,7 @@ void ProcessManager::Fork()
 	}
 	else
 	{
-		/* ¸¸½ø³Ì½ø³Ìfork()ÏµÍ³µ÷ÓÃ·µ»Ø×Ó½ø³ÌPID */
+		/* çˆ¶è¿›ç¨‹è¿›ç¨‹fork()ç³»ç»Ÿè°ƒç”¨è¿”å›å­è¿›ç¨‹PID */
 		u.u_ar0[User::EAX] = child->p_pid;
 	}
 
@@ -464,7 +464,7 @@ void ProcessManager::Fork()
 extern "C" void runtime();
 extern "C" void ExecShell();
 
-/* ÖÕÓÚ¸Ò³ÆÎª V6 µÄ execÊµÏÖ¡£È±º¶£º²»Ö§³Ö ISUID ±ÈÌØ */
+/* ç»ˆäºæ•¢ç§°ä¸º V6 çš„ execå®ç°ã€‚ç¼ºæ†¾ï¼šä¸æ”¯æŒ ISUID æ¯”ç‰¹ */
 void ProcessManager::Exec()
 {
 	Inode* pInode;
@@ -477,19 +477,19 @@ void ProcessManager::Exec()
 
 	Diagnose::Write("Process %d execing\n",u.u_procp->p_pid);
 	pInode = fileMgr.NameI(FileManager::NextChar, FileManager::OPEN);
-	if ( NULL == pInode )	//ËÑË÷Ä¿Â¼Ê§°Ü
+	if ( NULL == pInode )	//æœç´¢ç›®å½•å¤±è´¥
 	{
 		return;
 	}
 
-	/* Èç¹ûÍ¬Ê±½øĞĞÍ¼Ïñ¸Ä»»µÄ½ø³ÌÊı³¬³öÏŞÖÆ£¬ÔòÏÈ½øÈëË¯Ãß */
+	/* å¦‚æœåŒæ—¶è¿›è¡Œå›¾åƒæ”¹æ¢çš„è¿›ç¨‹æ•°è¶…å‡ºé™åˆ¶ï¼Œåˆ™å…ˆè¿›å…¥ç¡çœ  */
 	while( this->ExeCnt >= NEXEC )
 	{
 		u.u_procp->Sleep((unsigned long)&ExeCnt, ProcessManager::EXPRI);
 	}
 	this->ExeCnt++;
 
-	/* ½ø³Ì±ØĞèÓµÓĞ¿ÉÖ´ĞĞÎÄ¼şµÄÖ´ĞĞÈ¨ÏŞ£¬ÇÒ±»Ö´ĞĞµÄÖ»ÄÜÊÇÒ»°ãÎÄ¼ş¡£ */
+	/* è¿›ç¨‹å¿…éœ€æ‹¥æœ‰å¯æ‰§è¡Œæ–‡ä»¶çš„æ‰§è¡Œæƒé™ï¼Œä¸”è¢«æ‰§è¡Œçš„åªèƒ½æ˜¯ä¸€èˆ¬æ–‡ä»¶ã€‚ */
 	if ( fileMgr.Access(pInode, Inode::IEXEC) || (pInode->i_mode & Inode::IFMT) != 0 )
 	{
 		fileMgr.m_InodeTable->IPut(pInode);
@@ -509,15 +509,15 @@ void ProcessManager::Exec()
         return;
     }
 
- 	/* »ñÈ¡·ÖÎöPEÍ·½á¹¹µÃµ½ÕıÎÄ¶ÎµÄÆğÊ¼µØÖ·¡¢³¤¶È */
+ 	/* è·å–åˆ†æPEå¤´ç»“æ„å¾—åˆ°æ­£æ–‡æ®µçš„èµ·å§‹åœ°å€ã€é•¿åº¦ */
 	u.u_MemoryDescriptor.m_TextStartAddress = parser.TextAddress;
 	u.u_MemoryDescriptor.m_TextSize = parser.TextSize;
 
-	/* Êı¾İ¶ÎµÄÆğÊ¼µØÖ·¡¢³¤¶È */
+	/* æ•°æ®æ®µçš„èµ·å§‹åœ°å€ã€é•¿åº¦ */
 	u.u_MemoryDescriptor.m_DataStartAddress = parser.DataAddress;
 	u.u_MemoryDescriptor.m_DataSize = parser.DataSize;
 
-	/* ¶ÑÕ»¶Î³õÊ¼»¯³¤¶È */
+	/* å †æ ˆæ®µåˆå§‹åŒ–é•¿åº¦ */
 	u.u_MemoryDescriptor.m_StackSize = parser.StackSize;
 	
 	if ( parser.TextSize + parser.DataSize + parser.StackSize  + PageManager::PAGE_SIZE > MemoryDescriptor::USER_SPACE_SIZE - parser.TextAddress)
@@ -528,9 +528,9 @@ void ProcessManager::Exec()
 	}
 
 	/* 
-	 * ·ÖÅäÄÚ´æÓÃÓÚ´æ·ÅÓÃ»§³ÌĞòÔËĞĞĞèÒªµÄ²ÎÊıargc£¬argv[]£¬ÕâĞ©²ÎÊıÓÉexec()ÏµÍ³µ÷ÓÃ´«Èë£¬
-	 * Î»ÓÚ½ø³ÌÍ¼Ïñ¸Ä»»Ç°µÄÓÃ»§Õ»ÖĞ£¬½«²ÎÊı±¸·İµ½fakeStackÖĞ£¬È»ºó¿ÉÒÔÊÍ·ÅÔ­½ø³ÌÍ¼Ïñ£¬
-	 * ·ÖÅäºÃĞÂ½ø³ÌÍ¼ÏñÖ®ºó£¬ÔÙ½«fakeStackÖĞµÄ±¸·İ²ÎÊı¿½±´µ½ĞÂ½ø³ÌµÄÓÃ»§Õ»ÖĞ¡£
+	 * åˆ†é…å†…å­˜ç”¨äºå­˜æ”¾ç”¨æˆ·ç¨‹åºè¿è¡Œéœ€è¦çš„å‚æ•°argcï¼Œargv[]ï¼Œè¿™äº›å‚æ•°ç”±exec()ç³»ç»Ÿè°ƒç”¨ä¼ å…¥ï¼Œ
+	 * ä½äºè¿›ç¨‹å›¾åƒæ”¹æ¢å‰çš„ç”¨æˆ·æ ˆä¸­ï¼Œå°†å‚æ•°å¤‡ä»½åˆ°fakeStackä¸­ï¼Œç„¶åå¯ä»¥é‡Šæ”¾åŸè¿›ç¨‹å›¾åƒï¼Œ
+	 * åˆ†é…å¥½æ–°è¿›ç¨‹å›¾åƒä¹‹åï¼Œå†å°†fakeStackä¸­çš„å¤‡ä»½å‚æ•°æ‹·è´åˆ°æ–°è¿›ç¨‹çš„ç”¨æˆ·æ ˆä¸­ã€‚
 	 */
 	//unsigned long fakeStack = kernelPgMgr.AllocMemory(parser.StackSize);
 	int allocLength = (parser.StackSize + PageManager::PAGE_SIZE * 2 - 1) >> 13 << 13;
@@ -539,59 +539,59 @@ void ProcessManager::Exec()
 	int argc = u.u_arg[1];
 	char** argv = (char **)u.u_arg[2];
 
-	/* esp¶¨Î»µ½Õ»µ× */
+	/* espå®šä½åˆ°æ ˆåº• */
 	unsigned int esp = MemoryDescriptor::USER_SPACE_SIZE;
-	/* Ê¹ÓÃºËĞÄÌ¬Ò³±íÓ³Éä£¬ËùÒÔÔÚÎïÀíµØÖ·ÉÏ¼Ó0xC0000000¹¹³ÉÏßĞÔµØÖ· */
+	/* ä½¿ç”¨æ ¸å¿ƒæ€é¡µè¡¨æ˜ å°„ï¼Œæ‰€ä»¥åœ¨ç‰©ç†åœ°å€ä¸ŠåŠ 0xC0000000æ„æˆçº¿æ€§åœ°å€ */
 	unsigned long desAddress = fakeStack + allocLength + 0xC0000000;
 	//unsigned long desAddress = fakeStack + parser.StackSize + 0xC0000000;
 	int length;
 
-	/* ¸´ÖÆargv[]Ö¸ÕëÊı×éÖ¸ÏòµÄÃüÁîĞĞ²ÎÊı×Ö·û´® */
+	/* å¤åˆ¶argv[]æŒ‡é’ˆæ•°ç»„æŒ‡å‘çš„å‘½ä»¤è¡Œå‚æ•°å­—ç¬¦ä¸² */
 	for (int i = 0; i < argc; i++ )
 	{
 		length = 0;
-		/* ¼ÆËã²ÎÊı×Ö·û´®³¤¶È£¬length²»º¬'\0' */
+		/* è®¡ç®—å‚æ•°å­—ç¬¦ä¸²é•¿åº¦ï¼Œlengthä¸å«'\0' */
 		while( NULL != argv[i][length] )
 		{
 			length++;
 		}
 		desAddress = desAddress - (length + 1);
-		/* ¿½±´Ê±½«'\0'Ò»Æğ¿½±´¹ıÈ¥ */
+		/* æ‹·è´æ—¶å°†'\0'ä¸€èµ·æ‹·è´è¿‡å» */
 		Utility::MemCopy((unsigned long)argv[i], desAddress, length + 1);
-		/* ½«²ÎÊı×Ö·û´®ÔÚĞÂ½ø³ÌÍ¼ÏñÓÃ»§Õ»ÖĞµÄÆğÊ¼Î»ÖÃ´æÈëargv[i]£¬ÓÃ»§Õ»Î»ÓÚ½ø³ÌÂß¼­µØÖ·¿Õ¼ä0x800000µÄµ×²¿ */
+		/* å°†å‚æ•°å­—ç¬¦ä¸²åœ¨æ–°è¿›ç¨‹å›¾åƒç”¨æˆ·æ ˆä¸­çš„èµ·å§‹ä½ç½®å­˜å…¥argv[i]ï¼Œç”¨æˆ·æ ˆä½äºè¿›ç¨‹é€»è¾‘åœ°å€ç©ºé—´0x800000çš„åº•éƒ¨ */
 		esp = esp - (length + 1);
 		argv[i] = (char *)esp;
 	}
 
-	/* ºóĞø´æ·ÅµÄÊÇintĞÍÊıÖµ£¬ÕâÀïÒÔ16×Ö½Ú±ß½ç¶ÔÆë */
+	/* åç»­å­˜æ”¾çš„æ˜¯intå‹æ•°å€¼ï¼Œè¿™é‡Œä»¥16å­—èŠ‚è¾¹ç•Œå¯¹é½ */
 	desAddress = desAddress & 0xFFFFFFF0;
 	esp = esp & 0xFFFFFFF0;
 
-	/* ¸´ÖÆargcºÍargv[] */
+	/* å¤åˆ¶argcå’Œargv[] */
 	int endValue = 0;
 	desAddress -= sizeof(endValue);
 	esp -= sizeof(endValue);
-	/* ÏòÓÃ»§Õ»ÖĞĞ´ÈëendValue×÷Îªargv[]µÄ½áÊø */
+	/* å‘ç”¨æˆ·æ ˆä¸­å†™å…¥endValueä½œä¸ºargv[]çš„ç»“æŸ */
 	Utility::MemCopy((unsigned long)&endValue, desAddress, sizeof(endValue));
 
 	desAddress -= argc * sizeof(int);
 	esp -= argc * sizeof(int);
-	/* Ğ´Èëargv[]µÄÄÚÈİ */
+	/* å†™å…¥argv[]çš„å†…å®¹ */
 	Utility::MemCopy((unsigned long)argv, desAddress, argc * sizeof(int));
 
-	/* ÁîendValueÖ¸Ïòµ±Ç°Õ»ÖĞargv[]µÄÆğÊ¼µØÖ·£¬¼´argv[]ÈëÕ»Íê±Ïºóµ±Ç°Õ»¶¥µØÖ· */
+	/* ä»¤endValueæŒ‡å‘å½“å‰æ ˆä¸­argv[]çš„èµ·å§‹åœ°å€ï¼Œå³argv[]å…¥æ ˆå®Œæ¯•åå½“å‰æ ˆé¡¶åœ°å€ */
 	endValue = esp;
 	desAddress -= sizeof(int);
 	esp -= sizeof(int);
 	Utility::MemCopy((unsigned long)&endValue, desAddress, sizeof(int));
 
-	/* ×îºóÈëÕ»argc */
+	/* æœ€åå…¥æ ˆargc */
 	desAddress -= sizeof(int);
 	esp -= sizeof(int);
 	Utility::MemCopy((unsigned long)&argc, desAddress, sizeof(int));	/* Done! */
 
 
-	/* ÊÍ·ÅÔ­½ø³ÌÍ¼ÏñµÄ¹²ÏíÕıÎÄ¶Î£¬Êı¾İ¶Î£¬¶ÑÕ»¶Î */
+	/* é‡Šæ”¾åŸè¿›ç¨‹å›¾åƒçš„å…±äº«æ­£æ–‡æ®µï¼Œæ•°æ®æ®µï¼Œå †æ ˆæ®µ */
 	if ( u.u_procp->p_textp != NULL )
 	{
 		u.u_procp->p_textp->XFree();
@@ -600,22 +600,22 @@ void ProcessManager::Exec()
 	u.u_procp->Expand(ProcessManager::USIZE);
 
 	pText = NULL;
-	/* ·ÖÅäÒ»¸ö¿ÕÏĞText½á¹¹£¬»òÕßºÍÆäËü½ø³Ì¹²ÏíÍ¬Ò»ÕıÎÄ¶Î */
+	/* åˆ†é…ä¸€ä¸ªç©ºé—²Textç»“æ„ï¼Œæˆ–è€…å’Œå…¶å®ƒè¿›ç¨‹å…±äº«åŒä¸€æ­£æ–‡æ®µ */
 	for ( int i = 0; i < ProcessManager::NTEXT; i++ )
 	{
-		if ( NULL == this->text[i].x_iptr )     /* ¼ÇÏÂÕÒµ½µÄµÚÒ»¸ö¿ÕÏĞtext½á¹¹ */
+		if ( NULL == this->text[i].x_iptr )     /* è®°ä¸‹æ‰¾åˆ°çš„ç¬¬ä¸€ä¸ªç©ºé—²textç»“æ„ */
 		{
 			if ( NULL == pText )
 			{
 				pText = &(this->text[i]);
 			}
 		}
-		else if ( pInode == this->text[i].x_iptr )		/* Èç¹û£¬Õâ²»ÊÇÒ»¸ö¿ÕÏĞtext½á¹¹£¬¿´Ò»ÏÂtext½á¹¹Ö¸ÏòµÄ¿ÉÖ´ĞĞÎÄ¼şÊÇexecÏµÍ³µ÷ÓÃÒªÖ´ĞĞµÄÓ¦ÓÃ³ÌĞòÂğ£¿ */
+		else if ( pInode == this->text[i].x_iptr )		/* å¦‚æœï¼Œè¿™ä¸æ˜¯ä¸€ä¸ªç©ºé—²textç»“æ„ï¼Œçœ‹ä¸€ä¸‹textç»“æ„æŒ‡å‘çš„å¯æ‰§è¡Œæ–‡ä»¶æ˜¯execç³»ç»Ÿè°ƒç”¨è¦æ‰§è¡Œçš„åº”ç”¨ç¨‹åºå—ï¼Ÿ */
 		{
 			this->text[i].x_count++;
 			this->text[i].x_ccount++;
 			u.u_procp->p_textp = &(this->text[i]);
-			pText = NULL;	/* ÓëÆäËü½ø³Ì¹²ÏíÍ¬Ò»ÕıÎÄ¶Î£¬ÔòpTextÖØĞÂÇåÁã£¬·ñÔòÖ¸ÏòÒ»¿ÕÏĞText½á¹¹ */
+			pText = NULL;	/* ä¸å…¶å®ƒè¿›ç¨‹å…±äº«åŒä¸€æ­£æ–‡æ®µï¼Œåˆ™pTexté‡æ–°æ¸…é›¶ï¼Œå¦åˆ™æŒ‡å‘ä¸€ç©ºé—²Textç»“æ„ */
 			break;
 		}
 	}
@@ -623,15 +623,15 @@ void ProcessManager::Exec()
 
 	int sharedText = 0;
 
-	/* Ã»ÓĞ¿É¹²ÏíµÄÏÖ³ÉText½á¹¹£¬½øĞĞÏàÓ¦³õÊ¼»¯ */
+	/* æ²¡æœ‰å¯å…±äº«çš„ç°æˆTextç»“æ„ï¼Œè¿›è¡Œç›¸åº”åˆå§‹åŒ– */
 	if ( NULL != pText )
 	{
 		/* 
-		 * ´Ë´¦i_count++ÓÃÓÚÆ½ºâXFree()º¯ÊıÖĞµÄIPut(x_iptr)£»ÌÈÈôÖ»ÓĞExec()¿ªÊ¼´¦
-		 * µ÷ÓÃNameI()º¯ÊıÖĞIGet()£¬ÒÔ¼°Exec()½áÎ²´¦IPut()ÊÍ·ÅexeÎÄ¼şµÄInode»Øµ½¿ÕÏĞInode±í£¬
-		 * ¼«¶ËÇé¿öÏÂ£ºÈôºóĞø½ø³ÌºÜ¿ìÒ²Exec()£¬»ñÈ¡¿ÕÏĞInodeÇ¡ºÃÊÇÖ®Ç°¼ÓÔØµÄexeÎÄ¼şÊÍ·ÅµÄInode£¬
-		 * Ôò»á´íÎóµØÅĞ¶Ï£ºpInode (µ±Ç°exe¶ÔÓ¦Inode) == this->text[i].x_iptr(Ö®Ç°exeÎÄ¼şInode)£¬
-		 * µ¼ÖÂºÍÖ®Ç°½ø³Ì¹²ÏíÍ¬Ò»Text½á¹¹£¬¼´Í¬Ò»ÕıÎÄ¶Î£¬¶øÊµ¼ÊÉÏ±¾¸ÃÊÇÁ½¸ö¶ÀÁ¢µÄ³ÌĞò¡£
+		 * æ­¤å¤„i_count++ç”¨äºå¹³è¡¡XFree()å‡½æ•°ä¸­çš„IPut(x_iptr)ï¼›å€˜è‹¥åªæœ‰Exec()å¼€å§‹å¤„
+		 * è°ƒç”¨NameI()å‡½æ•°ä¸­IGet()ï¼Œä»¥åŠExec()ç»“å°¾å¤„IPut()é‡Šæ”¾exeæ–‡ä»¶çš„Inodeå›åˆ°ç©ºé—²Inodeè¡¨ï¼Œ
+		 * æç«¯æƒ…å†µä¸‹ï¼šè‹¥åç»­è¿›ç¨‹å¾ˆå¿«ä¹ŸExec()ï¼Œè·å–ç©ºé—²Inodeæ°å¥½æ˜¯ä¹‹å‰åŠ è½½çš„exeæ–‡ä»¶é‡Šæ”¾çš„Inodeï¼Œ
+		 * åˆ™ä¼šé”™è¯¯åœ°åˆ¤æ–­ï¼špInode (å½“å‰exeå¯¹åº”Inode) == this->text[i].x_iptr(ä¹‹å‰exeæ–‡ä»¶Inode)ï¼Œ
+		 * å¯¼è‡´å’Œä¹‹å‰è¿›ç¨‹å…±äº«åŒä¸€Textç»“æ„ï¼Œå³åŒä¸€æ­£æ–‡æ®µï¼Œè€Œå®é™…ä¸Šæœ¬è¯¥æ˜¯ä¸¤ä¸ªç‹¬ç«‹çš„ç¨‹åºã€‚
 		 */
 		pInode->i_count++;
 
@@ -639,10 +639,10 @@ void ProcessManager::Exec()
 		pText->x_count = 1;
 		pText->x_iptr = pInode;
 		pText->x_size = u.u_MemoryDescriptor.m_TextSize;
-		/* ÎªÕıÎÄ¶Î·ÖÅäÄÚ´æ£¬¶ø¾ßÌåÕıÎÄ¶ÎÄÚÈİµÄ¶ÁÈëĞèÒªµÈµ½½¨Á¢Ò³±íÓ³ÉäÖ®ºó£¬ÔÙ´ÓmapAddressµØÖ·ÆğÊ¼µÄexeÎÄ¼şÖĞ¶ÁÈë */
+		/* ä¸ºæ­£æ–‡æ®µåˆ†é…å†…å­˜ï¼Œè€Œå…·ä½“æ­£æ–‡æ®µå†…å®¹çš„è¯»å…¥éœ€è¦ç­‰åˆ°å»ºç«‹é¡µè¡¨æ˜ å°„ä¹‹åï¼Œå†ä»mapAddressåœ°å€èµ·å§‹çš„exeæ–‡ä»¶ä¸­è¯»å…¥ */
 		pText->x_caddr = userPgMgr.AllocMemory(pText->x_size);
 		pText->x_daddr = Kernel::Instance().GetSwapperManager().AllocSwap(pText->x_size);
-		/* ½¨Á¢uÇøºÍText½á¹¹µÄ¹´Á¬¹ØÏµ */
+		/* å»ºç«‹uåŒºå’ŒTextç»“æ„çš„å‹¾è¿å…³ç³» */
 		u.u_procp->p_textp = pText;
 	}
 	else
@@ -665,10 +665,10 @@ void ProcessManager::Exec()
 	u.u_MemoryDescriptor.MapToPageTable();
     u.u_MemoryDescriptor.DisplayPageTable();
 
-	/* ´ÓexeÎÄ¼şÖĞÒÀ´Î¶ÁÈë.text¶Î¡¢.data¶Î¡¢.rdata¶Î¡¢.bss¶Î */
+	/* ä»exeæ–‡ä»¶ä¸­ä¾æ¬¡è¯»å…¥.textæ®µã€.dataæ®µã€.rdataæ®µã€.bssæ®µ */
 	parser.Relocate(pInode, sharedText);
 
-	/* .text¶ÎÔÚswap·ÖÇøÉÏÁô¸´±¾ */
+	/* .textæ®µåœ¨swapåˆ†åŒºä¸Šç•™å¤æœ¬ */
 	if(sharedText == 0)
 	{
 		u.u_procp->p_flag |= Process::SLOCK;
@@ -676,17 +676,17 @@ void ProcessManager::Exec()
 		u.u_procp->p_flag &= ~Process::SLOCK;
 	}
 
-	/* ½«fakeStackÖĞ±¸·İµÄÓÃ»§Õ»²ÎÊı¸´ÖÆµ½ĞÂ½ø³ÌÍ¼ÏñµÄÓÃ»§Õ»ÖĞ */
+	/* å°†fakeStackä¸­å¤‡ä»½çš„ç”¨æˆ·æ ˆå‚æ•°å¤åˆ¶åˆ°æ–°è¿›ç¨‹å›¾åƒçš„ç”¨æˆ·æ ˆä¸­ */
 	//Utility::MemCopy(fakeStack | 0xC0000000, MemoryDescriptor::USER_SPACE_SIZE - parser.StackSize, parser.StackSize);
 	Utility::MemCopy(fakeStack + allocLength - parser.StackSize | 0xC0000000, MemoryDescriptor::USER_SPACE_SIZE - parser.StackSize, parser.StackSize);
-	/* ÊÍ·ÅÓÃÓÚ¶ÁÈëexeÎÄ¼şºÍ±¸·İÓÃ»§Õ»²ÎÊıµÄÄÚ´æ£ºmapAddressºÍfakeStack */
+	/* é‡Šæ”¾ç”¨äºè¯»å…¥exeæ–‡ä»¶å’Œå¤‡ä»½ç”¨æˆ·æ ˆå‚æ•°çš„å†…å­˜ï¼šmapAddresså’ŒfakeStack */
 	kernelPgMgr.FreeMemory(allocLength, fakeStack);
 
 	/* 
-	  * ½«runtime()¡¢SignalHandler()º¯Êı¿½±´µ½½ø³ÌÓÃ»§Ì¬µØÖ·¿Õ¼ä0x00000000ÏßĞÔµØÖ·´¦£¬runtime()
-	  * ÓÃÓÚring0ÍË³öµ½ring3ÌØÈ¨¼¶Ö®ºóÖ´ĞĞµÄ´úÂë£¬SignalHandler()Îª½ø³ÌµÄĞÅºÅ´¦Àíº¯ÊıÈë¿Ú£¬¸ºÔğ
-	  * µ÷ÓÃ¾ßÌåĞÅºÅµÄHandler¡£Ã¿Ò»¸ö½ø³Ì0x00000000ÏßĞÔµØÖ·´¦¶¼Ó¦¸ÃÓĞÒ»·İ¶ÀÁ¢µÄruntime()¼°SignalHandler()
-	  * º¯Êı¸±±¾£¡
+	  * å°†runtime()ã€SignalHandler()å‡½æ•°æ‹·è´åˆ°è¿›ç¨‹ç”¨æˆ·æ€åœ°å€ç©ºé—´0x00000000çº¿æ€§åœ°å€å¤„ï¼Œruntime()
+	  * ç”¨äºring0é€€å‡ºåˆ°ring3ç‰¹æƒçº§ä¹‹åæ‰§è¡Œçš„ä»£ç ï¼ŒSignalHandler()ä¸ºè¿›ç¨‹çš„ä¿¡å·å¤„ç†å‡½æ•°å…¥å£ï¼Œè´Ÿè´£
+	  * è°ƒç”¨å…·ä½“ä¿¡å·çš„Handlerã€‚æ¯ä¸€ä¸ªè¿›ç¨‹0x00000000çº¿æ€§åœ°å€å¤„éƒ½åº”è¯¥æœ‰ä¸€ä»½ç‹¬ç«‹çš„runtime()åŠSignalHandler()
+	  * å‡½æ•°å‰¯æœ¬ï¼
 	  */
 //	unsigned char* runtimeSrc = (unsigned char*)runtime;
 //	unsigned char* runtimeDst = 0x00000000;
@@ -695,7 +695,7 @@ void ProcessManager::Exec()
 //		*runtimeDst++ = *runtimeSrc++;
 //	}
 
-	/* ÊÍ·ÅInode£¬¼õÉÙExeCnt¼ÆÊıÖµ */
+	/* é‡Šæ”¾Inodeï¼Œå‡å°‘ExeCntè®¡æ•°å€¼ */
 	fileMgr.m_InodeTable->IPut(pInode);
 	if ( this->ExeCnt >= NEXEC )
 	{
@@ -703,47 +703,47 @@ void ProcessManager::Exec()
 	}
 	this->ExeCnt--;
 
-	/* ÓÃÄ¬ÈÏµÄ·½Ê½´¦ÀíĞÅºÅ  */
+	/* ç”¨é»˜è®¤çš„æ–¹å¼å¤„ç†ä¿¡å·  */
 	for (int i = 0; i < u.NSIG ; i++)
 	{
 		u.u_signal[i] = 0;
 	}
 
-	/* Çå0ËùÓĞÍ¨ÓÃ¼Ä´æÆ÷  */
+	/* æ¸…0æ‰€æœ‰é€šç”¨å¯„å­˜å™¨  */
 	for (int i = User::EAX - 4; i < User::EAX - 4*7 ; i = i - 4)
 	{
-		u.u_ar0[i] = 0;     /* ÏÂ±êĞ´³É  User::EAX + i ¿É¶ÁĞÔÒªÇ¿Ò»Ğ©£¬µ«ÊÇÔËËãËÙ¶ÈÂıÁË¡£¾ÍĞ¡¿Ù£¬×·ÇóËÙ¶È°É */
+		u.u_ar0[i] = 0;     /* ä¸‹æ ‡å†™æˆ  User::EAX + i å¯è¯»æ€§è¦å¼ºä¸€äº›ï¼Œä½†æ˜¯è¿ç®—é€Ÿåº¦æ…¢äº†ã€‚å°±å°æŠ ï¼Œè¿½æ±‚é€Ÿåº¦å§ */
 	}
 
-	/* ½«exe³ÌĞòµÄÈë¿ÚµØÖ··ÅÈëºËĞÄÕ»ÏÖ³¡±£»¤ÇøÖĞµÄEAX×÷ÎªÏµÍ³µ÷ÓÃ·µ»ØÖµ£¬Õâ¸öÊÇruntimeÒªÓÃ  */
+	/* å°†exeç¨‹åºçš„å…¥å£åœ°å€æ”¾å…¥æ ¸å¿ƒæ ˆç°åœºä¿æŠ¤åŒºä¸­çš„EAXä½œä¸ºç³»ç»Ÿè°ƒç”¨è¿”å›å€¼ï¼Œè¿™ä¸ªæ˜¯runtimeè¦ç”¨  */
 	u.u_ar0[User::EAX] = parser.EntryPointAddress;
 	
-	/* ¹¹Ôì³öExec()ÏµÍ³µ÷ÓÃµÄÍË³ö»·¾³£¬Ê¹Ö®ÍË³öµ½ring3Ê±£¬¿ªÊ¼Ö´ĞĞuser code */
+	/* æ„é€ å‡ºExec()ç³»ç»Ÿè°ƒç”¨çš„é€€å‡ºç¯å¢ƒï¼Œä½¿ä¹‹é€€å‡ºåˆ°ring3æ—¶ï¼Œå¼€å§‹æ‰§è¡Œuser code */
 	struct pt_context* pContext = (struct pt_context *)u.u_arg[4];
-	pContext->eip = 0x00000000;	/* ÍË³öµ½ring3ÌØÈ¨¼¶ÏÂ´ÓÏßĞÔµØÖ·0x00000000´¦runtime()¿ªÊ¼Ö´ĞĞ */
+	pContext->eip = 0x00000000;	/* é€€å‡ºåˆ°ring3ç‰¹æƒçº§ä¸‹ä»çº¿æ€§åœ°å€0x00000000å¤„runtime()å¼€å§‹æ‰§è¡Œ */
 	//pContext->eip = parser.EntryPointAddress;
 	pContext->xcs = Machine::USER_CODE_SEGMENT_SELECTOR;
-	pContext->eflags = 0x200;	/* ´ËÏîÊÇ·ñ´Û¸ÄÎŞ¹Ø½ôÒª */
+	pContext->eflags = 0x200;	/* æ­¤é¡¹æ˜¯å¦ç¯¡æ”¹æ— å…³ç´§è¦ */
 	pContext->esp = esp;
 	pContext->xss = Machine::USER_DATA_SEGMENT_SELECTOR;
 }
 
 Process* ProcessManager::Select ()
 {
-	/* Ç°Ò»´ÎÑ¡ÖĞÉÏÌ¨½ø³Ì */
+	/* å‰ä¸€æ¬¡é€‰ä¸­ä¸Šå°è¿›ç¨‹ */
 	static int lastSelect = 0;
 	
 	while (true)
 	{
 		int priority = 256;
-		int best = -1;	/* ±¾ÂÖËÑË÷ÕÒµ½µÄ×îºÏÊÊÉÏÌ¨½ø³Ì */
+		int best = -1;	/* æœ¬è½®æœç´¢æ‰¾åˆ°çš„æœ€åˆé€‚ä¸Šå°è¿›ç¨‹ */
 
 		this->RunRun = 0;
 
-		/* ËÑË÷ÓÅÏÈ¼¶×î¸ßµÄ¿ÉÔËĞĞ½ø³Ì */
+		/* æœç´¢ä¼˜å…ˆçº§æœ€é«˜çš„å¯è¿è¡Œè¿›ç¨‹ */
 		for ( int count = 0; count < NPROC ; count++ )
 		{
-			/* ´ÓÉÏÒ»´Î±»Ñ¡ÖĞ½ø³ÌµÄÏÂÒ»¸ö¿ªÊ¼»Ø»·É¨Ãè£¬¶ø²»ÊÇÃ¿´Î´Ó0#½ø³Ì¿ªÊ¼£¬±£Ö¤¸÷½ø³Ì»ú»á¾ùµÈ */
+			/* ä»ä¸Šä¸€æ¬¡è¢«é€‰ä¸­è¿›ç¨‹çš„ä¸‹ä¸€ä¸ªå¼€å§‹å›ç¯æ‰«æï¼Œè€Œä¸æ˜¯æ¯æ¬¡ä»0#è¿›ç¨‹å¼€å§‹ï¼Œä¿è¯å„è¿›ç¨‹æœºä¼šå‡ç­‰ */
 			int i = (lastSelect + 1 + count) % NPROC;
 			if ( Process::SRUN == process[i].p_stat && (process[i].p_flag & Process::SLOAD) != 0 )
 			{
@@ -763,9 +763,9 @@ Process* ProcessManager::Select ()
 		SwtchNum++;
 		if ( SwtchNum & 0x80000000 ) 
 		{
-			SwtchNum = 0;	/* ¼ÆÊıÒç³ö±äÎª¸ºÊıºó£¬ÖØÖÃÎªÁã */
+			SwtchNum = 0;	/* è®¡æ•°æº¢å‡ºå˜ä¸ºè´Ÿæ•°åï¼Œé‡ç½®ä¸ºé›¶ */
 		}
-		/* Èç¹ûÑ¡³öÓÅÏÈ¼¶×î¸ßµÄ¿ÉÔËĞĞ½ø³Ì */
+		/* å¦‚æœé€‰å‡ºä¼˜å…ˆçº§æœ€é«˜çš„å¯è¿è¡Œè¿›ç¨‹ */
 		this->CurPri = priority;
 		lastSelect = best;
 		//Diagnose::Write("Process %d is running!",best);
@@ -783,28 +783,28 @@ void ProcessManager::Kill()
 
 	for ( int i = 0; i < ProcessManager::NPROC; i++ )
 	{
-		/* ²»ÔÊĞí·¢ËÍĞÅºÅ¸ø½ø³Ì×ÔÉí */
+		/* ä¸å…è®¸å‘é€ä¿¡å·ç»™è¿›ç¨‹è‡ªèº« */
 		if ( u.u_procp == &process[i] )
 		{
 			continue;
 		}
-		/* ²»ÊÇĞÅºÅµÄ½ÓÊÕ·½Ä¿±ê½ø³Ì£¬¼ÌĞøËÑÑ° */
+		/* ä¸æ˜¯ä¿¡å·çš„æ¥æ”¶æ–¹ç›®æ ‡è¿›ç¨‹ï¼Œç»§ç»­æœå¯» */
 		if ( pid != 0 && process[i].p_pid != pid)
 		{
 			continue;
 		}
-		/* pidÎª0£¬Ôò½«ĞÅºÅ·¢ËÍÖÁÓë·¢ËÍ½ø³ÌÍ¬Ò»ÖÕ¶ËµÄËùÓĞ½ø³Ì£¬0#½ø³Ì²»°üÀ¨ÔÚÄÚ */
+		/* pidä¸º0ï¼Œåˆ™å°†ä¿¡å·å‘é€è‡³ä¸å‘é€è¿›ç¨‹åŒä¸€ç»ˆç«¯çš„æ‰€æœ‰è¿›ç¨‹ï¼Œ0#è¿›ç¨‹ä¸åŒ…æ‹¬åœ¨å†… */
 		if ( pid == 0 && (process[i].p_ttyp != u.u_procp->p_ttyp || i == 0 ) )
 		{
 			continue;
 		}
-		/* ³ı·ÇÊÇ³¬¼¶ÓÃ»§£¬·ñÔòÒªÇó·¢ËÍ¡¢½ÓÊÕ½ø³Ìu.uidÏàÍ¬£¬¼´²»¿É¸øÆäËüÓÃ»§½ø³Ì·¢ËÍĞÅºÅ */
+		/* é™¤éæ˜¯è¶…çº§ç”¨æˆ·ï¼Œå¦åˆ™è¦æ±‚å‘é€ã€æ¥æ”¶è¿›ç¨‹u.uidç›¸åŒï¼Œå³ä¸å¯ç»™å…¶å®ƒç”¨æˆ·è¿›ç¨‹å‘é€ä¿¡å· */
 		if ( u.u_uid != 0 && u.u_uid != process[i].p_uid )
 		{
 			continue;
 		}
 		flag = true;
-		/* ĞÅºÅ·¢ËÍ¸øÂú×ãÌõ¼şµÄÄ¿±ê½ø³Ì */
+		/* ä¿¡å·å‘é€ç»™æ»¡è¶³æ¡ä»¶çš„ç›®æ ‡è¿›ç¨‹ */
 		process[i].PSignal(signal);
 	}
 	if ( false == flag )
@@ -815,7 +815,7 @@ void ProcessManager::Kill()
 
 void ProcessManager::WakeUpAll(unsigned long chan)
 {
-	/* »½ĞÑÏµÍ³ÖĞËùÓĞÒòchan¶ø½øÈëË¯ÃßµÄ½ø³Ì */
+	/* å”¤é†’ç³»ç»Ÿä¸­æ‰€æœ‰å› chanè€Œè¿›å…¥ç¡çœ çš„è¿›ç¨‹ */
 	for(int i = 0; i < ProcessManager::NPROC; i++)
 	{
 		if( this->process[i].IsSleepOn(chan) )
@@ -832,18 +832,18 @@ void ProcessManager::XSwap( Process* pProcess, bool bFreeMemory, int size )
 		size = pProcess->p_size;
 	}
 
-	/* blkno¼ÇÂ¼·ÖÅäµ½µÄ½»»»ÇøÆğÊ¼ÉÈÇøºÅ */
+	/* blknoè®°å½•åˆ†é…åˆ°çš„äº¤æ¢åŒºèµ·å§‹æ‰‡åŒºå· */
 	int blkno = Kernel::Instance().GetSwapperManager().AllocSwap(pProcess->p_size);
 	if ( 0 == blkno )
 	{
 		Utility::Panic("Out of Swapper Space");
 	}
-	/* µİ¼õ½ø³ÌÍ¼ÏñÔÚÄÚ´æÖĞ£¬ÇÒÒıÓÃ¸ÃÕıÎÄ¶ÎµÄ½ø³ÌÊı */
+	/* é€’å‡è¿›ç¨‹å›¾åƒåœ¨å†…å­˜ä¸­ï¼Œä¸”å¼•ç”¨è¯¥æ­£æ–‡æ®µçš„è¿›ç¨‹æ•° */
 	if ( pProcess->p_textp != NULL )
 	{
 		pProcess->p_textp->XccDec();
 	}
-	/* ÉÏËø£¬·ÀÖ¹Í¬Ò»½ø³ÌÍ¼Ïñ±»ÖØ¸´»»³ö */
+	/* ä¸Šé”ï¼Œé˜²æ­¢åŒä¸€è¿›ç¨‹å›¾åƒè¢«é‡å¤æ¢å‡º */
 	pProcess->p_flag |= Process::SLOCK;
 	if ( false == Kernel::Instance().GetBufferManager().Swap(blkno, pProcess->p_addr, size, Buf::B_WRITE) )
 	{
@@ -853,10 +853,10 @@ void ProcessManager::XSwap( Process* pProcess, bool bFreeMemory, int size )
 	{
 		Kernel::Instance().GetUserPageManager().FreeMemory(size, pProcess->p_addr);
 	}
-	/* °Ñ½ø³ÌÍ¼ÏñÔÚ½»»»ÇøÆğÊ¼ÉÈÇøºÅ¼ÇÂ¼ÔÚp_addrÖĞ£¬SLOADÊÇ0¡¢½ø³ÌÊÇÅÌ½»»»ÇøÉÏµÄ½ø³ÌÁË */
+	/* æŠŠè¿›ç¨‹å›¾åƒåœ¨äº¤æ¢åŒºèµ·å§‹æ‰‡åŒºå·è®°å½•åœ¨p_addrä¸­ï¼ŒSLOADæ˜¯0ã€è¿›ç¨‹æ˜¯ç›˜äº¤æ¢åŒºä¸Šçš„è¿›ç¨‹äº† */
 	pProcess->p_addr = blkno;
 	pProcess->p_flag &= ~(Process::SLOAD | Process::SLOCK);
-	/* ×î½üÒ»´Î±»»»Èë»ò»»³öÒÔÀ´£¬ÔÚÄÚ³ö»ò½»»»Çø×¤ÁôµÄÊ±¼ä³¤¶ÈÇåÁã */
+	/* æœ€è¿‘ä¸€æ¬¡è¢«æ¢å…¥æˆ–æ¢å‡ºä»¥æ¥ï¼Œåœ¨å†…å‡ºæˆ–äº¤æ¢åŒºé©»ç•™çš„æ—¶é—´é•¿åº¦æ¸…é›¶ */
 	pProcess->p_time = 0;
 
 	if ( this->RunOut )

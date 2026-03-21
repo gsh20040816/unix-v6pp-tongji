@@ -4,11 +4,11 @@ using System;
 namespace Build
 {
 	/// <summary>
-	/// file µÄÕªÒªËµÃ÷¡£
+	/// file çš„æ‘˜è¦è¯´æ˜ã€‚
 	/// </summary>
 	public class File
     {
-        #region ³£Á¿
+        #region å¸¸é‡
         public static  int CREATFILE = 1;
 		public static  int DELETEFILE = 2;
         
@@ -25,56 +25,56 @@ namespace Build
         #endregion
 
         /// <summary>
-        /// ÒªÔÚV6ÖĞ´´½¨µÄÎÄ¼şÂ·¾¶
+        /// è¦åœ¨V6ä¸­åˆ›å»ºçš„æ–‡ä»¶è·¯å¾„
         /// </summary>
         protected string _createFilePath;
         /// <summary>
-		/// Ä¿Â¼²Ù×÷
+		/// ç›®å½•æ“ä½œ
 		/// </summary>
 		protected Directary _dire;
 		/// <summary>
-		/// Ä¿Â¼µÄinodeºÅ
+		/// ç›®å½•çš„inodeå·
 		/// </summary>
 		protected int _dirInodeNo;
 		/// <summary>
-		/// ¸¸Ä¿Â¼µÄinodeÏî
+		/// çˆ¶ç›®å½•çš„inodeé¡¹
 		/// </summary>
 		protected InodeStr _dirInode;
 		/// <summary>
-		/// ÎÄ¼şµÄinodeÏî
+		/// æ–‡ä»¶çš„inodeé¡¹
 		/// </summary>
 		protected InodeStr _fileInode;
 		/// <summary>
-		/// ÎÄ¼şµÄinodeºÅ
+		/// æ–‡ä»¶çš„inodeå·
 		/// </summary>
 		protected int _fileInodeNo;
 		/// <summary>
-		/// ¿ÕÏĞÄ¿Â¼ÏîµÄÎ»ÖÃ,ĞéµØÖ·
+		/// ç©ºé—²ç›®å½•é¡¹çš„ä½ç½®,è™šåœ°å€
 		/// </summary>
 		protected int _blankDirItem;
 		/// <summary>
-		/// ³¬¼¶¿é¹ÜÀí
+		/// è¶…çº§å—ç®¡ç†
 		/// </summary>
 		protected Superblock _superBlock;
 		/// <summary>
-		/// inode¹ÜÀí
+		/// inodeç®¡ç†
 		/// </summary>
 		protected InodeBlock _inodeblock;
 		/// <summary>
-		/// ¿ÕÏĞÊı¾İ¿é¹ÜÀí
+		/// ç©ºé—²æ•°æ®å—ç®¡ç†
 		/// </summary>
 		protected DataBlock _dataBlock;
         /// <summary>
-        /// ´ÅÅÌÎÄ¼ş
+        /// ç£ç›˜æ–‡ä»¶
         /// </summary>
         protected Disk _diskFile;
 		/// <summary>
-		/// ÓÃÓÚ´æ·ÅÓÉnamei½âÎöºóµÄÎÄ¼şÃû(¾ø¶ÔÃû×Ö£¬²»º¬Â·¾¶£¬×÷Îªref ²ÎÊı´«¸ønamei)
+		/// ç”¨äºå­˜æ”¾ç”±nameiè§£æåçš„æ–‡ä»¶å(ç»å¯¹åå­—ï¼Œä¸å«è·¯å¾„ï¼Œä½œä¸ºref å‚æ•°ä¼ ç»™namei)
 		/// </summary>
 		protected char[] _fileName = new char[28];
 
         /// <summary>
-        /// ¹¹Ôìº¯Êı
+        /// æ„é€ å‡½æ•°
         /// </summary>
         /// <param name="tsb"></param>
         /// <param name="tid"></param>
@@ -94,29 +94,29 @@ namespace Build
 		}
 
         /// <summary>
-        /// ¸ù¾İÂ·¾¶Ãû£¬½«ÎÄ¼şÒÔ¼°Ïà¹ØĞÅÏ¢Ğ´Èë
+        /// æ ¹æ®è·¯å¾„åï¼Œå°†æ–‡ä»¶ä»¥åŠç›¸å…³ä¿¡æ¯å†™å…¥
         /// </summary>
 		public virtual void CreateFile()
 		{
-            //»ñÈ¡Ä¿Â¼inode
+            //è·å–ç›®å½•inode
             SearchFatherDir(_createFilePath);
             if (Error.ErrorType != Error.SUCCESS)
             {
                 return;
             }
-            //ÌîĞ´Ğ´Ä¿Â¼Ïî
+            //å¡«å†™å†™ç›®å½•é¡¹
             WriteDirItem(_dirInode);
-            //Ğ´ĞÂ½¨µÄinode£¬²¢Ğ´Èë´ÅÅÌ
+            //å†™æ–°å»ºçš„inodeï¼Œå¹¶å†™å…¥ç£ç›˜
             //_inodeblock.CleanInodeAddr(_fileInode);
             SetCommonFileInode();
             _inodeblock.UpdateInodeToDisk(_fileInode, _fileInodeNo);
-            //¸üĞÂÄ¿Â¼inode²¢Ğ´»Ø´ÅÅÌ
+            //æ›´æ–°ç›®å½•inodeå¹¶å†™å›ç£ç›˜
             UpdateFatherDirInode();
             _inodeblock.UpdateInodeToDisk(_dirInode, _dirInodeNo);
         }
 
         /// <summary>
-        /// ¸ù¾İÂ·¾¶ÃûÔÚÎÄ¼şÏµÍ³ÖĞ½øĞĞËÑË÷
+        /// æ ¹æ®è·¯å¾„ååœ¨æ–‡ä»¶ç³»ç»Ÿä¸­è¿›è¡Œæœç´¢
         /// </summary>
         /// <param name="path"></param>
 		protected void SearchFatherDir(string path)
@@ -125,7 +125,7 @@ namespace Build
    		}
 
 		/// <summary>
-		/// Ğ´ÈëÄ¿Â¼Ïî
+		/// å†™å…¥ç›®å½•é¡¹
 		/// </summary>
 		protected void WriteDirItem(InodeStr dirInode)
 		{
@@ -137,7 +137,7 @@ namespace Build
 			{
 				cin[i] = inodeNo[i];
 			}
-            //´Ë´¦µÄFileNameÓÉÖ®Ç°µÄnameiÖĞµÃÀ´£¬Ö¸µÄÊÇÎÄ¼şµÄ¾ø¶ÔÃû£¬²»´øÂ·¾¶
+            //æ­¤å¤„çš„FileNameç”±ä¹‹å‰çš„nameiä¸­å¾—æ¥ï¼ŒæŒ‡çš„æ˜¯æ–‡ä»¶çš„ç»å¯¹åï¼Œä¸å¸¦è·¯å¾„
 			for(int i = 0;i < 28;++i)
 			{
 				cin[i + 4] = Convert.ToByte(_fileName[i]);
@@ -146,11 +146,11 @@ namespace Build
 		}
 
 		/// <summary>
-		/// Á÷Ğ´Èë
+		/// æµå†™å…¥
 		/// </summary>
-		/// <param name="cin">´ıĞ´ÈëµÄÁ÷</param>
-		/// <param name="position">Ğ´ÈëÆğÊ¼Î»ÖÃ</param>
-		/// <param name="count">ĞèĞ´ÈëµÄÊıÁ¿</param>
+		/// <param name="cin">å¾…å†™å…¥çš„æµ</param>
+		/// <param name="position">å†™å…¥èµ·å§‹ä½ç½®</param>
+		/// <param name="count">éœ€å†™å…¥çš„æ•°é‡</param>
 		protected void WriteStream(byte[] cin,int itemNum,int count,InodeStr dinode)
 		{
             int pos = _dire.BMap(dinode, itemNum / 512);
@@ -161,7 +161,7 @@ namespace Build
 		}
 
         /// <summary>
-        /// ÉèÖÃÎÄ¼şµÄinodeÄÚÈİ
+        /// è®¾ç½®æ–‡ä»¶çš„inodeå†…å®¹
         /// </summary>
 		protected virtual void SetCommonFileInode()
 		{
@@ -174,7 +174,7 @@ namespace Build
 		}
 
         /// <summary>
-        /// ¸üĞÂ¸¸Ä¿Â¼µÄinodeĞÅÏ¢
+        /// æ›´æ–°çˆ¶ç›®å½•çš„inodeä¿¡æ¯
         /// </summary>
 		public void UpdateFatherDirInode()
 		{

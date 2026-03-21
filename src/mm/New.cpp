@@ -1,8 +1,8 @@
 #include "New.h"
 /*
- * ����ļ�������
- * 1�����ص��ǿռ��������ַ
- * 2��new����Ĳ�������Ҫ�Ŀռ��С��û������ɱ䳤���飬�μ�PEParser.cpp��  line 157.
+ * 这个文件有问题
+ * 1、返回的是空间的物理地址
+ * 2、new后面的参数是需要的空间大小，没法申请可变长数组，参见PEParser.cpp中  line 157.
  */
 
 KernelAllocator* g_pAllocator;

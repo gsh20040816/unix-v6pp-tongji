@@ -7,17 +7,17 @@ namespace Build
 {
     class Run
     {
-        //´ÅÅÌÎÄ¼şc.img
+        //ç£ç›˜æ–‡ä»¶c.img
         private Disk _disk;
-        //ÓÃÓÚĞ´bootloader
+        //ç”¨äºå†™bootloader
         private Boot _boot;
-        //ÓÃÓÚĞ´kernel
+        //ç”¨äºå†™kernel
         private Kernel _kernel;
-        //³¬¼¶¿é
+        //è¶…çº§å—
         private Superblock _superBlock;
-        //inodeÇø
+        //inodeåŒº
         private InodeBlock _inodeBlock;
-        //Êı¾İÇø
+        //æ•°æ®åŒº
         private DataBlock _dataBlock;
 
         public Run()
@@ -46,7 +46,7 @@ namespace Build
         }
 
         /// <summary>
-        /// ¹¹½¨Ä¿Â¼½á¹¹£¨°üÀ¨¸ùÄ¿Â¼£¬Éè±¸ÎÄ¼şÄ¿Â¼ÒÔ¼°ÆäËûÒ»Ğ©Ä¿Â¼µÈµÈ£©
+        /// æ„å»ºç›®å½•ç»“æ„ï¼ˆåŒ…æ‹¬æ ¹ç›®å½•ï¼Œè®¾å¤‡æ–‡ä»¶ç›®å½•ä»¥åŠå…¶ä»–ä¸€äº›ç›®å½•ç­‰ç­‰ï¼‰
         /// </summary>
         private void ConstructDirectoryStruct()
         { 
@@ -63,7 +63,7 @@ namespace Build
         }
 
         /// <summary>
-        /// ±éÀúMachinePara.ProgramDirPathËùÖ¸ÏòµÄÄ¿Â¼£¬½«ÆäÄ¿Â¼½á¹¹¸´ÖÆµ½¸ùÄ¿Â¼"/"ÏÂ
+        /// éå†MachinePara.ProgramDirPathæ‰€æŒ‡å‘çš„ç›®å½•ï¼Œå°†å…¶ç›®å½•ç»“æ„å¤åˆ¶åˆ°æ ¹ç›®å½•"/"ä¸‹
         /// </summary>
         private void WriteWholeDir()
         {
@@ -72,20 +72,20 @@ namespace Build
 
             while (dirQueue.Count != 0)
             {
-                //ÒªÔÚV6++ÏµÍ³ÖĞ´´½¨ÎÄ¼şµÄÂ·¾¶
+                //è¦åœ¨V6++ç³»ç»Ÿä¸­åˆ›å»ºæ–‡ä»¶çš„è·¯å¾„
                 string dirV6Path = dirQueue.Dequeue();
-                //Êµ¼ÊÎÄ¼şµÄÂ·¾¶
+                //å®é™…æ–‡ä»¶çš„è·¯å¾„
                 string dirRealPath = MachinePara.ProgramDirPath + dirV6Path;
                 DirectoryInfo theFolder = new DirectoryInfo(dirRealPath);
 
-                //´´½¨ÎÄ¼ş
+                //åˆ›å»ºæ–‡ä»¶
                 foreach (FileInfo file in theFolder.GetFiles())
                 {
                     string createFilePath = dirV6Path + "/"+file.Name;
                     CommonFile commonFile = new CommonFile(_superBlock, _inodeBlock, _dataBlock, _disk, createFilePath, file.FullName);
                     commonFile.CreateFile();
                 }
-                //´´½¨ÎÄ¼ş¼Ğ
+                //åˆ›å»ºæ–‡ä»¶å¤¹
                 foreach (DirectoryInfo directory in theFolder.GetDirectories())
                 {
                     if ((directory.Attributes & FileAttributes.Hidden) != 0)

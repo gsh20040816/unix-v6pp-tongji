@@ -48,7 +48,7 @@ void CRT::CRTStart(TTy* pTTy)
 			m_Position++;
 			break;
 
-		default:	/* ����Ļ�ϻ�����ͨ�ַ� */
+		default:	/* 在屏幕上回显普通字符 */
 			WriteChar(ch);
 			m_Position++;
 			break;
@@ -63,10 +63,10 @@ void CRT::MoveCursor(unsigned int col, unsigned int row)
 		return;
 	}
 
-	/* ������ƫ���� */
+	/* 计算光标偏移量 */
 	unsigned short cursorPosition = row * CRT::COLUMNS + col;
 
-	/* ѡ�� r14��r15�Ĵ������ֱ�Ϊ���λ�õĸ�8λ�͵�8λ */
+	/* 选择 r14和r15寄存器，分别为光标位置的高8位和低8位 */
 	IOPort::OutByte(CRT::VIDEO_ADDR_PORT, 14);
 	IOPort::OutByte(CRT::VIDEO_DATA_PORT, cursorPosition >> 8);
 	IOPort::OutByte(CRT::VIDEO_ADDR_PORT, 15);
@@ -78,7 +78,7 @@ void CRT::NextLine()
 	m_CursorX = 0;
 	m_CursorY += 1;
 
-	/* ����������� */
+	/* 超出最大行数 */
 	if ( m_CursorY >= CRT::ROWS )
 	{
 		m_CursorY = 0;
@@ -91,7 +91,7 @@ void CRT::BackSpace()
 {
 	m_CursorX--;
 
-	/* �ƶ���꣬���Ҫ�ص���һ�еĻ� */
+	/* 移动光标，如果要回到上一行的话 */
 	if ( m_CursorX < 0 )
 	{
 		m_CursorX = CRT::COLUMNS - 1;
@@ -103,14 +103,14 @@ void CRT::BackSpace()
 	}
 	MoveCursor(m_CursorX, m_CursorY);
 
-	/* �ڹ������λ�����Ͽո� */
+	/* 在光标所在位置填上空格 */
 	m_VideoMemory[m_CursorY * COLUMNS + m_CursorX] = ' ' | CRT::COLOR;
 	// m_VideoMemory[m_CursorY * COLUMNS + m_CursorX] = ' ' | 0x0A00;
 }
 
 void CRT::Tab()
 {
-	m_CursorX &= 0xFFFFFFF8;	/* ������뵽ǰһ��Tab�߽� */
+	m_CursorX &= 0xFFFFFFF8;	/* 向左对齐到前一个Tab边界 */
 	m_CursorX += 8;
 	// const int TabWidth = 10;
 	// m_CursorX -= m_CursorX % TabWidth;

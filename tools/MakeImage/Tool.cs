@@ -41,7 +41,7 @@ namespace MakeImage
 
         public static void WriteInt(int value, ref byte[] buffer, int offset)
         {
-            /* 手动强转value到byte[4] */
+            /* 鎵嬪姩寮鸿浆value鍒癰yte[4] */
             byte[] b = new byte[4];
             
             b[0] = (byte)value;

@@ -5,17 +5,17 @@ namespace Build
 	public class Boot
 	{
 		/// <summary>
-		/// Æô¶¯ÎÄ¼ş(boot.bin)
+		/// å¯åŠ¨æ–‡ä»¶(boot.bin)
 		/// </summary>
 		private RWFiles _bootFile;
 
         /// <summary>
-        /// ´ÅÅÌÎÄ¼ş(c.img)
+        /// ç£ç›˜æ–‡ä»¶(c.img)
         /// </summary>
         private Disk _diskFile;
 
         /// <summary>
-        /// ¹¹Ôìº¯Êı
+        /// æ„é€ å‡½æ•°
         /// </summary>
 		public Boot(Disk diskFile)
 		{
@@ -24,20 +24,20 @@ namespace Build
 		}
 
         /// <summary>
-        /// ½«±àÒëºÃµÄÆô¶¯ÎÄ¼şboot.bin°´¹æ¶¨Ğ´Èë´ÅÅÌ
+        /// å°†ç¼–è¯‘å¥½çš„å¯åŠ¨æ–‡ä»¶boot.binæŒ‰è§„å®šå†™å…¥ç£ç›˜
         /// </summary>
 		public void WriteBootBlock()
 		{
             int bootSize = MachinePara.Boot_Size * MachinePara.Block_Size;
             byte[] writeTo = new byte[bootSize];
 
-            //¶ÁÈ¡boot.bin
+            //è¯»å–boot.bin
             _bootFile.OpenFile();
             _bootFile.SeekFilePosition(0, System.IO.SeekOrigin.Begin);
             _bootFile.ReadFile(ref writeTo, 0, 512);
             _bootFile.CloseFile();
 
-            //Ğ´Èëc.img
+            //å†™å…¥c.img
             _diskFile.OpenFile();
 		    _diskFile.SeekFilePosition(0, System.IO.SeekOrigin.Begin);
             _diskFile.WriteFile(ref writeTo, 0, bootSize);

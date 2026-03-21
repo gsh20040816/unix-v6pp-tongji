@@ -7,17 +7,17 @@ namespace Build
     class Kernel
     {
         /// <summary>
-		/// Æô¶¯ÎÄ¼ş
+		/// å¯åŠ¨æ–‡ä»¶
 		/// </summary>
 		private RWFiles _kernelFile;
 
         /// <summary>
-        /// ´ÅÅÌÎÄ¼ş
+        /// ç£ç›˜æ–‡ä»¶
         /// </summary>
         private Disk _diskFile;
 
         /// <summary>
-        /// ¹¹Ôìº¯Êı
+        /// æ„é€ å‡½æ•°
         /// </summary>
 		public Kernel(Disk diskFile)
 		{
@@ -26,7 +26,7 @@ namespace Build
 		}
 
         /// <summary>
-        /// ½«±àÒëºÃµÄÄÚºËkernel.binÎÄ¼ş°´¹æ¶¨Ğ´Èë´ÅÅÌ
+        /// å°†ç¼–è¯‘å¥½çš„å†…æ ¸kernel.binæ–‡ä»¶æŒ‰è§„å®šå†™å…¥ç£ç›˜
         /// </summary>
 		public void WriteKernelBlock()
 		{
@@ -35,12 +35,12 @@ namespace Build
             byte[] writeTo;
             writeTo = new byte[kernelFileLength];
             
-            //¶Á³ökernel.binÎÄ¼şµÄÄÚÈİ
+            //è¯»å‡ºkernel.binæ–‡ä»¶çš„å†…å®¹
 			_kernelFile.SeekFilePosition(0, System.IO.SeekOrigin.Begin);
             _kernelFile.ReadFile(ref writeTo, 0, kernelFileLength);
             _kernelFile.CloseFile();
 
-            //½«kernel.binµÄÄÚÈİĞ´Èëc.img
+            //å°†kernel.binçš„å†…å®¹å†™å…¥c.img
             _diskFile.OpenFile();
             _diskFile.SeekFilePosition(1*512, System.IO.SeekOrigin.Begin);
             _diskFile.WriteFile(ref writeTo, 0, kernelFileLength);

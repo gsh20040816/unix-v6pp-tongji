@@ -38,7 +38,7 @@ bool BreadTest()
 	pBuf = bufMgr.Bread(DeviceManager::ROOTDEV, 0);
 	CheckSumBuffer(pBuf);
 
-	/* һ��ҪBrelse() */
+	/* 一定要Brelse() */
 	bufMgr.Brelse(pBuf);
 
 	pBuf = bufMgr.Bread(DeviceManager::ROOTDEV, 0);
@@ -53,15 +53,15 @@ bool RepeatReadTest()
 	Diagnose::Write("Repeated Read Test Start...\n");
 	Buf* pBuf;
 	unsigned long addr;
-	/* 15������ѭ�����ã���ȡ����ַ��飬���𳬹�c.img��������20,160 Sectors */
+	/* 15个缓存循环利用，读取多个字符块，但别超过c.img的扇区数20,160 Sectors */
 	int repeat = 3000;
 
 	BufferManager& bufMgr = Kernel::Instance().GetBufferManager();
 
 	pBuf = bufMgr.Bread(DeviceManager::ROOTDEV, 0);
-	/* һ��ҪBrelse() */
+	/* 一定要Brelse() */
 	bufMgr.Brelse(pBuf);
-	/* ��¼1st buffer�ĵ�ַ */
+	/* 记录1st buffer的地址 */
 	addr = (unsigned long)pBuf->b_addr;
 
 	int nbuffer = 0;
@@ -148,13 +148,13 @@ bool TestSwap()
 	int count = SwapperManager::BLOCK_SIZE * 2;
 	char swapBuf[1024];
 
-	/* ��1#��2#���������̿����swapBuf���൱�ڽ���ͼ���룬��Ϊ��û�п����ڲ��ԵĽ���ͼ�� */
+	/* 将1#，2#这两个磁盘块读入swapBuf，相当于进程图像换入，因为还没有可用于测试的进程图像 */
 	if( bufMgr.Swap(1, (unsigned long)swapBuf, count, Buf::B_READ) == false )
 	{
 		while(true);
 	}
 
-	/* ���佻�����ռ䣬��������ͼ�񡰻��������������У����н��ʹ��UltraEdit��c.img�鿴 */
+	/* 分配交换区空间，并将进程图像“换出”到交换区中，运行结果使用UltraEdit打开c.img查看 */
 	int blkno = Kernel::Instance().GetSwapperManager().AllocSwap(count);
 	
 	if( bufMgr.Swap(blkno, (unsigned long)swapBuf, count, Buf::B_WRITE) == false )
@@ -163,10 +163,10 @@ bool TestSwap()
 	}
 
 	return true;
-	/* ע�⣺Ŀǰ���ڲ���Swap()�����Ľ���ͼ���׵�ַswapBuf��λ�ں���̬��ַ�ռ䣬������0xC0000000��
-	 * ��������ͼ���뻻��ʱ���û�̬��ַ�ռ�����Ե�ַ0��ʼ����ATADriver::DevStart()�����У���
-	 * ����������������(PRD Table)�������ʵ��������ַ��ͳһ����Buf - 0xC0000000�Ļ��㡣���������ָ��
-	 * ����ͼ����ʼ��ַ��swbuf���������Եģ�������Ҫ��������޸ġ�
+	/* 注意：目前用于测试Swap()函数的进程图像首地址swapBuf是位于核心态地址空间，即大于0xC0000000，
+	 * 真正进程图像换入换出时，用户态地址空间从线性地址0开始，而ATADriver::DevStart()函数中，在
+	 * 物理区域描述符表(PRD Table)填入的是实际物理地址，统一进行Buf - 0xC0000000的换算。这操作对于指向
+	 * 进程图像起始地址的swbuf会是灾难性的，后面需要对其进行修改。
 	 */
 }
 

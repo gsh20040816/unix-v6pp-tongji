@@ -12,7 +12,7 @@ unsigned long Allocator::Alloc(MapNode map[], unsigned long size)
 	MapNode* pNode;
 	unsigned long retIdx = 0;
 
-	/* ÈôpNode->m_Size == 0Ôò±íÊ¾ÒÑ¾­±éÀúµ½½áÎ² */
+	/* è‹¥pNode->m_Size == 0åˆ™è¡¨ç¤ºå·²ç»éåŽ†åˆ°ç»“å°¾ */
 	for ( pNode = map; pNode->m_Size; pNode++)
 	{
 		if ( pNode->m_Size >= size )
@@ -20,7 +20,7 @@ unsigned long Allocator::Alloc(MapNode map[], unsigned long size)
 			retIdx = pNode->m_AddressIdx;
 			pNode->m_AddressIdx += size;
 			pNode->m_Size -= size;
-			/* µ±Ç°ÄÚ´æÕýºÃ·ÖÅäÍê³É£¬½«¸ÃMapNodeËùÔÚÎ»ÖÃºóÃæµÄMapNode¶¼ÏòÇ°ÒÆ¶¯Ò»¸öÎ»ÖÃ */
+			/* å½“å‰å†…å­˜æ­£å¥½åˆ†é…å®Œæˆï¼Œå°†è¯¥MapNodeæ‰€åœ¨ä½ç½®åŽé¢çš„MapNodeéƒ½å‘å‰ç§»åŠ¨ä¸€ä¸ªä½ç½® */
 			if ( pNode->m_Size == 0 ) 
 			{
 				MapNode* pNextNode = (pNode + 1);
@@ -41,19 +41,19 @@ unsigned long Allocator::Alloc(MapNode map[], unsigned long size)
 unsigned long Allocator::Free(MapNode map[], unsigned long size, unsigned long addrIdx)
 {
 	MapNode* pNode;
-	/* Ê×ÏÈ£¬pNodeÖ¸ÏòÕýºÃÊÇaddrIdxÏÂÒ»¿é¿ÕÏÐÇø */
+	/* é¦–å…ˆï¼ŒpNodeæŒ‡å‘æ­£å¥½æ˜¯addrIdxä¸‹ä¸€å—ç©ºé—²åŒº */
 	for ( pNode = map; pNode->m_AddressIdx <= addrIdx && pNode->m_Size != 0; ++pNode );
 	/* 
-	 * 1) pNode²»ÊÇµÚÒ»¿é£¬¼´²»ÊÇÔÚÍ·²¿²åÈë
-	 * 2) ÐèÒªfreeµÄÊý¾Ý¿éÕýºÃÓëpLastNodeÏàÁÚ
-	 * 3) ÒòÎªÈç¹ûpNodeÊÇµÚÒ»¸ö»°Ìõ¼þ2)Ò»¶¨²»»á³ÉÁ¢£¬
-	 * Òò´Ë¿ÉÒÔ±£Ö¤pLastNodeÔÚÌõ¼þÄÚÒ»¶¨²»»áÐ¡ÓÚmapµÄµØÖ·
+	 * 1) pNodeä¸æ˜¯ç¬¬ä¸€å—ï¼Œå³ä¸æ˜¯åœ¨å¤´éƒ¨æ’å…¥
+	 * 2) éœ€è¦freeçš„æ•°æ®å—æ­£å¥½ä¸ŽpLastNodeç›¸é‚»
+	 * 3) å› ä¸ºå¦‚æžœpNodeæ˜¯ç¬¬ä¸€ä¸ªè¯æ¡ä»¶2)ä¸€å®šä¸ä¼šæˆç«‹ï¼Œ
+	 * å› æ­¤å¯ä»¥ä¿è¯pLastNodeåœ¨æ¡ä»¶å†…ä¸€å®šä¸ä¼šå°äºŽmapçš„åœ°å€
 	 */
 	MapNode* pLastNode = pNode - 1;
 	if ( pNode > map && addrIdx == pLastNode->m_AddressIdx + pLastNode->m_Size )
 	{
 		pLastNode->m_Size += size;
-		/* ÕâÀï´¦ÀíÓëºóÃæ¿ÕÏÐ¿éÏàÁÚµÄÇé¿ö£¬ÐèÒªºÏ²¢ºóÒÀ´ÎÏòÇ°ÒÆ¶¯¿ÕÏÐ¿é */
+		/* è¿™é‡Œå¤„ç†ä¸ŽåŽé¢ç©ºé—²å—ç›¸é‚»çš„æƒ…å†µï¼Œéœ€è¦åˆå¹¶åŽä¾æ¬¡å‘å‰ç§»åŠ¨ç©ºé—²å— */
 		if ( addrIdx + size == pNode->m_AddressIdx )  
 		{
 			pLastNode->m_Size += pNode->m_Size;
@@ -65,9 +65,9 @@ unsigned long Allocator::Free(MapNode map[], unsigned long size, unsigned long a
 			pLastNode->m_AddressIdx = pLastNode->m_Size = 0;
 		}
 	}
-	/* ÕâÀï´¦ÀíÁ½ÖÖÇé¿ö
-	 * 1) ÕýºÃÓëpNodeÏàÁÚÇÒpNode²»ÊÇÎÞÐ§µÄ£¬Ö»ÒªÐÞ¸ÄpNodeµÄAddressIdxÊôÐÔ¼´¿É
-	 * 2) Ç°ºó¶¼²»ÏàÁÚ£¬ÔòÐèÒª½«pNode¼°ÒÔºóµÄ½ÚµãÒÀ´ÎÏòºóÒÆ¶¯
+	/* è¿™é‡Œå¤„ç†ä¸¤ç§æƒ…å†µ
+	 * 1) æ­£å¥½ä¸ŽpNodeç›¸é‚»ä¸”pNodeä¸æ˜¯æ— æ•ˆçš„ï¼Œåªè¦ä¿®æ”¹pNodeçš„AddressIdxå±žæ€§å³å¯
+	 * 2) å‰åŽéƒ½ä¸ç›¸é‚»ï¼Œåˆ™éœ€è¦å°†pNodeåŠä»¥åŽçš„èŠ‚ç‚¹ä¾æ¬¡å‘åŽç§»åŠ¨
 	 */
 	else
 	{
@@ -76,9 +76,9 @@ unsigned long Allocator::Free(MapNode map[], unsigned long size, unsigned long a
 			pNode->m_AddressIdx = addrIdx;
 			pNode->m_Size += size;
 		}
-		else if ( size ) //ºÏ·¨ÐÔÅÐ¶Ï
+		else if ( size ) //åˆæ³•æ€§åˆ¤æ–­
 		{
-			//´¦ÀíÌõ¼þ2)µÄÇé¿ö
+			//å¤„ç†æ¡ä»¶2)çš„æƒ…å†µ
 			MapNode tmpNode1, tmpNode2;
 			tmpNode1.m_AddressIdx = addrIdx;
 			tmpNode1.m_Size = size;
@@ -94,7 +94,7 @@ unsigned long Allocator::Free(MapNode map[], unsigned long size, unsigned long a
 				tmpNode1.m_AddressIdx = tmpNode2.m_AddressIdx;
 				tmpNode1.m_Size = tmpNode2.m_Size;
 			}
-			/* ½«×îºóÒ»¸öÌîÈëpNodeÖÐ */
+			/* å°†æœ€åŽä¸€ä¸ªå¡«å…¥pNodeä¸­ */
 			pNode->m_AddressIdx = tmpNode1.m_AddressIdx;
 			pNode->m_Size = tmpNode1.m_Size;
 		}

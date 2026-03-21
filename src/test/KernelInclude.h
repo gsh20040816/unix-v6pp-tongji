@@ -2,9 +2,9 @@
 #define KERNEL_INCLUDE_H
 
 /* 
-�˴��г���Testxx.cpp����ҪInclude�ں���
-���������ȫ�ֶ����ṩ��test����Ĳ��Դ���
-Include�ں˵Ľӿڡ�
+此处列出了Testxx.cpp中需要Include内核中
+声明的类或全局对象，提供给test下面的测试代码
+Include内核的接口。
 */
 
 #include "..\include\Kernel.h"

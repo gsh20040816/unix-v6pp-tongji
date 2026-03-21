@@ -27,7 +27,7 @@ unsigned int mktime(struct tm* ptime)
 {
 	unsigned int timeInSeconds = 0;
 	unsigned int days;
-	int currentYear = 2000 + ptime->Year;	/* YearÖÐÖ»ÓÐÄê·Ýºó2Î» */
+	int currentYear = 2000 + ptime->Year;	/* Yearä¸­åªæœ‰å¹´ä»½åŽ2ä½ */
 	
 	/* compute hours, minutes, seconds */
 	timeInSeconds += ptime->Second;
@@ -61,7 +61,7 @@ struct tm* localtime(unsigned int timeInSeconds)
 	
 	/* compute days before today */
 	unsigned int days = timeInSeconds / SECONDS_IN_DAY;
-	ptime->DayOfWeek = weekdayNumber[(days % 7) + 1 /* ³ý·ÇtimeInSecondsÇ¡ºÃÕû³ýSECONDS_IN_DAYÃë */];
+	ptime->DayOfWeek = weekdayNumber[(days % 7) + 1 /* é™¤éžtimeInSecondsæ°å¥½æ•´é™¤SECONDS_IN_DAYç§’ */];
 	int year = 1970;
 	while(days >= 365)
 	{

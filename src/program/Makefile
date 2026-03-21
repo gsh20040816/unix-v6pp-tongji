@@ -2,18 +2,18 @@
 # Makefile for all Unix V6++ programs
 #
 
-# Ä¬ÈÏ¹¹½¨Ä¿±ê¡£
+# é»˜è®¤æ„å»ºç›®æ ‡ã€‚
 .DEFAULT_GOAL := all
 
-#ÃüÁî¶¨Òå
+#å‘½ä»¤å®šä¹‰
 CC = gcc
 LD = ld
 OBJDUMP = objdump
 
-#²ÎÊı¶¨Òå-nostartfiles
+#å‚æ•°å®šä¹‰-nostartfiles
 CFLAGS = -w -O0 -g -nostdlib -nostartfiles -nostdinc -fno-builtin -fno-exceptions
 
-#Ä¿Â¼¶¨Òå
+#ç›®å½•å®šä¹‰
 TARGET = .\objs
 V6++LIB = "..\lib\Lib_V6++.a"
 INCLUDE = .

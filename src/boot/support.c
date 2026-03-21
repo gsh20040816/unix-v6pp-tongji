@@ -1,16 +1,16 @@
 //Support.c
 
 /*
-º¯ÊıÃûÇ°Ğè¼ÓÉÏ extern ¡°C¡±£¬ËäÈ»±¾ÎÄ¼şÃûsupport.cÊÇ.cºó×ºµÄÎÄ¼ş£¬
-ÎÄ¼şÄÚÈİÒ²ÊÇpure C code£¬ÈÃÊÇÒòÎªMakefileÀïÃæ¶Ôsupport.c±àÒëÓÃµÄÊÇ
-g++£¬¶ø²»ÊÇgcc£¬ËùÒÔº¯ÊıÃûÇ°Ãæ»¹ÊÇÒª¼ÓÉÏextern ¡°C¡±£¬·ñÔò»á±¨
-¡°undefined reference to __main()¡±ÀàËÆµÄ´íÎó¡£
+å‡½æ•°åå‰éœ€åŠ ä¸Š extern â€œCâ€ï¼Œè™½ç„¶æœ¬æ–‡ä»¶åsupport.cæ˜¯.cåç¼€çš„æ–‡ä»¶ï¼Œ
+æ–‡ä»¶å†…å®¹ä¹Ÿæ˜¯pure C codeï¼Œè®©æ˜¯å› ä¸ºMakefileé‡Œé¢å¯¹support.cç¼–è¯‘ç”¨çš„æ˜¯
+g++ï¼Œè€Œä¸æ˜¯gccï¼Œæ‰€ä»¥å‡½æ•°åå‰é¢è¿˜æ˜¯è¦åŠ ä¸Šextern â€œCâ€ï¼Œå¦åˆ™ä¼šæŠ¥
+â€œundefined reference to __main()â€ç±»ä¼¼çš„é”™è¯¯ã€‚
 */
 extern "C" void _main()
 {
 	extern void (*_CTOR_LIST__)();   
-	/*Note£º ´Ë´¦Ê¹ÓÃ_CTOR_LIST__£¬±äÁ¿Ãûprefix Ò»¸ö ¡¯_¡®   
-			¶ølink.ldÖĞÒªprefix Á½¸ö ¡¯_¡®*/
+	/*Noteï¼š æ­¤å¤„ä½¿ç”¨_CTOR_LIST__ï¼Œå˜é‡åprefix ä¸€ä¸ª â€™_â€˜   
+			è€Œlink.ldä¸­è¦prefix ä¸¤ä¸ª â€™_â€˜*/
 	
 	void (**constructor)() = &_CTOR_LIST__;
 
@@ -18,13 +18,13 @@ extern "C" void _main()
 	int total = *(int *)constructor;
 	
 	//constructor++;   
-		/*  (¿ÉÒÔÏÈ¿´Ò»ÏÂÁ´½Ó½Å±¾£ºLink.ld)
-		Link scriptÖĞĞŞ¸Ä¹ıºó£¬ÕâÀïµÄtotalÒÑ¾­²»ÊÇconstructorµÄ¸öÊıÁË£¬
-		_CTOR_LIST__µÄµÚÒ»¸öµ¥Ôª¿ªÊ¼¾ÍÊÇglobal/static¶ÔÏóµÄconstructor£¬
-		ËùÒÔ²»ÓÃ constructor++; 
+		/*  (å¯ä»¥å…ˆçœ‹ä¸€ä¸‹é“¾æ¥è„šæœ¬ï¼šLink.ld)
+		Link scriptä¸­ä¿®æ”¹è¿‡åï¼Œè¿™é‡Œçš„totalå·²ç»ä¸æ˜¯constructorçš„ä¸ªæ•°äº†ï¼Œ
+		_CTOR_LIST__çš„ç¬¬ä¸€ä¸ªå•å…ƒå¼€å§‹å°±æ˜¯global/staticå¯¹è±¡çš„constructorï¼Œ
+		æ‰€ä»¥ä¸ç”¨ constructor++; 
 		*/
 	
-	while(total) //total²»ÊÇconstructorµÄÊıÁ¿£¬¶øÊÇÓÃÓÚ¼ì²âÊÇ·ñµ½ÁË_CTOR_LIST__µÄÄ©Î²
+	while(total) //totalä¸æ˜¯constructorçš„æ•°é‡ï¼Œè€Œæ˜¯ç”¨äºæ£€æµ‹æ˜¯å¦åˆ°äº†_CTOR_LIST__çš„æœ«å°¾
 	{
 		(*constructor)();
 		//total--;

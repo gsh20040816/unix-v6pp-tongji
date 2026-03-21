@@ -6,7 +6,7 @@
 #include "BufferManager.h"
 
 /*
- * ÎÄ¼şÏµÍ³´æ´¢×ÊÔ´¹ÜÀí¿é(Super Block)µÄ¶¨Òå¡£
+ * æ–‡ä»¶ç³»ç»Ÿå­˜å‚¨èµ„æºç®¡ç†å—(Super Block)çš„å®šä¹‰ã€‚
  */
 class SuperBlock
 {
@@ -19,29 +19,29 @@ public:
 	
 	/* Members */
 public:
-	int		s_isize;		/* Íâ´æInodeÇøÕ¼ÓÃµÄÅÌ¿éÊı */
-	int		s_fsize;		/* ÅÌ¿é×ÜÊı */
+	int		s_isize;		/* å¤–å­˜InodeåŒºå ç”¨çš„ç›˜å—æ•° */
+	int		s_fsize;		/* ç›˜å—æ€»æ•° */
 	
-	int		s_nfree;		/* Ö±½Ó¹ÜÀíµÄ¿ÕÏĞÅÌ¿éÊıÁ¿ */
-	int		s_free[100];	/* Ö±½Ó¹ÜÀíµÄ¿ÕÏĞÅÌ¿éË÷Òı±í */
+	int		s_nfree;		/* ç›´æ¥ç®¡ç†çš„ç©ºé—²ç›˜å—æ•°é‡ */
+	int		s_free[100];	/* ç›´æ¥ç®¡ç†çš„ç©ºé—²ç›˜å—ç´¢å¼•è¡¨ */
 	
-	int		s_ninode;		/* Ö±½Ó¹ÜÀíµÄ¿ÕÏĞÍâ´æInodeÊıÁ¿ */
-	int		s_inode[100];	/* Ö±½Ó¹ÜÀíµÄ¿ÕÏĞÍâ´æInodeË÷Òı±í */
+	int		s_ninode;		/* ç›´æ¥ç®¡ç†çš„ç©ºé—²å¤–å­˜Inodeæ•°é‡ */
+	int		s_inode[100];	/* ç›´æ¥ç®¡ç†çš„ç©ºé—²å¤–å­˜Inodeç´¢å¼•è¡¨ */
 	
-	int		s_flock;		/* ·âËø¿ÕÏĞÅÌ¿éË÷Òı±í±êÖ¾ */
-	int		s_ilock;		/* ·âËø¿ÕÏĞInode±í±êÖ¾ */
+	int		s_flock;		/* å°é”ç©ºé—²ç›˜å—ç´¢å¼•è¡¨æ ‡å¿— */
+	int		s_ilock;		/* å°é”ç©ºé—²Inodeè¡¨æ ‡å¿— */
 	
-	int		s_fmod;			/* ÄÚ´æÖĞsuper block¸±±¾±»ĞŞ¸Ä±êÖ¾£¬ÒâÎ¶×ÅĞèÒª¸üĞÂÍâ´æ¶ÔÓ¦µÄSuper Block */
-	int		s_ronly;		/* ±¾ÎÄ¼şÏµÍ³Ö»ÄÜ¶Á³ö */
-	int		s_time;			/* ×î½üÒ»´Î¸üĞÂÊ±¼ä */
-	int		padding[47];	/* Ìî³äÊ¹SuperBlock¿é´óĞ¡µÈÓÚ1024×Ö½Ú£¬Õ¼¾İ2¸öÉÈÇø */
+	int		s_fmod;			/* å†…å­˜ä¸­super blockå‰¯æœ¬è¢«ä¿®æ”¹æ ‡å¿—ï¼Œæ„å‘³ç€éœ€è¦æ›´æ–°å¤–å­˜å¯¹åº”çš„Super Block */
+	int		s_ronly;		/* æœ¬æ–‡ä»¶ç³»ç»Ÿåªèƒ½è¯»å‡º */
+	int		s_time;			/* æœ€è¿‘ä¸€æ¬¡æ›´æ–°æ—¶é—´ */
+	int		padding[47];	/* å¡«å……ä½¿SuperBlockå—å¤§å°ç­‰äº1024å­—èŠ‚ï¼Œå æ®2ä¸ªæ‰‡åŒº */
 };
 
 
 /*
- * ÎÄ¼şÏµÍ³×°Åä¿é(Mount)µÄ¶¨Òå¡£
- * ×°Åä¿éÓÃÓÚÊµÏÖ×ÓÎÄ¼şÏµÍ³Óë
- * ¸ùÎÄ¼şÏµÍ³µÄÁ¬½Ó¡£
+ * æ–‡ä»¶ç³»ç»Ÿè£…é…å—(Mount)çš„å®šä¹‰ã€‚
+ * è£…é…å—ç”¨äºå®ç°å­æ–‡ä»¶ç³»ç»Ÿä¸
+ * æ ¹æ–‡ä»¶ç³»ç»Ÿçš„è¿æ¥ã€‚
  */
 class Mount
 {
@@ -54,35 +54,35 @@ public:
 	
 	/* Members */
 public:
-	short 		m_dev;		/* ÎÄ¼şÏµÍ³Éè±¸ºÅ */
-	SuperBlock* m_spb;		/* Ö¸ÏòÎÄ¼şÏµÍ³µÄSuper Block¶ÔÏóÔÚÄÚ´æÖĞµÄ¸±±¾ */
-	Inode*		m_inodep;	/* Ö¸Ïò¹ÒÔØ×ÓÎÄ¼şÏµÍ³µÄÄÚ´æINode */
+	short 		m_dev;		/* æ–‡ä»¶ç³»ç»Ÿè®¾å¤‡å· */
+	SuperBlock* m_spb;		/* æŒ‡å‘æ–‡ä»¶ç³»ç»Ÿçš„Super Blockå¯¹è±¡åœ¨å†…å­˜ä¸­çš„å‰¯æœ¬ */
+	Inode*		m_inodep;	/* æŒ‡å‘æŒ‚è½½å­æ–‡ä»¶ç³»ç»Ÿçš„å†…å­˜INode */
 };
 
 
 
 /*
- * ÎÄ¼şÏµÍ³Àà(FileSystem)¹ÜÀíÎÄ¼ş´æ´¢Éè±¸ÖĞ
- * µÄ¸÷Àà´æ´¢×ÊÔ´£¬´ÅÅÌ¿é¡¢Íâ´æINodeµÄ·ÖÅä¡¢
- * ÊÍ·Å¡£
+ * æ–‡ä»¶ç³»ç»Ÿç±»(FileSystem)ç®¡ç†æ–‡ä»¶å­˜å‚¨è®¾å¤‡ä¸­
+ * çš„å„ç±»å­˜å‚¨èµ„æºï¼Œç£ç›˜å—ã€å¤–å­˜INodeçš„åˆ†é…ã€
+ * é‡Šæ”¾ã€‚
  */
 class FileSystem
 {
 public:
 	/* static consts */
-	static const int NMOUNT = 5;			/* ÏµÍ³ÖĞÓÃÓÚ¹ÒÔØ×ÓÎÄ¼şÏµÍ³µÄ×°Åä¿éÊıÁ¿ */
+	static const int NMOUNT = 5;			/* ç³»ç»Ÿä¸­ç”¨äºæŒ‚è½½å­æ–‡ä»¶ç³»ç»Ÿçš„è£…é…å—æ•°é‡ */
 
-	static const int SUPER_BLOCK_SECTOR_NUMBER = 200;	/* ¶¨ÒåSuperBlockÎ»ÓÚ´ÅÅÌÉÏµÄÉÈÇøºÅ£¬Õ¼¾İ200£¬201Á½¸öÉÈÇø¡£ */
+	static const int SUPER_BLOCK_SECTOR_NUMBER = 200;	/* å®šä¹‰SuperBlockä½äºç£ç›˜ä¸Šçš„æ‰‡åŒºå·ï¼Œå æ®200ï¼Œ201ä¸¤ä¸ªæ‰‡åŒºã€‚ */
 
-	static const int ROOTINO = 1;			/* ÎÄ¼şÏµÍ³¸ùÄ¿Â¼Íâ´æInode±àºÅ */
+	static const int ROOTINO = 1;			/* æ–‡ä»¶ç³»ç»Ÿæ ¹ç›®å½•å¤–å­˜Inodeç¼–å· */
 
-	static const int INODE_NUMBER_PER_SECTOR = 8;		/* Íâ´æINode¶ÔÏó³¤¶ÈÎª64×Ö½Ú£¬Ã¿¸ö´ÅÅÌ¿é¿ÉÒÔ´æ·Å512/64 = 8¸öÍâ´æInode */
-	static const int INODE_ZONE_START_SECTOR = 202;		/* Íâ´æInodeÇøÎ»ÓÚ´ÅÅÌÉÏµÄÆğÊ¼ÉÈÇøºÅ */
-	static const int INODE_ZONE_SIZE = 1024 - 202;		/* ´ÅÅÌÉÏÍâ´æInodeÇøÕ¼¾İµÄÉÈÇøÊı */
+	static const int INODE_NUMBER_PER_SECTOR = 8;		/* å¤–å­˜INodeå¯¹è±¡é•¿åº¦ä¸º64å­—èŠ‚ï¼Œæ¯ä¸ªç£ç›˜å—å¯ä»¥å­˜æ”¾512/64 = 8ä¸ªå¤–å­˜Inode */
+	static const int INODE_ZONE_START_SECTOR = 202;		/* å¤–å­˜InodeåŒºä½äºç£ç›˜ä¸Šçš„èµ·å§‹æ‰‡åŒºå· */
+	static const int INODE_ZONE_SIZE = 1024 - 202;		/* ç£ç›˜ä¸Šå¤–å­˜InodeåŒºå æ®çš„æ‰‡åŒºæ•° */
 
-	static const int DATA_ZONE_START_SECTOR = 1024;		/* Êı¾İÇøµÄÆğÊ¼ÉÈÇøºÅ */
-	static const int DATA_ZONE_END_SECTOR = 18000 - 1;	/* Êı¾İÇøµÄ½áÊøÉÈÇøºÅ */
-	static const int DATA_ZONE_SIZE = 18000 - DATA_ZONE_START_SECTOR;	/* Êı¾İÇøÕ¼¾İµÄÉÈÇøÊıÁ¿ */
+	static const int DATA_ZONE_START_SECTOR = 1024;		/* æ•°æ®åŒºçš„èµ·å§‹æ‰‡åŒºå· */
+	static const int DATA_ZONE_END_SECTOR = 18000 - 1;	/* æ•°æ®åŒºçš„ç»“æŸæ‰‡åŒºå· */
+	static const int DATA_ZONE_SIZE = 18000 - DATA_ZONE_START_SECTOR;	/* æ•°æ®åŒºå æ®çš„æ‰‡åŒºæ•°é‡ */
 
 	/* Functions */
 public:
@@ -92,66 +92,66 @@ public:
 	~FileSystem();
 
 	/* 
-	 * @comment ³õÊ¼»¯³ÉÔ±±äÁ¿
+	 * @comment åˆå§‹åŒ–æˆå‘˜å˜é‡
 	 */
 	void Initialize();
 
 	/* 
-	* @comment ÏµÍ³³õÊ¼»¯Ê±¶ÁÈëSuperBlock
+	* @comment ç³»ç»Ÿåˆå§‹åŒ–æ—¶è¯»å…¥SuperBlock
 	*/
 	void LoadSuperBlock();
 
 	/* 
-	 * @comment ¸ù¾İÎÄ¼ş´æ´¢Éè±¸µÄÉè±¸ºÅdev»ñÈ¡
-	 * ¸ÃÎÄ¼şÏµÍ³µÄSuperBlock
+	 * @comment æ ¹æ®æ–‡ä»¶å­˜å‚¨è®¾å¤‡çš„è®¾å¤‡å·devè·å–
+	 * è¯¥æ–‡ä»¶ç³»ç»Ÿçš„SuperBlock
 	 */
 	SuperBlock* GetFS(short dev);
 	/* 
-	 * @comment ½«SuperBlock¶ÔÏóµÄÄÚ´æ¸±±¾¸üĞÂµ½
-	 * ´æ´¢Éè±¸µÄSuperBlockÖĞÈ¥
+	 * @comment å°†SuperBlockå¯¹è±¡çš„å†…å­˜å‰¯æœ¬æ›´æ–°åˆ°
+	 * å­˜å‚¨è®¾å¤‡çš„SuperBlockä¸­å»
 	 */
 	void Update();
 
 	/* 
-	 * @comment  ÔÚ´æ´¢Éè±¸devÉÏ·ÖÅäÒ»¸ö¿ÕÏĞ
-	 * Íâ´æINode£¬Ò»°ãÓÃÓÚ´´½¨ĞÂµÄÎÄ¼ş¡£
+	 * @comment  åœ¨å­˜å‚¨è®¾å¤‡devä¸Šåˆ†é…ä¸€ä¸ªç©ºé—²
+	 * å¤–å­˜INodeï¼Œä¸€èˆ¬ç”¨äºåˆ›å»ºæ–°çš„æ–‡ä»¶ã€‚
 	 */
 	Inode* IAlloc(short dev);
 	/* 
-	 * @comment  ÊÍ·Å´æ´¢Éè±¸devÉÏ±àºÅÎªnumber
-	 * µÄÍâ´æINode£¬Ò»°ãÓÃÓÚÉ¾³ıÎÄ¼ş¡£
+	 * @comment  é‡Šæ”¾å­˜å‚¨è®¾å¤‡devä¸Šç¼–å·ä¸ºnumber
+	 * çš„å¤–å­˜INodeï¼Œä¸€èˆ¬ç”¨äºåˆ é™¤æ–‡ä»¶ã€‚
 	 */
 	void IFree(short dev, int number);
 
 	/* 
-	 * @comment ÔÚ´æ´¢Éè±¸devÉÏ·ÖÅä¿ÕÏĞ´ÅÅÌ¿é
+	 * @comment åœ¨å­˜å‚¨è®¾å¤‡devä¸Šåˆ†é…ç©ºé—²ç£ç›˜å—
 	 */
 	Buf* Alloc(short dev);
 	/* 
-	 * @comment ÊÍ·Å´æ´¢Éè±¸devÉÏ±àºÅÎªblknoµÄ´ÅÅÌ¿é
+	 * @comment é‡Šæ”¾å­˜å‚¨è®¾å¤‡devä¸Šç¼–å·ä¸ºblknoçš„ç£ç›˜å—
 	 */
 	void Free(short dev, int blkno);
 
 	/* 
-	 * @comment ²éÕÒÎÄ¼şÏµÍ³×°Åä±í£¬ËÑË÷Ö¸¶¨Inode¶ÔÓ¦µÄMount×°Åä¿é
+	 * @comment æŸ¥æ‰¾æ–‡ä»¶ç³»ç»Ÿè£…é…è¡¨ï¼Œæœç´¢æŒ‡å®šInodeå¯¹åº”çš„Mountè£…é…å—
 	 */
 	Mount* GetMount(Inode* pInode);
 
 private:
 	/* 
-	 * @comment ¼ì²éÉè±¸devÉÏ±àºÅblknoµÄ´ÅÅÌ¿éÊÇ·ñÊôÓÚ
-	 * Êı¾İÅÌ¿éÇø
+	 * @comment æ£€æŸ¥è®¾å¤‡devä¸Šç¼–å·blknoçš„ç£ç›˜å—æ˜¯å¦å±äº
+	 * æ•°æ®ç›˜å—åŒº
 	 */
 	bool BadBlock(SuperBlock* spb, short dev, int blkno);
 
 	/* Members */
 public:
-	Mount m_Mount[NMOUNT];		/* ÎÄ¼şÏµÍ³×°Åä¿é±í£¬Mount[0]ÓÃÓÚ¸ùÎÄ¼şÏµÍ³ */
+	Mount m_Mount[NMOUNT];		/* æ–‡ä»¶ç³»ç»Ÿè£…é…å—è¡¨ï¼ŒMount[0]ç”¨äºæ ¹æ–‡ä»¶ç³»ç»Ÿ */
 
 private:
-	BufferManager* m_BufferManager;		/* FileSystemÀàĞèÒª»º´æ¹ÜÀíÄ£¿é(BufferManager)Ìá¹©µÄ½Ó¿Ú */
-	int updlock;				/* Update()º¯ÊıµÄËø£¬¸Ãº¯ÊıÓÃÓÚÍ¬²½ÄÚ´æ¸÷¸öSuperBlock¸±±¾ÒÔ¼°£¬
-								±»ĞŞ¸Ä¹ıµÄÄÚ´æInode¡£ÈÎÒ»Ê±¿ÌÖ»ÔÊĞíÒ»¸ö½ø³Ìµ÷ÓÃ¸Ãº¯Êı */
+	BufferManager* m_BufferManager;		/* FileSystemç±»éœ€è¦ç¼“å­˜ç®¡ç†æ¨¡å—(BufferManager)æä¾›çš„æ¥å£ */
+	int updlock;				/* Update()å‡½æ•°çš„é”ï¼Œè¯¥å‡½æ•°ç”¨äºåŒæ­¥å†…å­˜å„ä¸ªSuperBlockå‰¯æœ¬ä»¥åŠï¼Œ
+								è¢«ä¿®æ”¹è¿‡çš„å†…å­˜Inodeã€‚ä»»ä¸€æ—¶åˆ»åªå…è®¸ä¸€ä¸ªè¿›ç¨‹è°ƒç”¨è¯¥å‡½æ•° */
 };
 
 #endif

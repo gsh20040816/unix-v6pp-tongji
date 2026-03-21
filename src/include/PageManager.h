@@ -8,37 +8,37 @@ class PageManager
 {
 public:
 	/* static member */
-	static unsigned int PHY_MEM_SIZE;	/* ÎïÀíÄÚ´æ´óĞ¡£¬ÏµÍ³Æô¶¯Ê±¸ù¾İÎïÀíÄÚ´æ´óĞ¡ÉèÖÃ */
+	static unsigned int PHY_MEM_SIZE;	/* ç‰©ç†å†…å­˜å¤§å°ï¼Œç³»ç»Ÿå¯åŠ¨æ—¶æ ¹æ®ç‰©ç†å†…å­˜å¤§å°è®¾ç½® */
 	
 	/* static const member */
-	static const unsigned int PAGE_SIZE = 0x1000;					/* ÎïÀíÄÚ´æÒ³´óĞ¡ */
-	static const unsigned int MEMORY_MAP_ARRAY_SIZE = 0x200;		/* ×î¶à¿É·ÖÅä512¸ö¶ÔÏó */
-	static const unsigned int KERNEL_MEM_START_ADDR	= 0x100000;		/* ÄÚºËÓ³Ïñ´Ó1MÎïÀíÄÚ´æ¿ªÊ¼ */
-	static const unsigned int KERNEL_SIZE			= 0x80000;		/* ÄÚºËÓ³Ïñ´óĞ¡ÏŞÖÆ(Ò»°ã¶ş½øÖÆÓ³ÏñÔ¶²»»áµ½512K´óĞ¡) */
+	static const unsigned int PAGE_SIZE = 0x1000;					/* ç‰©ç†å†…å­˜é¡µå¤§å° */
+	static const unsigned int MEMORY_MAP_ARRAY_SIZE = 0x200;		/* æœ€å¤šå¯åˆ†é…512ä¸ªå¯¹è±¡ */
+	static const unsigned int KERNEL_MEM_START_ADDR	= 0x100000;		/* å†…æ ¸æ˜ åƒä»1Mç‰©ç†å†…å­˜å¼€å§‹ */
+	static const unsigned int KERNEL_SIZE			= 0x80000;		/* å†…æ ¸æ˜ åƒå¤§å°é™åˆ¶(ä¸€èˆ¬äºŒè¿›åˆ¶æ˜ åƒè¿œä¸ä¼šåˆ°512Kå¤§å°) */
 
 	/* Functions */
 public:
 	PageManager(Allocator* allocator);
 	virtual ~PageManager();
 	
-	/* Íê³É¶ÔMapNode map[]Êı×éµÄ³õÊ¼»¯ÇåÁã */
+	/* å®Œæˆå¯¹MapNode map[]æ•°ç»„çš„åˆå§‹åŒ–æ¸…é›¶ */
 	int Initialize();
 	/* 
-	 * ÎïÀíÄÚ´æ·ÖÅä
+	 * ç‰©ç†å†…å­˜åˆ†é…
 	 * 
-	 * size: Ğè·ÖÅäÄÚ´æ´óĞ¡(µ¥Î»: byte)£¬Êµ¼Ê·ÖÅäÎïÀíÄÚ´æ´óĞ¡ÒÔÒ³
-	 * Îªµ¥Î»£¬»á¸ù¾İsize´óĞ¡ÒÔ4KÎª±ß½ç£¬ÏòÉÏÈ¡ÕûÖÁ4K×Ö½ÚÕûÊı±¶¡£
+	 * size: éœ€åˆ†é…å†…å­˜å¤§å°(å•ä½: byte)ï¼Œå®é™…åˆ†é…ç‰©ç†å†…å­˜å¤§å°ä»¥é¡µ
+	 * ä¸ºå•ä½ï¼Œä¼šæ ¹æ®sizeå¤§å°ä»¥4Kä¸ºè¾¹ç•Œï¼Œå‘ä¸Šå–æ•´è‡³4Kå­—èŠ‚æ•´æ•°å€ã€‚
 	 * 
-	 * ·µ»ØÖµ: ³É¹¦·ÖÅäµÄÎïÀíÄÚ´æÇøÆğÊ¼µØÖ·£¬·µ»Ø0±íÊ¾·ÖÅäÊ§°Ü¡£
+	 * è¿”å›å€¼: æˆåŠŸåˆ†é…çš„ç‰©ç†å†…å­˜åŒºèµ·å§‹åœ°å€ï¼Œè¿”å›0è¡¨ç¤ºåˆ†é…å¤±è´¥ã€‚
 	 */
 	unsigned long AllocMemory(unsigned long size);
 	/* 
-	 * ÎïÀíÄÚ´æÊÍ·Å
+	 * ç‰©ç†å†…å­˜é‡Šæ”¾
 	 * 
-	 * size: ĞèÊÍ·ÅÄÚ´æ´óĞ¡(µ¥Î»: byte)£¬Êµ¼ÊÊÍ·ÅÎïÀíÄÚ´æ´óĞ¡ÒÔÒ³
-	 * Îªµ¥Î»£¬»á¸ù¾İsize´óĞ¡ÒÔ4KÎª±ß½ç£¬ÏòÉÏÈ¡ÕûÖÁ4K×Ö½ÚÕûÊı±¶¡£
+	 * size: éœ€é‡Šæ”¾å†…å­˜å¤§å°(å•ä½: byte)ï¼Œå®é™…é‡Šæ”¾ç‰©ç†å†…å­˜å¤§å°ä»¥é¡µ
+	 * ä¸ºå•ä½ï¼Œä¼šæ ¹æ®sizeå¤§å°ä»¥4Kä¸ºè¾¹ç•Œï¼Œå‘ä¸Šå–æ•´è‡³4Kå­—èŠ‚æ•´æ•°å€ã€‚
 	 * 
-	 * ·µ»ØÖµ: ÊÍ·ÅÎïÀíÄÚ´æ²Ù×÷×ÜÄÜ³É¹¦£¬µ«Í¨³£²»¼ì²éÆä·µ»ØÖµ¡£
+	 * è¿”å›å€¼: é‡Šæ”¾ç‰©ç†å†…å­˜æ“ä½œæ€»èƒ½æˆåŠŸï¼Œä½†é€šå¸¸ä¸æ£€æŸ¥å…¶è¿”å›å€¼ã€‚
 	 */
 	unsigned long FreeMemory(unsigned long size, unsigned long memoryStartAddress);
 
@@ -58,16 +58,16 @@ class KernelPageManager : public PageManager
 {
 public:
 	/* 
-	 * ÎïÀíµØÖ· 0x200000 ±»ÓÃÓÚPageDirectory, 
-	 * ÎïÀíµØÖ· 0x201000 ±»ÓÃÓÚÄÚºËÒ³±í, 
-	 * ÎïÀíµØÖ· 0x202000 Óë 0x203000 ÓÃÓÚÓÃ»§³ÌĞòÒ³±í.
+	 * ç‰©ç†åœ°å€ 0x200000 è¢«ç”¨äºPageDirectory, 
+	 * ç‰©ç†åœ°å€ 0x201000 è¢«ç”¨äºå†…æ ¸é¡µè¡¨, 
+	 * ç‰©ç†åœ°å€ 0x202000 ä¸ 0x203000 ç”¨äºç”¨æˆ·ç¨‹åºé¡µè¡¨.
 	 */
 	static const unsigned int KERNEL_PAGE_POOL_START_ADDR = 0x200000 + 0x2000 + 0x2000;
 	static const unsigned int KERNEL_PAGE_POOL_SIZE = 0x200000 - 0x4000;
 
 public:
 	KernelPageManager(Allocator* allocator);
-	int Initialize();	/* ³õÊ¼»¯MapNode map[0]ÎªÄÚºËÎïÀíÒ³ÇøÆğÊ¼µØÖ·¡¢´óĞ¡ */
+	int Initialize();	/* åˆå§‹åŒ–MapNode map[0]ä¸ºå†…æ ¸ç‰©ç†é¡µåŒºèµ·å§‹åœ°å€ã€å¤§å° */
 };
 
 
@@ -75,13 +75,13 @@ class UserPageManager : public PageManager
 {
 public:
 	/* static const member */
-	static const unsigned int USER_PAGE_POOL_START_ADDR = 0x400000;		/* ÓÃ»§ÎïÀíÄÚ´æÇøÓòÆğÊ¼µØÖ· */
+	static const unsigned int USER_PAGE_POOL_START_ADDR = 0x400000;		/* ç”¨æˆ·ç‰©ç†å†…å­˜åŒºåŸŸèµ·å§‹åœ°å€ */
 	/* static member */
-	static unsigned int USER_PAGE_POOL_SIZE;		/* ÓÃ»§ÎïÀíÄÚ´æÇøÓò´óĞ¡£ºÓÉÄÚºË³õÊ¼»¯Ê±½øĞĞÉèÖÃ */
+	static unsigned int USER_PAGE_POOL_SIZE;		/* ç”¨æˆ·ç‰©ç†å†…å­˜åŒºåŸŸå¤§å°ï¼šç”±å†…æ ¸åˆå§‹åŒ–æ—¶è¿›è¡Œè®¾ç½® */
 	
 public:
 	UserPageManager(Allocator* allocator);
-	int Initialize();	/* ³õÊ¼»¯MapNode map[0]ÎªÓÃ»§ÎïÀíÒ³ÇøÆğÊ¼µØÖ·¡¢´óĞ¡ */
+	int Initialize();	/* åˆå§‹åŒ–MapNode map[0]ä¸ºç”¨æˆ·ç‰©ç†é¡µåŒºèµ·å§‹åœ°å€ã€å¤§å° */
 };
 
 #endif

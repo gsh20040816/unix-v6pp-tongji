@@ -3,9 +3,9 @@
 
 #include "MapNode.h"
 
-/* @comment ¸ÃÀàÎªÄÚ´æ·ÖÅäËã·¨Àà£¬Õë¶ÔÊ¹ÓÃMapNode
- * Êı×é±ê¼ÇµÄÇé¿ö£¬¿ÉÒÔÓÃÔÚPageManagerºÍSwapDiskManagerÖĞ
- * ÆäÖĞº¯ÊıÔÚUnixv6ÖĞ¶ÔÓ¦¹ØÏµÈçÏÂ£º
+/* @comment è¯¥ç±»ä¸ºå†…å­˜åˆ†é…ç®—æ³•ç±»ï¼Œé’ˆå¯¹ä½¿ç”¨MapNode
+ * æ•°ç»„æ ‡è®°çš„æƒ…å†µï¼Œå¯ä»¥ç”¨åœ¨PageManagerå’ŒSwapDiskManagerä¸­
+ * å…¶ä¸­å‡½æ•°åœ¨Unixv6ä¸­å¯¹åº”å…³ç³»å¦‚ä¸‹ï¼š
  * Alloc()	: malloc(mp, size)		@line 2538
  * Free()	: mfree(mp, size, aa)	@line 2556 
  */

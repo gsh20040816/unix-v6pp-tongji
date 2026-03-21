@@ -2,7 +2,7 @@
 #include "..\KernelInclude.h"
 #include "..\TestInclude.h"
 
-/* ¾­ÏµÍ³µ÷ÓÃ¶Ôc.imgÖĞÎÄ¼ş½øĞĞ´´½¨¡¢Ğ´ÈëÊı¾İ£¬²¢¶ÁÈ¡¼ìÑé¡£ */
+/* ç»ç³»ç»Ÿè°ƒç”¨å¯¹c.imgä¸­æ–‡ä»¶è¿›è¡Œåˆ›å»ºã€å†™å…¥æ•°æ®ï¼Œå¹¶è¯»å–æ£€éªŒã€‚ */
 bool FileRWTest()
 {
 	Buf* pBuf;
@@ -10,25 +10,25 @@ bool FileRWTest()
 	User& u = Kernel::Instance().GetUser();
 
 	int fd = -1;
-	/* ÏµÍ³³õÊ¼»¯next()ÖĞÒÑ¾­½¨Á¢¸ùÄ¿Â¼"/"£¬´Ë´¦´´½¨ÎÄ¼şdatafile */
+	/* ç³»ç»Ÿåˆå§‹åŒ–next()ä¸­å·²ç»å»ºç«‹æ ¹ç›®å½•"/"ï¼Œæ­¤å¤„åˆ›å»ºæ–‡ä»¶datafile */
 	fd = lib_creat("/datafile", 0x1FF); /* mode = rwx rwx rwx  */
 	
 	int checksum = 0;
-	int nblock = 7;//Inode::SMALL_FILE_BLOCK;	/* Òª²âÊÔµÄÎÄ¼şÕ¼¾İÅÌ¿éÊı */
+	int nblock = 7;//Inode::SMALL_FILE_BLOCK;	/* è¦æµ‹è¯•çš„æ–‡ä»¶å æ®ç›˜å—æ•° */
 	
-	/* ²âÊÔĞ¡ĞÍÎÄ¼şĞ´Èë */
+	/* æµ‹è¯•å°å‹æ–‡ä»¶å†™å…¥ */
 	for(int i = 0; i < nblock; i++ )
 	{
-		/* ½«boot.bin¡¢kernel.bin×÷ÎªdatafileµÄÊı¾İ */
+		/* å°†boot.binã€kernel.binä½œä¸ºdatafileçš„æ•°æ® */
 		pBuf = bufMgr.Bread(DeviceManager::ROOTDEV, i);
 		checksum += CheckSumBuffer(pBuf);
 		int nbytes = lib_write(fd, (char *)pBuf->b_addr, Inode::BLOCK_SIZE);
 		bufMgr.Brelse(pBuf);
 		
-		/* Êµ¼ÊĞ´ÈëµÄ×Ö½ÚÊı */
+		/* å®é™…å†™å…¥çš„å­—èŠ‚æ•° */
 		if ( nbytes != Inode::BLOCK_SIZE )
 		{
-			/* Ğ´ÈëÊ§°Ü!!! */
+			/* å†™å…¥å¤±è´¥!!! */
 			Diagnose::Write("Lib_write failure! nbytes = [%d], u_error = %d\n", nbytes, u.u_error);
 			return false;
 		}
@@ -37,7 +37,7 @@ bool FileRWTest()
 	Diagnose::Write("Checksum = [%x]\n", checksum);
 	Delay();Delay();
 
-	/* u.u_errorÖĞÈç¹ûÓĞ³ö´íÂëµÄ»°£¬¼´±ãºóÃæµÄ³ÌĞòÍêÈ«ÕıÈ·£¬ÄÚºËÒ²»á½øÈë´íÎóÂ·¾¶ **!!!!** */
+	/* u.u_errorä¸­å¦‚æœæœ‰å‡ºé”™ç çš„è¯ï¼Œå³ä¾¿åé¢çš„ç¨‹åºå®Œå…¨æ­£ç¡®ï¼Œå†…æ ¸ä¹Ÿä¼šè¿›å…¥é”™è¯¯è·¯å¾„ **!!!!** */
 	if ( User::NOERROR != u.u_error)
 	{
 		Diagnose::Write("u_error = %d\n", u.u_error);
@@ -45,12 +45,12 @@ bool FileRWTest()
 	}
 
 	/*****************************************/
-	/*          ¶ÁÈ¡datafileÄÚÈİ²¢Ğ£Ñé       */
+	/*          è¯»å–datafileå†…å®¹å¹¶æ ¡éªŒ       */
 	/*****************************************/
 
 	fd = lib_open("/datafile", 0x1FF); /* mode = rwx rwx rwx  */
 	int checksumRead = 0;
-	/* ½èÓÃÒ»¸ö»º´æ£¬ÓÃÓÚ´æ·Å´Ódatafile¶ÁÈ¡À´µÄÊı¾İ */
+	/* å€Ÿç”¨ä¸€ä¸ªç¼“å­˜ï¼Œç”¨äºå­˜æ”¾ä»datafileè¯»å–æ¥çš„æ•°æ® */
 	//pBuf = bufMgr.Bread(DeviceManager::ROOTDEV, 1000);
 	Buf b;
 	pBuf = &b;
@@ -62,10 +62,10 @@ bool FileRWTest()
 		int nRead = lib_read(fd, (char *)pBuf->b_addr, Inode::BLOCK_SIZE);
 		checksumRead += CheckSumBuffer(pBuf);
 
-		/* Êµ¼Ê¶ÁÈ¡µÄ×Ö½ÚÊı */
+		/* å®é™…è¯»å–çš„å­—èŠ‚æ•° */
 		if ( nRead != Inode::BLOCK_SIZE )
 		{
-			/* Ê§°Ü!!! */
+			/* å¤±è´¥!!! */
 			Diagnose::Write("Lib_read failure! nbytes = [%d], u_error = %d\n", nRead, u.u_error);
 			return false;
 		}
@@ -80,7 +80,7 @@ bool FileRWTest()
 	}
 
 	Diagnose::TraceOff();
-	/* Ğ´»Øspb£¬ÄÚ´æInodeºÍÑÓ³ÙĞ´ÅÌ¿é */
+	/* å†™å›spbï¼Œå†…å­˜Inodeå’Œå»¶è¿Ÿå†™ç›˜å— */
 	Kernel::Instance().GetFileSystem().Update();
 	Kernel::Instance().GetBufferManager().Bflush(DeviceManager::ROOTDEV);
 	Diagnose::TraceOn();
@@ -159,7 +159,7 @@ bool ForkTest()
 
 	static int count = 0;
 
-	/* »áfork³ö8¸ö½ø³Ì£¬0# ~ 7# proc */
+	/* ä¼šforkå‡º8ä¸ªè¿›ç¨‹ï¼Œ0# ~ 7# proc */
 	for ( int i = 0; i < 2; i++ )
 	{
 		lib_fork();
@@ -167,13 +167,13 @@ bool ForkTest()
 
 	count++;
 	
-	/* 1# ~ 7#È«²¿exit£¬0#¼ÌĞøalive */
+	/* 1# ~ 7#å…¨éƒ¨exitï¼Œ0#ç»§ç»­alive */
 	if ( u.u_procp->p_pid != 0  )
 	{
-		//lib_exit(0x77);	/* uÇø¸±±¾Ğ´µ½½»»»ÇøÉÏ£¬·½±ã²é¿´u_MemoryDescriptor */
+		//lib_exit(0x77);	/* uåŒºå‰¯æœ¬å†™åˆ°äº¤æ¢åŒºä¸Šï¼Œæ–¹ä¾¿æŸ¥çœ‹u_MemoryDescriptor */
 	}
 
-	while(count < 4) ;	/* 8¸ö½ø³ÌµÄÍ¬²½µã£¬Ê±ÖÓÖĞ¶ÏÀïSwtch() */
+	while(count < 4) ;	/* 8ä¸ªè¿›ç¨‹çš„åŒæ­¥ç‚¹ï¼Œæ—¶é’Ÿä¸­æ–­é‡ŒSwtch() */
 	
 	Diagnose::Write("-------------->count = %d, pid = %d\n", count, u.u_procp->p_pid);
 	if ( Time::lbolt >= Time::HZ - 1 )
@@ -184,13 +184,13 @@ bool ForkTest()
 
 	/*************************************************/
 
-	/* ´´½¨8#½ø³Ì */
+	/* åˆ›å»º8#è¿›ç¨‹ */
 	int ans = lib_fork();
 	if (ans == 0)
 	{
 		/* 
-		 * Í¨¹ıÖ®Ç°½ø³ÌµÄforkºÍexit£¬²é¿´´Ë´¦´´½¨½ø³ÌÊ±u_MemoryDescriptor
-		 * ÊÇ·ñÕıÈ·£¬¿ÉÑéÖ¤1# ~ 7#exit×ÊÔ´ÊÇ·ñÕıÈ·ÊÍ·Å
+		 * é€šè¿‡ä¹‹å‰è¿›ç¨‹çš„forkå’Œexitï¼ŒæŸ¥çœ‹æ­¤å¤„åˆ›å»ºè¿›ç¨‹æ—¶u_MemoryDescriptor
+		 * æ˜¯å¦æ­£ç¡®ï¼Œå¯éªŒè¯1# ~ 7#exitèµ„æºæ˜¯å¦æ­£ç¡®é‡Šæ”¾
 		 */
 		lib_exit(0xEE);
 	}
@@ -262,9 +262,9 @@ bool ExitWaitTest()
 
 /********************************************/
 /* 
-×¢Òâ£ººËĞÄÌ¬ÏÂÎŞ·¨¶Ôexecv()ÍêÕû²âÊÔ£¬ÒòÎª
-Õ»ÉÏm_ES, m_DSÎªºËĞÄÌ¬¶ÎSelector£¬¶øexec()
-FakeµÄÍË³ö»·¾³ÎªÓÃ»§Ì¬CS£¬SS£¬»áµ¼ÖÂÒì³£¡£
+æ³¨æ„ï¼šæ ¸å¿ƒæ€ä¸‹æ— æ³•å¯¹execv()å®Œæ•´æµ‹è¯•ï¼Œå› ä¸º
+æ ˆä¸Šm_ES, m_DSä¸ºæ ¸å¿ƒæ€æ®µSelectorï¼Œè€Œexec()
+Fakeçš„é€€å‡ºç¯å¢ƒä¸ºç”¨æˆ·æ€CSï¼ŒSSï¼Œä¼šå¯¼è‡´å¼‚å¸¸ã€‚
 */
 /********************************************/
 bool ExecTest()
@@ -345,15 +345,15 @@ void PrepareExeFile()
 	int count = 0;
 	while(true)
 	{
-		int exeInfo[2];	/* exeInfo[0]ÖĞ´æ·ÅstartBlkno£¬exeInfo[1]ÖĞ´æ·ÅÎÄ¼ş´óĞ¡ */
+		int exeInfo[2];	/* exeInfo[0]ä¸­å­˜æ”¾startBlknoï¼ŒexeInfo[1]ä¸­å­˜æ”¾æ–‡ä»¶å¤§å° */
 
 		Utility::DWordCopy((int *)(pBuf->b_addr + count * 2 * sizeof(int)), exeInfo, 2);
 		
-		if ( exeInfo[0] == 0 || exeInfo[1] == 0 )	/* ÒÑ¾­Íê³ÉËùÓĞexeÎÄ¼şĞ´Èë£¬½áÊø */
+		if ( exeInfo[0] == 0 || exeInfo[1] == 0 )	/* å·²ç»å®Œæˆæ‰€æœ‰exeæ–‡ä»¶å†™å…¥ï¼Œç»“æŸ */
 		{
 			bufMgr.Brelse(pBuf);
 			Diagnose::TraceOff();
-			/* Ğ´»Øspb£¬ÄÚ´æInodeºÍÑÓ³ÙĞ´ÅÌ¿é */
+			/* å†™å›spbï¼Œå†…å­˜Inodeå’Œå»¶è¿Ÿå†™ç›˜å— */
 			Kernel::Instance().GetFileSystem().Update();
 			Kernel::Instance().GetBufferManager().Bflush(DeviceManager::ROOTDEV);
 			Diagnose::TraceOn();
@@ -366,7 +366,7 @@ void PrepareExeFile()
 		count++;
 
 		int startBlkno = exeInfo[0];
-		int size = exeInfo[1];	/* ²»Ò»¶¨ÊÇ512ÕûÊı±¶ */
+		int size = exeInfo[1];	/* ä¸ä¸€å®šæ˜¯512æ•´æ•°å€ */
 		Diagnose::Write("startBlkno = %d, size = %d\n", startBlkno, size);
 		int i;
 		Buf* pRead;
@@ -375,10 +375,10 @@ void PrepareExeFile()
 			pRead = bufMgr.Bread(DeviceManager::ROOTDEV, startBlkno + i);
 			int nbytes = lib_write(fd, (char *)pRead->b_addr, Inode::BLOCK_SIZE);
 			bufMgr.Brelse(pRead);
-			/* Êµ¼ÊĞ´ÈëµÄ×Ö½ÚÊı */
+			/* å®é™…å†™å…¥çš„å­—èŠ‚æ•° */
 			if ( nbytes != Inode::BLOCK_SIZE )
 			{
-				/* Ğ´ÈëÊ§°Ü!!! */
+				/* å†™å…¥å¤±è´¥!!! */
 				Diagnose::Write("Lib_write failure! nbytes = [%d], u_error = %d\n", nbytes, u.u_error);
 				return ;
 			}
@@ -388,10 +388,10 @@ void PrepareExeFile()
 			pRead = bufMgr.Bread(DeviceManager::ROOTDEV, startBlkno + i);
 			int nbytes = lib_write(fd, (char *)pRead->b_addr, size % Inode::BLOCK_SIZE);
 			bufMgr.Brelse(pRead);
-			/* Êµ¼ÊĞ´ÈëµÄ×Ö½ÚÊı */
+			/* å®é™…å†™å…¥çš„å­—èŠ‚æ•° */
 			if ( nbytes != size % Inode::BLOCK_SIZE )
 			{
-				/* Ğ´ÈëÊ§°Ü!!! */
+				/* å†™å…¥å¤±è´¥!!! */
 				Diagnose::Write("Lib_write failure! nbytes = [%d], u_error = %d\n", nbytes, u.u_error);
 				return ;
 			}

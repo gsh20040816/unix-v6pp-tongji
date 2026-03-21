@@ -8,9 +8,9 @@ class KernelAllocator
 {
 	/* static const member */
 public:
-	static const unsigned int MEMORY_MAP_ARRAY_SIZE =	0x200;		/* ×î¶à¿É·ÖÅä512¸ö¶ÔÏó */
-	static const unsigned int KERNEL_HEAP_START_ADDR =	0x180000 + 0xC0000000;	/* 1.5M´¦¿ªÊ¼ÎªÄÚºË¶ÑÇø£¬µ«ÊÇÕû¸öÄÚºË´Ó0xC0000000²Å¿ªÊ¼ */
-	static const unsigned int KERNEL_HEAP_SIZE =		0x80000;	/* 512KÄÚºË¶Ñ´óĞ¡ */
+	static const unsigned int MEMORY_MAP_ARRAY_SIZE =	0x200;		/* æœ€å¤šå¯åˆ†é…512ä¸ªå¯¹è±¡ */
+	static const unsigned int KERNEL_HEAP_START_ADDR =	0x180000 + 0xC0000000;	/* 1.5Må¤„å¼€å§‹ä¸ºå†…æ ¸å †åŒºï¼Œä½†æ˜¯æ•´ä¸ªå†…æ ¸ä»0xC0000000æ‰å¼€å§‹ */
+	static const unsigned int KERNEL_HEAP_SIZE =		0x80000;	/* 512Kå†…æ ¸å †å¤§å° */
 
 	/* Functions */
 public:
