@@ -1,0 +1,8 @@
+CompileFlags:
+  CompilationDatabase: .vscode
+  Add:
+    - -nostdinc
+    - -nostdlib
+    - -fno-builtin
+    - -fno-rtti
+    - -fno-exceptions

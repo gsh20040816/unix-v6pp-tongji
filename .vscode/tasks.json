@@ -1,0 +1,61 @@
+{
+    "tasks": [
+        {
+            "type": "shell",
+            "label": "OOS make",
+            "command": "C:\\Program Files\\Git\\bin\\bash.exe",
+            "args": [
+                "-lc",
+                "./build.sh"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "detail": "通过 build.sh 增量编译并更新 c.img",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "OOS debug prep",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "OOS make",
+                "OOS host run"
+            ]
+        },
+        {
+            "type": "shell",
+            "label": "OOS host run",
+            "command": "C:\\Program Files\\Git\\bin\\bash.exe",
+            "args": [
+                "-lc",
+                "./debug.sh"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "detail": "在独立终端里通过 SSH 启动宿主机上的 bochs-gdb",
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "focus": false,
+                "clear": false
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "custom",
+                "pattern": {
+                    "regexp": "^(?!)$"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": ".*Connecting to .*",
+                    "endsPattern": ".*Enabled gdbstub.*"
+                }
+            }
+        }
+    ],
+    "version": "2.0.0"
+}
