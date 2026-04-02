@@ -3,7 +3,7 @@
         {
             "type": "shell",
             "label": "OOS make",
-            "command": "C:\\Program Files\\Git\\bin\\bash.exe",
+            "command": "bash",
             "args": [
                 "-lc",
                 "./build.sh"
@@ -11,7 +11,7 @@
             "options": {
                 "cwd": "${workspaceFolder}"
             },
-            "detail": "通过 build.sh 增量编译并更新 c.img",
+            "detail": "在 Linux 工作区中触发 build.sh，并通过 SSH 到 Windows 完成构建",
             "group": {
                 "kind": "build",
                 "isDefault": true
@@ -22,13 +22,13 @@
             "dependsOrder": "sequence",
             "dependsOn": [
                 "OOS make",
-                "OOS host run"
+                "OOS linux debug host"
             ]
         },
         {
             "type": "shell",
-            "label": "OOS host run",
-            "command": "C:\\Program Files\\Git\\bin\\bash.exe",
+            "label": "OOS linux debug host",
+            "command": "bash",
             "args": [
                 "-lc",
                 "./debug.sh"
@@ -36,7 +36,7 @@
             "options": {
                 "cwd": "${workspaceFolder}"
             },
-            "detail": "在独立终端里通过 SSH 启动宿主机上的 bochs-gdb",
+            "detail": "在 Linux 本机启动 bochs-gdb，并等待 gdbstub 可连接",
             "presentation": {
                 "reveal": "always",
                 "panel": "dedicated",
@@ -51,7 +51,7 @@
                 },
                 "background": {
                     "activeOnStart": true,
-                    "beginsPattern": ".*Connecting to .*",
+                    "beginsPattern": ".*Starting bochs-gdb in .*",
                     "endsPattern": ".*Enabled gdbstub.*"
                 }
             }

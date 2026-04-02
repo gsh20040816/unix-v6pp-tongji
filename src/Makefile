@@ -1,15 +1,46 @@
 include Makefile.inc
 
-.PHONY : all build deploy run $(DIRS)
+.PHONY : all build deploy run clean $(DIRS)
 
-PROGRAMS =	cat	\
-			cp	\
-			ls	\
-			mkdir \
-			rm	\
-			date \
-			perf \
-			rm
+KERNEL_EXE = $(TARGET)\kernel.exe
+KERNEL_BIN = $(TARGET)\kernel.bin
+KERNEL_SYM = $(TARGET)\kernel.sym
+KERNEL_ASM = $(TARGET)\kernel.asm
+
+IMG_BOOT = $(IMGTARGET)\boot.bin
+IMG_KERNEL_BIN = $(IMGTARGET)\kernel.bin
+IMG_KERNEL_SYM = $(IMGTARGET)\kernel.sym
+IMG_KERNEL_ASM = $(IMGTARGET)\kernel.asm
+
+WORKSPACE_BOOT = $(V6PP_FS_EDIT_WORKSPACE)\boot.bin
+WORKSPACE_KERNEL = $(V6PP_FS_EDIT_WORKSPACE)\kernel.bin
+WORKSPACE_IMG = $(V6PP_FS_EDIT_WORKSPACE)\$(IMG)
+FINAL_IMG = ..\targets\UNIXV6++\$(IMG)
+
+WORKSPACE_PROGRAMS = \
+	$(V6PP_FS_EDIT_WORKSPACE)\programs\Shell.exe \
+	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\cat \
+	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\cp \
+	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\ls \
+	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\mkdir \
+	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\rm \
+	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\perf \
+	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\sig \
+	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\copyfile \
+	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\shutdown \
+	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\test \
+	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\forks \
+	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\trace \
+	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\echo \
+	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\date \
+	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\newsig \
+	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\sigTest \
+	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\stack \
+	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\malloc \
+	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\testSTDOUT \
+	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\fork \
+	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\HelloWorld \
+	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\showStack
 
 all: build deploy 
 
@@ -25,22 +56,36 @@ all: build deploy
 #	qemu-system-i386 -m 32M -audiodev pa,id=hda -machine pcspk-audiodev=hda -rtc #base=localtime \
 #	-boot c -drive file=../targets/UNIXV6++/c.img,if=ide,index=0,media=disk,format=raw 
 
-#no program directory
 $(DIRS) : 
 	$(MAKE) --directory=$@
 	
-build	: $(DIRS)	
-	$(LD) $(LDFLAGS) $(OBJS) -o $(TARGET)\kernel.exe	
-	$(OBJCOPY) -O binary $(TARGET)\kernel.exe $(TARGET)\kernel.bin
-	$(NM) $(TARGET)\kernel.exe > $(TARGET)\kernel.sym
-	$(OBJDUMP) -d $(TARGET)\kernel.exe  > $(TARGET)\kernel.asm
+build	: $(DIRS) $(KERNEL_ASM)
 
-deploy	:
+deploy	: $(DIRS) $(IMG_BOOT) $(IMG_KERNEL_BIN) $(IMG_KERNEL_SYM) $(IMG_KERNEL_ASM) $(FINAL_IMG)
 
-	copy $(TARGET)\boot.bin $(IMGTARGET)\boot.bin
-	copy $(TARGET)\kernel.bin $(IMGTARGET)\kernel.bin
-	copy $(TARGET)\kernel.sym  $(IMGTARGET)\kernel.sym
-	copy $(TARGET)\kernel.asm  $(IMGTARGET)\kernel.asm
+$(KERNEL_EXE)	: $(OBJS)
+	$(LD) $(LDFLAGS) $(OBJS) -o $@
+
+$(KERNEL_BIN)	: $(KERNEL_EXE)
+	$(OBJCOPY) -O binary $< $@
+
+$(KERNEL_SYM)	: $(KERNEL_EXE)
+	$(NM) $< > $@
+
+$(KERNEL_ASM)	: $(KERNEL_EXE)
+	$(OBJDUMP) -d $< > $@
+
+$(IMG_BOOT)	: $(TARGET)\boot.bin
+	copy $< $@
+
+$(IMG_KERNEL_BIN)	: $(KERNEL_BIN)
+	copy $< $@
+
+$(IMG_KERNEL_SYM)	: $(KERNEL_SYM)
+	copy $< $@
+
+$(IMG_KERNEL_ASM)	: $(KERNEL_ASM)
+	copy $< $@
 
 #	cd $(IMGTARGET) && partcopy boot.bin 0 200 c.img 0
 #	cd $(IMGTARGET) && partcopy kernel.bin 0 13000 c.img 200
@@ -52,11 +97,18 @@ deploy	:
 #	cd $(MakeImageDebug) && build.exe c.img boot.bin kernel.bin programs
 #	copy $(MakeImageDebug)\$(IMG) $(UNIXV6PPTARGET)\$(IMG)
 
-	copy $(TARGET)\boot.bin $(V6PP_FS_EDIT_WORKSPACE)\boot.bin
-	copy $(TARGET)\kernel.bin $(V6PP_FS_EDIT_WORKSPACE)\kernel.bin
+$(WORKSPACE_BOOT)	: $(TARGET)\boot.bin
+	copy $< $@
 
+$(WORKSPACE_KERNEL)	: $(KERNEL_BIN)
+	copy $< $@
+
+$(WORKSPACE_IMG)	: $(WORKSPACE_BOOT) $(WORKSPACE_KERNEL) $(WORKSPACE_PROGRAMS) \
+		$(V6PP_FS_EDIT_WORKSPACE)\filescanner.exe $(V6PP_FS_EDIT_WORKSPACE)\fsedit.exe
 	cd $(V6PP_FS_EDIT_WORKSPACE) && filescanner.exe | fsedit.exe $(IMG) c
-	copy $(V6PP_FS_EDIT_WORKSPACE)\c.img $(UNIXV6PPTARGET)\$(IMG)
+
+$(FINAL_IMG)	: $(WORKSPACE_IMG)
+	copy $< "$@"
 
 clean	:	
 	del     $(TARGET)\*.o
@@ -69,4 +121,4 @@ clean	:
 	del     $(IMGTARGET)\*.sym
 	del     $(IMGTARGET)\*.asm
 	
-	del     $(UNIXV6PPTARGET)\c.img
+	del     "$(FINAL_IMG)"

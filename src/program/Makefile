@@ -16,137 +16,75 @@ CFLAGS = -w -O0 -g -nostdlib -nostartfiles -nostdinc -fno-builtin -fno-exception
 #目录定义
 TARGET = .\objs
 V6++LIB = "..\lib\Lib_V6++.a"
+V6++LIB_DEP = ..\lib\Lib_V6++.a
 INCLUDE = .
 LIB_INCLUDE = ..\lib\include
 
 #MAKEIMAGEPATH = ..\..\tools\MakeImage\bin\Debug\programs
 MAKEIMAGEPATH = ..\..\tools\v6pp-fs-edit-2022\workspace\programs
-#DEMO = demo
 BIN = bin
 
-.PHONY : all
+.PHONY : all build clean
 
-SHELL_OBJS =$(TARGET)\cat.exe	\
-			$(TARGET)\cp.exe	\
-			$(TARGET)\ls.exe	\
-			$(TARGET)\mkdir.exe	\
-			$(TARGET)\rm.exe	\
-			$(TARGET)\perf.exe	\
-			$(TARGET)\sig.exe \
-			$(TARGET)\copyfile.exe	\
-			$(TARGET)\shutdown.exe	\
-			$(TARGET)\test.exe	\
-			$(TARGET)\forks.exe	\
-			$(TARGET)\trace.exe	\
-			$(TARGET)\echo.exe	\
-			$(TARGET)\date.exe \
-			$(TARGET)\newsig.exe \
-			$(TARGET)\sigTest.exe \
-			$(TARGET)\stack.exe	\
-			$(TARGET)\malloc.exe \
-			$(TARGET)\testSTDOUT.exe \
-			$(TARGET)\fork.exe \
-			$(TARGET)\HelloWorld.exe \
-			$(TARGET)\showStack.exe
+PROGRAM_WORKSPACE_TARGETS = \
+	$(MAKEIMAGEPATH)\$(BIN)\cat \
+	$(MAKEIMAGEPATH)\$(BIN)\cp \
+	$(MAKEIMAGEPATH)\$(BIN)\ls \
+	$(MAKEIMAGEPATH)\$(BIN)\mkdir \
+	$(MAKEIMAGEPATH)\$(BIN)\rm \
+	$(MAKEIMAGEPATH)\$(BIN)\perf \
+	$(MAKEIMAGEPATH)\$(BIN)\sig \
+	$(MAKEIMAGEPATH)\$(BIN)\copyfile \
+	$(MAKEIMAGEPATH)\$(BIN)\shutdown \
+	$(MAKEIMAGEPATH)\$(BIN)\test \
+	$(MAKEIMAGEPATH)\$(BIN)\forks \
+	$(MAKEIMAGEPATH)\$(BIN)\trace \
+	$(MAKEIMAGEPATH)\$(BIN)\echo \
+	$(MAKEIMAGEPATH)\$(BIN)\date \
+	$(MAKEIMAGEPATH)\$(BIN)\newsig \
+	$(MAKEIMAGEPATH)\$(BIN)\sigTest \
+	$(MAKEIMAGEPATH)\$(BIN)\stack \
+	$(MAKEIMAGEPATH)\$(BIN)\malloc \
+	$(MAKEIMAGEPATH)\$(BIN)\testSTDOUT \
+	$(MAKEIMAGEPATH)\$(BIN)\fork \
+	$(MAKEIMAGEPATH)\$(BIN)\HelloWorld \
+	$(MAKEIMAGEPATH)\$(BIN)\showStack
 
-#$(TARGET)\performance.exe
-			
+all	:	$(PROGRAM_WORKSPACE_TARGETS)
 
+build : $(PROGRAM_WORKSPACE_TARGETS)
 
-build : $(SHELL_OBJS)
+define BUILD_PROGRAM
+$(TARGET)\$(1).exe : $(2) $(V6++LIB_DEP)
+	$(CC) $(CFLAGS) -I"$(INCLUDE)" -I"$(LIB_INCLUDE)" $$(filter %.c,$$^) -e _main1 $(V6++LIB) -o $$@
 
-$(TARGET)\cat.exe :	cat.c
-	$(CC) $(CFLAGS) -I"$(INCLUDE)" -I"$(LIB_INCLUDE)"  $< -e _main1 $(V6++LIB) -o $@
-	copy $(TARGET)\cat.exe $(MAKEIMAGEPATH)\$(BIN)\cat
-	
-$(TARGET)\cp.exe :	cp.c
-	$(CC) $(CFLAGS) -I"$(INCLUDE)" -I"$(LIB_INCLUDE)"  $< -e _main1 $(V6++LIB) -o $@
-	copy $(TARGET)\cp.exe $(MAKEIMAGEPATH)\$(BIN)\cp
-	
-$(TARGET)\ls.exe :	ls.c
-	$(CC) $(CFLAGS) -I"$(INCLUDE)" -I"$(LIB_INCLUDE)"  $< -e _main1 $(V6++LIB) -o $@
-	copy $(TARGET)\ls.exe $(MAKEIMAGEPATH)\$(BIN)\ls
-	
-$(TARGET)\mkdir.exe :	mkdir.c
-	$(CC) $(CFLAGS) -I"$(INCLUDE)" -I"$(LIB_INCLUDE)"  $< -e _main1 $(V6++LIB) -o $@
-	copy $(TARGET)\mkdir.exe $(MAKEIMAGEPATH)\$(BIN)\mkdir
-	
-$(TARGET)\perf.exe :	performance.c
-	$(CC) $(CFLAGS) -I"$(INCLUDE)" -I"$(LIB_INCLUDE)"  $< -e _main1 $(V6++LIB) -o $@
-	copy $(TARGET)\perf.exe $(MAKEIMAGEPATH)\$(BIN)\perf
-	
-$(TARGET)\rm.exe :	rm.c
-	$(CC) $(CFLAGS) -I"$(INCLUDE)" -I"$(LIB_INCLUDE)"  $< -e _main1 $(V6++LIB) -o $@
-	copy $(TARGET)\rm.exe $(MAKEIMAGEPATH)\$(BIN)\rm
-	
-$(TARGET)\copyfile.exe :	copyfile.c
-	$(CC) $(CFLAGS) -I"$(INCLUDE)" -I"$(LIB_INCLUDE)"  $< -e _main1 $(V6++LIB) -o $@
-	copy $(TARGET)\copyfile.exe $(MAKEIMAGEPATH)\$(BIN)\copyfile
-	
-$(TARGET)\shutdown.exe :	shutdown.c
-	$(CC) $(CFLAGS) -I"$(INCLUDE)" -I"$(LIB_INCLUDE)"  $< -e _main1 $(V6++LIB) -o $@
-	copy $(TARGET)\shutdown.exe $(MAKEIMAGEPATH)\$(BIN)\shutdown
+$(MAKEIMAGEPATH)\$(BIN)\$(1) : $(TARGET)\$(1).exe
+	copy $$< $$@
+endef
 
-$(TARGET)\test.exe :	test.c
-	$(CC) $(CFLAGS) -I"$(INCLUDE)" -I"$(LIB_INCLUDE)"  $< -e _main1 $(V6++LIB) -o $@
-	copy $(TARGET)\test.exe $(MAKEIMAGEPATH)\$(BIN)\test
-	
-$(TARGET)\forks.exe :		forks.c
-	$(CC) $(CFLAGS) -I"$(INCLUDE)" -I"$(LIB_INCLUDE)"  $< -e _main1 $(V6++LIB) -o $@
-	copy $(TARGET)\forks.exe $(MAKEIMAGEPATH)\$(BIN)\forks
-	
-$(TARGET)\sig.exe :		sig.c
-	$(CC) $(CFLAGS) -I"$(INCLUDE)" -I"$(LIB_INCLUDE)"  $< -e _main1 $(V6++LIB) -o $@
-	copy $(TARGET)\sig.exe $(MAKEIMAGEPATH)\$(BIN)\sig
-
-$(TARGET)\sigTest.exe :		sigTest.c
-	$(CC) $(CFLAGS) -I"$(INCLUDE)" -I"$(LIB_INCLUDE)"  $< -e _main1 $(V6++LIB) -o $@
-	copy $(TARGET)\sigTest.exe $(MAKEIMAGEPATH)\$(BIN)\sigTest
-	
-$(TARGET)\trace.exe :		trace.c
-	$(CC) $(CFLAGS) -I"$(INCLUDE)" -I"$(LIB_INCLUDE)"  $< -e _main1 $(V6++LIB) -o $@
-	copy $(TARGET)\trace.exe $(MAKEIMAGEPATH)\$(BIN)\trace
-	
-$(TARGET)\echo.exe :		echo.c
-	$(CC) $(CFLAGS) -I"$(INCLUDE)" -I"$(LIB_INCLUDE)"  $< -e _main1 $(V6++LIB) -o $@
-	copy $(TARGET)\echo.exe $(MAKEIMAGEPATH)\$(BIN)\echo
-	
-$(TARGET)\date.exe :		date.c
-	$(CC) $(CFLAGS) -I"$(INCLUDE)" -I"$(LIB_INCLUDE)"  $< -e _main1 $(V6++LIB) -o $@
-	copy $(TARGET)\date.exe $(MAKEIMAGEPATH)\$(BIN)\date
-	
-$(TARGET)\newsig.exe :		newsig.c
-	$(CC) $(CFLAGS) -I"$(INCLUDE)" -I"$(LIB_INCLUDE)"  $< -e _main1 $(V6++LIB) -o $@
-	copy $(TARGET)\newsig.exe $(MAKEIMAGEPATH)\$(BIN)\newsig
-	
-$(TARGET)\stack.exe :		stack.c
-	$(CC) $(CFLAGS) -I"$(INCLUDE)" -I"$(LIB_INCLUDE)"  $< -e _main1 $(V6++LIB) -o $@
-	copy $(TARGET)\stack.exe $(MAKEIMAGEPATH)\$(BIN)\stack
-	
-$(TARGET)\malloc.exe :		malloc.c
-	$(CC) $(CFLAGS) -I"$(INCLUDE)" -I"$(LIB_INCLUDE)"  $< -e _main1 $(V6++LIB) -o $@
-	copy $(TARGET)\malloc.exe $(MAKEIMAGEPATH)\$(BIN)\malloc
-
-$(TARGET)\fork.exe :		fork.c
-	$(CC) $(CFLAGS) -I"$(INCLUDE)" -I"$(LIB_INCLUDE)"  $< -e _main1 $(V6++LIB) -o $@
-	copy $(TARGET)\fork.exe $(MAKEIMAGEPATH)\$(BIN)\fork
-
-$(TARGET)\testSTDOUT.exe :	testSTDOUT.c
-	$(CC) $(CFLAGS) -I"$(INCLUDE)" -I"$(LIB_INCLUDE)"  $< -e _main1 $(V6++LIB) -o $@
-	copy $(TARGET)\testSTDOUT.exe $(MAKEIMAGEPATH)\$(BIN)\testSTDOUT
-
-$(TARGET)\HelloWorld.exe :	HelloWorld.c
-	$(CC) $(CFLAGS) -I"$(INCLUDE)" -I"$(LIB_INCLUDE)"  $< -e _main1 $(V6++LIB) -o $@
-	copy $(TARGET)\HelloWorld.exe $(MAKEIMAGEPATH)\$(BIN)\HelloWorld
-
-$(TARGET)\showStack.exe :	showStack.c
-	$(CC) $(CFLAGS) -I"$(INCLUDE)" -I"$(LIB_INCLUDE)"  $< -e _main1 $(V6++LIB) -o $@
-	copy $(TARGET)\showStack.exe $(MAKEIMAGEPATH)\$(BIN)\showStack
+$(eval $(call BUILD_PROGRAM,cat,cat.c))
+$(eval $(call BUILD_PROGRAM,cp,cp.c))
+$(eval $(call BUILD_PROGRAM,ls,ls.c))
+$(eval $(call BUILD_PROGRAM,mkdir,mkdir.c))
+$(eval $(call BUILD_PROGRAM,rm,rm.c))
+$(eval $(call BUILD_PROGRAM,perf,performance.c))
+$(eval $(call BUILD_PROGRAM,sig,sig.c))
+$(eval $(call BUILD_PROGRAM,copyfile,copyfile.c))
+$(eval $(call BUILD_PROGRAM,shutdown,shutdown.c))
+$(eval $(call BUILD_PROGRAM,test,test.c))
+$(eval $(call BUILD_PROGRAM,forks,forks.c))
+$(eval $(call BUILD_PROGRAM,trace,trace.c))
+$(eval $(call BUILD_PROGRAM,echo,echo.c))
+$(eval $(call BUILD_PROGRAM,date,date.c))
+$(eval $(call BUILD_PROGRAM,newsig,newsig.c))
+$(eval $(call BUILD_PROGRAM,sigTest,sigTest.c))
+$(eval $(call BUILD_PROGRAM,stack,stack.c))
+$(eval $(call BUILD_PROGRAM,malloc,malloc.c))
+$(eval $(call BUILD_PROGRAM,testSTDOUT,testSTDOUT.c))
+$(eval $(call BUILD_PROGRAM,fork,fork.c))
+$(eval $(call BUILD_PROGRAM,HelloWorld,HelloWorld.c))
+$(eval $(call BUILD_PROGRAM,showStack,showStack.c))
 
 clean:
 	del $(TARGET)\*.exe
 	del /Q $(MAKEIMAGEPATH)\$(BIN)\*
-	
-#all	:	build
-all	:	clean  build
-	

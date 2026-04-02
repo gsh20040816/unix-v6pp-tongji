@@ -14,7 +14,9 @@ TARGET = .\objs
 INCLUDE = .\include
 SRC = .\src
 
-.PHONY : all
+.PHONY : clean
+
+LIB_TARGET = Lib_V6++.a
 
 LIB_OBJS =	$(TARGET)\file.o	\
 			$(TARGET)\sys.o		\
@@ -28,12 +30,11 @@ LIB_OBJS =	$(TARGET)\file.o	\
 			$(TARGET)\time.o \
 			$(TARGET)\malloc.o
 
-			
-			
-all	:	$(LIB_OBJS)
-	ar -crv Lib_V6++.a $(LIB_OBJS)
-	
-	
+all	:	$(LIB_TARGET)
+
+$(LIB_TARGET)	:	$(LIB_OBJS)
+	ar -crv $@ $(LIB_OBJS)
+
 $(TARGET)\file.o :	$(SRC)\file.c $(INCLUDE)\file.h
 	$(CC) $(CFLAGS) -I"$(INCLUDE)" -c $< -o $@
 	
@@ -69,7 +70,7 @@ $(TARGET)\malloc.o	:	$(SRC)\malloc.c $(INCLUDE)\malloc.h
 	
 clean:
 	del $(TARGET)\*.o
-	del Lib_V6++.a
+	del $(LIB_TARGET)
 	
 	
 #默认编译规则

@@ -1,165 +1,161 @@
-# UnixV6++ Linux 宿主机开发环境搭建记录
+# UnixV6++ Linux 主开发环境记录
 
 ## 背景
 
-这套环境的目标是把职责拆开：
+当前环境的职责划分如下：
 
-- Windows 虚拟机内继续使用原有的 `MinGW + 批处理 + Makefile` 构建链
-- Linux 宿主机负责运行 `bochs-gdb` 的 `term` 模式
-- VS Code 在 Windows 虚拟机内编辑代码，并通过 GDB 远程连接宿主机上的 `bochs-gdb`
+- Linux 共享目录 `~/shared/UNIX V6++V1/oos` 是主开发目录
+- Windows 虚拟机继续保留原有的 `MinGW + 批处理 + Makefile` 构建链
+- Bochs 运行和 `gdbstub` 继续放在 Linux 本机
+- VS Code 在 Linux 上打开工作区，但真正执行调试器的是 Windows 上的 `gdb.exe`
 
-这样可以同时保留现有工程的 Windows 构建链，又获得 Linux 宿主机上更稳定的 `Bochs term` 调试体验。
+这样做的目标是保留旧工程对 Windows 构建链和 MinGW GDB 的依赖，同时把日常编辑、脚本入口和运行环境统一到 Linux 主目录。
 
 ## 最终工作流
 
-当前工作流如下：
+当前推荐工作流如下：
 
-1. 在 Windows 虚拟机内编辑代码
+1. 在 Linux 共享目录中编辑代码
 2. 触发 `OOS make`
-3. `build.sh` 调用 `tools/all.bat`
-4. `make all` 增量编译，并更新 `targets/UNIXV6++/c.img`
-5. 调试时，VS Code 先执行 `OOS debug prep`
-6. `OOS debug prep` 顺序执行 `OOS make` 和 `OOS host run`
-7. `runhost.sh` 通过 SSH 启动 Linux 宿主机上的 `bochs-gdb`
-8. VS Code 再用 GDB 远程连接宿主机的 `gdbstub`
+3. `build.sh` 通过 SSH 连接 Windows 主机
+4. Windows 端进入 `Z:\UNIX V6++V1\oos\tools`
+5. Windows 端调用 `oosvars_mingw.bat` 和 `all.bat`
+6. 增量编译并更新共享目录中的 `targets/UNIXV6++/c.img`
+7. 调试时，VS Code 先执行 `OOS debug prep`
+8. `OOS debug prep` 顺序执行 `OOS make` 和 `OOS linux debug host`
+9. `debug.sh` 在 Linux 本机启动 `bochs-gdb -q -f bochsrc.bxrc`
+10. VS Code 再通过 SSH 到 Windows 启动 `gdb.exe`
+11. Windows 上的 GDB 连接 Linux 上 `10.200.65.1:1234` 的 `gdbstub`
 
-## 目录映射和宿主机约定
+## 目录与主机约定
 
-当前环境采用以下约定：
+当前仓库默认约定如下：
 
-- Windows 虚拟机中的仓库路径是 `Z:\UNIX V6++V1\oos`
-- Linux 宿主机中的共享目录路径是 `~/shared/UNIX V6++V1/oos`
-- Linux 宿主机 SSH 用户是 `gsh`
-- Linux 宿主机地址是 `10.200.65.1`
-- 宿主机上 `BXSHARE` 使用 `/usr/share/bochs`
-- 宿主机运行命令为 `bochs-gdb -q -f bochsrc.bxrc`
+- Linux 工作区路径为 `~/shared/UNIX V6++V1/oos`
+- Windows 工作区路径为 `Z:\UNIX V6++V1\oos`
+- Windows SSH 主机别名为 `win`
+- Linux 运行机地址为 `10.200.65.1`
+- Linux 上 `BXSHARE` 默认使用 `/usr/share/bochs`
+- Windows 上的 GDB 使用 `Z:\UNIX V6++V1\MinGW\bin\gdb.exe`
 
-## 仓库内新增和修改的脚本
+### 可覆盖的环境变量
 
-### 根目录脚本
+- `OOS_WIN_HOST`
+  - Windows SSH 目标，默认 `win`
+- `OOS_WIN_REPO`
+  - Windows 仓库路径，默认 `Z:\UNIX V6++V1\oos`
+- `OOS_WIN_BUILD_COMMAND`
+  - Windows 端自定义构建命令
+- `OOS_LINUX_BXSHARE`
+  - Linux 端 `BXSHARE`，默认 `/usr/share/bochs`
+- `OOS_LINUX_DEBUG_COMMAND`
+  - Linux 端调试启动命令
+- `OOS_LINUX_RUN_COMMAND`
+  - Linux 端非调试运行命令
 
-- `build.sh`
-  - 提供 Git Bash 入口
-  - 先切到 `tools`
-  - 清理 Git Bash 自带的 `PATH` 干扰，避免 `sh.exe` 影响 MinGW `make`
-  - 载入 `oosvars_mingw.bat`
-  - 调用 `all.bat`
-  - 当前作用是增量编译并更新 `c.img`
+## 仓库内脚本
 
-- `run.sh`
-  - 在本机工作目录 `targets/UNIXV6++` 下启动 `bochs -q -f bochsrc.bxrc`
-  - 同样先加载 Windows 构建环境
+### `tools/ssh-win.sh`
 
-- `runhost.sh`
-  - 提供 Windows 虚拟机到 Linux 宿主机的统一运行入口
-  - 默认连接 `gsh@10.200.65.1`
-  - 自动推导宿主机共享路径 `~/shared/UNIX V6++V1/oos`
-  - 如果本地没有 SSH 密钥，会自动生成 `~/.ssh/oos_host_ed25519`
-  - 首次连接时会自动安装公钥到宿主机
-  - 通过 `ssh -tt` 分配终端，并补上 `TERM`
-  - 默认在宿主机的 `targets/UNIXV6++` 目录中执行 `bochs-gdb -q -f bochsrc.bxrc`
+- 统一封装 Linux 到 Windows 的 SSH 入口
+- 默认连接 `win`
+- 供 `build.sh` 和 VS Code `pipeTransport` 共用
+- 支持 `--shell` 打开一个交互式 Windows 远端终端
 
-### 原有批处理链的使用方式
+### `tools/pipe-win-gdb.sh`
 
-- `tools/build.bat`
-  - 原本只执行 `make build`
+- 专门给 VS Code `pipeTransport` 使用
+- 本地启动一个很薄的 MI 代理，再由代理 SSH 到 Windows 启动 `gdb.exe`
+- 负责把带空格的 Windows `gdb.exe` 路径包装成 PowerShell 可执行形式
+- 同时把 VS Code 发出的 Linux 本地绝对路径断点，例如 `/home/.../main.cpp:48`，改写成老 `gdb 7.2` 可以接受的 `main.cpp:48`
+- 这是为了解决当前仓库路径和 Windows 路径都带空格时，老 GDB 无法稳定解析 `-break-insert <absolute-path>:<line>` 的问题
 
-- `tools/all.bat`
-  - 执行 `make all`
-  - `all` 会串联 `build` 和 `deploy`
-  - `deploy` 会更新 `c.img`
+### `build.sh`
 
-当前已经把根目录的 `build.sh` 改成调用 `tools/all.bat`，因此 `OOS make` 现在不再只是编译内核，而是会同步更新镜像。
+- 在 Linux 上执行
+- 默认通过 `tools/ssh-win.sh` 连接 Windows
+- 默认执行：
 
-## VS Code 配置修改
+```text
+cmd.exe /c "cd /d Z:\UNIX V6++V1\oos\tools && call oosvars_mingw.bat && call all.bat"
+```
 
-### 任务
+- 作用是使用 Windows 原构建链完成增量编译并更新镜像
+- 现在 `src` 下的 Makefile 已改成真正的增量行为：
+  - 内核目标无变化时，不重新链接 `kernel.exe`
+  - `lib`、`shell`、`program` 不再因 `all` 目标而全量重编
+  - 只有发生变化的用户态程序才会重新生成并复制到 workspace
+  - 只有内核或 workspace 中的用户态程序有变化时，才会重新运行 `filescanner.exe | fsedit.exe` 更新 `c.img`
 
-`.vscode/tasks.json` 已调整为当前工作流：
+### `debug.sh`
+
+- 在 Linux 本机执行
+- 进入 `targets/UNIXV6++`
+- 导出 `BXSHARE`
+- 默认启动：
+
+```text
+bochs-gdb -q -f bochsrc.bxrc
+```
+
+- 用于调试前启动本机的 `gdbstub`
+
+### `run.sh`
+
+- 在 Linux 本机执行
+- 进入 `targets/UNIXV6++`
+- 导出 `BXSHARE`
+- 默认启动：
+
+```text
+bochs -q -f bochsrc_nodebug.bxrc
+```
+
+- 用于不接 GDB 的普通运行
+
+## VS Code 配置
+
+### `.vscode/tasks.json`
+
+当前任务已经调整为 Linux 主工作区模型：
 
 - `OOS make`
-  - 通过 `C:\Program Files\Git\bin\bash.exe -lc ./build.sh` 触发完整增量构建
+  - 通过本机 `bash -lc ./build.sh`
+  - 实际构建发生在 Windows 端
 
-- `OOS host run`
-  - 通过 `C:\Program Files\Git\bin\bash.exe -lc ./runhost.sh` 启动宿主机上的 `bochs-gdb`
+- `OOS linux debug host`
+  - 通过本机 `bash -lc ./debug.sh`
   - 作为后台任务运行
-  - 使用自定义 `problemMatcher`
-  - 当终端输出 `Enabled gdbstub` 时，认为宿主机已准备好供 GDB 连接
+  - 当输出 `Enabled gdbstub` 时，认为 Linux 端调试环境已准备完成
 
 - `OOS debug prep`
-  - 顺序依赖 `OOS make` 和 `OOS host run`
-  - 用于调试前统一准备
+  - 顺序依赖 `OOS make` 和 `OOS linux debug host`
+  - 统一处理调试前的构建和启动
 
-### 调试
+### `.vscode/launch.json`
 
-`.vscode/launch.json` 已配置 GDB 远程调试：
+当前调试配置改成：
 
-- `Bochs GDB (Host 10.200.65.1)`
-  - 使用 `preLaunchTask: "OOS debug prep"`
-  - 程序符号文件使用 `targets/objs/kernel.exe`
-  - 通过 `miDebuggerServerAddress: 10.200.65.1:1234` 连接宿主机 `gdbstub`
+- `Bochs GDB (Windows GDB -> Linux 10.200.65.1)`
+  - `preLaunchTask` 使用 `OOS debug prep`
+  - `pipeTransport` 通过 `tools/pipe-win-gdb.sh` SSH 到 Windows
+  - 远端调试器使用 `Z:\UNIX V6++V1\MinGW\bin\gdb.exe`
+  - 程序符号文件使用 Windows 侧共享路径 `Z:\UNIX V6++V1\oos\targets\objs\kernel.exe`
+  - `miDebuggerServerAddress` 连接 Linux 上的 `10.200.65.1:1234`
+  - 通过 `sourceFileMap` 把 Windows 编译路径映射回 Linux 工作区
 
-- `Bochs GDB (Localhost 1234)`
-  - 保留本机回环地址调试入口
+这样 VS Code 虽然运行在 Linux 上，但真正解析 PE 调试信息和执行 GDB 命令的是 Windows 端 MinGW GDB。
 
-为兼容当前这套 `MinGW + GDB + 老工程` 组合，`launch.json` 中保留了显式 `sourceFileMap`。原因是这份 GDB 对断点路径格式很敏感，仅用目录级映射不足以稳定命中断点。
+### `.vscode/settings.json`
 
-## 调试信息格式修改
+当前只保留 Linux 本地会直接用到的设置：
 
-为了修复源码行号和断点错位问题，`src/Makefile.inc` 的调试参数做了调整：
+- 继续使用 `clangd`
+- 关闭 `C_Cpp` 的 IntelliSense 引擎
+- 去掉 Windows 专用的 `--query-driver`
+- `C_Cpp.default.compilerPath` 改成 Linux 本地的 `/usr/bin/g++`
 
-- 从旧的 `-g`
-- 改为 `-g3 -gdwarf-2`
-
-这样生成的 `kernel.exe` 使用的是 DWARF 调试信息，而不是旧式的 STABS，更适合现在的 GDB 和 VS Code 联动。
-
-## clangd 和 IntelliSense 相关改动
-
-### 选择 clangd
-
-当前工作区已经切换为 `clangd` 作为主要语言服务：
-
-- `.vscode/settings.json`
-  - 关闭 `C_Cpp` 的 IntelliSense 引擎
-  - 保留 `cpptools` 仅用于调试
-  - 指定 `clangd` 使用 `.vscode/compile_commands.json`
-  - 配置 `--query-driver=Z:/UNIX V6++V1/MinGW/bin/*`
-
-- `.clangd`
-  - 指定 `CompilationDatabase: .vscode`
-  - 补充 freestanding 工程所需的基本编译选项
-
-### 生成 compile_commands.json
-
-新增 `tools/update_compile_commands.ps1`，作用如下：
-
-- 通过 `make -B -n all` 抓取完整 dry-run 编译命令
-- 解析多层 `make` 的 `Entering/Leaving directory`
-- 只提取 `gcc/g++` 的实际源文件编译命令
-- 将相对 `-I` 路径转换为绝对路径
-- 将源文件路径转换为绝对路径
-- 统一把 `directory` 写成仓库根路径
-- 通过临时文件再覆盖的方式生成 `.vscode/compile_commands.json`
-
-之所以这样做，是为了缓解共享盘路径和旧构建脚本对 `clangd` 的影响。
-
-### 规范化 include 路径
-
-为了避免 `clangd` 在跳转头文件时生成 `.` 开头的伪路径，工程里一批 `#include` 被统一从反斜杠风格改成了正斜杠风格，例如：
-
-- `#include "..\test\TestInclude.h"` 改成 `#include "../test/TestInclude.h"`
-- `#include "mm\TestAllocator.h"` 改成 `#include "mm/TestAllocator.h"`
-
-这类修改主要出现在：
-
-- `src/kernel/main.cpp`
-- `src/test/*`
-
-目的是提升头文件跳转和索引稳定性，不改变编译语义。
-
-## 当前宿主机调试入口
-
-现在推荐的使用方式是：
+## 手动使用方式
 
 ### 手动构建
 
@@ -167,47 +163,34 @@
 bash build.sh
 ```
 
-### 手动启动宿主机上的 Bochs
+### 手动启动 Linux 调试目标
 
 ```bash
-bash runhost.sh
+bash debug.sh
 ```
 
-### 在 VS Code 中调试
+### 手动普通运行
 
-直接选择：
-
-```text
-Bochs GDB (Host 10.200.65.1)
+```bash
+bash run.sh
 ```
 
-VS Code 会自动：
+### 手动打开 Windows 远端终端
 
-1. 执行 `OOS make`
-2. 增量编译并更新 `c.img`
-3. 执行 `OOS host run`
-4. 连接宿主机上的 `gdbstub`
+```bash
+bash tools/ssh-win.sh --shell
+```
 
 ## 这套方案解决了什么问题
 
-- 保留了工程原本的 Windows 构建链，不需要整体迁移到 WSL
-- 利用了 Linux 宿主机更适合 `Bochs term` 的运行环境
-- 避免了每次手工登录宿主机再敲启动命令
-- 让 VS Code 调试前自动做增量构建和镜像更新
-- 让 `clangd` 在这套旧工程上基本可用
-- 修复了调试信息格式导致的源码错位问题
-- 修复了 Windows 风格 `#include` 路径导致的跳转异常
+- Linux 共享目录成为唯一主工作区
+- Windows 旧构建链不需要迁移
+- Bochs 仍然运行在更稳定的 Linux 环境
+- 调试器继续使用兼容这套工程的 Windows MinGW GDB
+- VS Code 的构建、运行、调试入口都统一到了仓库脚本中
 
-## 已知限制
+## 当前限制
 
-- 当前 `launch.json` 仍然依赖较大的显式 `sourceFileMap`
-- 工作区位于共享盘 `Z:`，LLVM 工具链在这种路径上仍可能有边缘兼容性问题
-- `clangd` 虽然已可用，但这套共享目录方案仍不如本地 NTFS 工作区稳定
-
-## 后续可继续改进的方向
-
-- 为 `sourceFileMap` 增加自动生成脚本，减少后续维护成本
-- 补充 `.gitignore`，忽略 `.vscode/compile_commands.json`、日志和生成物
-- 增加 `.vscode/extensions.json`，把 `clangd`、`cpptools` 等扩展推荐固化进仓库
-- 增加一键刷新 `compile_commands.json` 的 VS Code 任务
-- 如果后续 `clangd` 仍偶发异常，可考虑把编辑工作区迁到本地 NTFS 路径，只同步构建产物到共享目录
+- `launch.json` 仍依赖较大的显式 `sourceFileMap`
+- Windows GDB 依然要求 `win` SSH 可达，且共享盘映射保持一致
+- `clangd` 现在不再查询 Windows 编译器内置头文件，若后续需要更完整的诊断，需要再补一层本地交叉工具链或更稳定的编译数据库转换

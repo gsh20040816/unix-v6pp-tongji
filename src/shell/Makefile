@@ -12,22 +12,30 @@ CFLAGS = -W -O0 -g -nostdlib -nostdinc -nostartfiles -fno-builtin -fno-exception
 #目录定义
 TARGET = .\OBJS
 V6++LIB = "..\lib\Lib_V6++.a"
+V6++LIB_DEP = ..\lib\Lib_V6++.a
 INCLUDE = .
 LIB_INCLUDE = ..\lib\include
 
 # MAKEIMAGEPATH = ..\..\tools\MakeImage\bin\Debug\programs
 MAKEIMAGEPATH = ..\..\tools\v6pp-fs-edit-2022\workspace\programs
 
-.PHONY : all
+.PHONY : clean
 
 SHELL_OBJS =$(TARGET)\commandtree.o	\
 			$(TARGET)\executecommand.o	\
 			$(TARGET)\preexecute.o	\
 			$(TARGET)\main.o
+
+SHELL_EXE = $(TARGET)\Shell.exe
+WORKSPACE_SHELL = $(MAKEIMAGEPATH)\Shell.exe
 			
-all	:	$(SHELL_OBJS)
-	$(CC) $(CFLAGS) $(SHELL_OBJS) $(V6++LIB) -e _main1 -o $(TARGET)\Shell.exe
-	copy $(TARGET)\Shell.exe $(MAKEIMAGEPATH)\Shell.exe
+all	:	$(WORKSPACE_SHELL)
+
+$(SHELL_EXE)	:	$(SHELL_OBJS) $(V6++LIB_DEP)
+	$(CC) $(CFLAGS) $(SHELL_OBJS) $(V6++LIB) -e _main1 -o $@
+
+$(WORKSPACE_SHELL)	:	$(SHELL_EXE)
+	copy $< $@
 	
 $(TARGET)\commandtree.o :	CommandTree.c $(INCLUDE)\CommandTree.h
 	$(CC) $(CFLAGS) -I"$(INCLUDE)" -I"$(LIB_INCLUDE)" -c $< -o $@
@@ -45,4 +53,3 @@ $(TARGET)\main.o :	main.c
 clean:
 	del $(TARGET)\*.o
 	del $(TARGET)\*.exe
-	
