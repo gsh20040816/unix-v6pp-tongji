@@ -21,7 +21,7 @@
 #include "TimeInterrupt.h"
 #include "PEParser.h"
 #include "CMOSTime.h"
-#include "..\test\TestInclude.h"
+#include "../test/TestInclude.h"
 
 bool isInit = false;
 
@@ -225,6 +225,5 @@ extern "C" void next()
 		__asm__ __volatile__ ("call *%%eax" :: "a"((unsigned long)ExecShell - 0xC0000000));   //要访问用户栈，所以一定要有映射！
 	}
 }
-
 
 

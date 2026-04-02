@@ -1,6 +1,6 @@
 #include "TestFileSystem.h"
-#include "..\KernelInclude.h"
-#include "..\TestUtility.h"
+#include "../KernelInclude.h"
+#include "../TestUtility.h"
 
 SuperBlock spb;
 
@@ -535,4 +535,3 @@ bool TestFileSystem()
 	// }
 	// return false;
 }
-

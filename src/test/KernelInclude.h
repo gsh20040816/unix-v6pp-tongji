@@ -7,12 +7,11 @@
 Include内核的接口。
 */
 
-#include "..\include\Kernel.h"
-#include "..\include\Video.h"
-#include "..\include\TimeInterrupt.h"
-#include "..\include\CRT.h"
+#include "../include/Kernel.h"
+#include "../include/Video.h"
+#include "../include/TimeInterrupt.h"
+#include "../include/CRT.h"
 
 extern "C" void Delay();
 
 #endif
-

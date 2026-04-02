@@ -1,5 +1,5 @@
 #include "Allocator.h"
-#include "..\TestUtility.h"
+#include "../TestUtility.h"
 
 bool TestAllocator()
 {
@@ -96,6 +96,5 @@ bool TestAllocator()
 
 	return 0;
 }
-
 
 

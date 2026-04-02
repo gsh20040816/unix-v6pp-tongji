@@ -1,8 +1,32 @@
 CompileFlags:
-  CompilationDatabase: .vscode
+  CompilationDatabase: None
+---
+If:
+  PathMatch: .*\.c$
+CompileFlags:
   Add:
-    - -nostdinc
-    - -nostdlib
-    - -fno-builtin
-    - -fno-rtti
-    - -fno-exceptions
+    - -xc
+    - -std=gnu11
+    - -I/home/gsh/shared/UNIX V6++V1/oos/src/include
+    - -I/home/gsh/shared/UNIX V6++V1/oos/src/lib/include
+    - -I/home/gsh/shared/UNIX V6++V1/oos/src/test
+    - -I/home/gsh/shared/UNIX V6++V1/oos/src/test/dev
+    - -I/home/gsh/shared/UNIX V6++V1/oos/src/test/fs
+    - -I/home/gsh/shared/UNIX V6++V1/oos/src/test/lib
+    - -I/home/gsh/shared/UNIX V6++V1/oos/src/test/mm
+    - -I/home/gsh/shared/UNIX V6++V1/oos/src/test/pe
+---
+If:
+  PathMatch: .*\.([Hh]|hh|hpp|hxx|cc|cpp|cxx)$
+CompileFlags:
+  Add:
+    - -xc++
+    - -std=gnu++98
+    - -I/home/gsh/shared/UNIX V6++V1/oos/src/include
+    - -I/home/gsh/shared/UNIX V6++V1/oos/src/lib/include
+    - -I/home/gsh/shared/UNIX V6++V1/oos/src/test
+    - -I/home/gsh/shared/UNIX V6++V1/oos/src/test/dev
+    - -I/home/gsh/shared/UNIX V6++V1/oos/src/test/fs
+    - -I/home/gsh/shared/UNIX V6++V1/oos/src/test/lib
+    - -I/home/gsh/shared/UNIX V6++V1/oos/src/test/mm
+    - -I/home/gsh/shared/UNIX V6++V1/oos/src/test/pe

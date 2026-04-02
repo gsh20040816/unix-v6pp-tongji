@@ -4,7 +4,6 @@
   "C_Cpp.default.compilerPath": "/usr/bin/g++",
   "C_Cpp.intelliSenseEngine": "disabled",
   "clangd.arguments": [
-    "--compile-commands-dir=.vscode",
     "--background-index",
     "--header-insertion=never"
   ]

@@ -1,5 +1,5 @@
 #include "TestBufferManager.h"
-#include "..\KernelInclude.h"
+#include "../KernelInclude.h"
 
 void PrintBuffer(Buf* pBuf)
 {
@@ -169,4 +169,3 @@ bool TestSwap()
 	 * 进程图像起始地址的swbuf会是灾难性的，后面需要对其进行修改。
 	 */
 }
-
