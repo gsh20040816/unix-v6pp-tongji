@@ -162,6 +162,9 @@ public:
 
 	/* 检查当前用户是否是超级用户 */
 	bool SUser();
+
+	/* 写用户页表 */
+	void WritePageTable();
 };
 
 #endif

@@ -197,6 +197,7 @@ void MemoryDescriptor::MapToPageTable()
 	FlushPageDirectory();
 }*/
 
+/*已经弃用，直接调用User::WriteUserPageTable()把用户页表写到页目录
 void MemoryDescriptor::MapToPageTable()
 {
 	User& u = Kernel::Instance().GetUser();
@@ -223,3 +224,4 @@ void MemoryDescriptor::MapToPageTable()
 	PageDirectory * pPageDirectory = & machine.GetPageDirectory();
 	Diagnose::Write("PageTable used by CPU %x\n", Machine::Instance().GetPageDirectory().m_Entrys[0].m_PageTableBaseAddress);
 }
+*/

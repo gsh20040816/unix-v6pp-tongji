@@ -42,6 +42,8 @@ void ProcessManager::SetupProcessZero()
 	pProcZero->p_size = 0x1000;
 	pProcZero->p_addr = PROCESS_ZERO_PPDA_ADDRESS;
 	pProcZero->p_textp = NULL;
+	pProcZero->p_pgDir = (PageDirectory*)(Machine::PAGE_DIRECTORY_BASE_ADDRESS + Machine::KERNEL_SPACE_START_ADDRESS);
+	pProcZero->p_user1PageTable = NULL;
 
 	User& u = Kernel::Instance().GetUser();
 	u.u_procp = pProcZero;

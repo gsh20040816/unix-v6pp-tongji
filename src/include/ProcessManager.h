@@ -32,7 +32,7 @@
 #define SwtchUStruct(p) \
 	Machine::Instance().GetKernelPageTable().m_Entrys[Kernel::USER_PAGE_INDEX].m_PageBaseAddress \
 		= (p)->p_addr / PageManager::PAGE_SIZE; \
-	FlushPageDirectory();
+	X86Assembly::FlushPageDirectory((unsigned long)((p)->p_pgDir));
 
 /* 
  * 恢复esp与ebp到u结构的宏，使用宏的理由同SaveU()
@@ -65,7 +65,7 @@ class ProcessManager
 	/* static consts */
 public:
 	static const int NPROC = 100;
-	static const unsigned long PROCESS_ZERO_PPDA_ADDRESS = 0x400000 - 0x1000;
+	static const unsigned long PROCESS_ZERO_PPDA_ADDRESS = 0x400000;
 
 	static const int NTEXT = 50;
 
@@ -182,4 +182,3 @@ public:
 };
 
 #endif
-

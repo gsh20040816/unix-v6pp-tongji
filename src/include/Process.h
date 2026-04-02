@@ -4,6 +4,8 @@
 #include "Text.h"
 #include "TTy.h"
 #include "Regs.h"
+#include "PageDirectory.h"
+#include "PageTable.h"
 
 /*
  * Process类与UNIX V6中进程控制块proc结构对应，这里只改变
@@ -97,6 +99,10 @@ public:
 	int p_sig;			/* 进程信号 */
 	TTy* p_ttyp;		/* 进程tty结构地址 */
 	unsigned long p_sigmap;
+
+	/* 进程私有页表 */
+	PageDirectory* p_pgDir;		/* 页目录，进程私有 */
+	PageTable* p_user1PageTable;	/* 1# 用户页表，进程私有 */
 };
 
 #endif

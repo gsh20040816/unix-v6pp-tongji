@@ -1,6 +1,8 @@
 #include "User.h"
 #include "Kernel.h"
 #include "Utility.h"
+#include "Machine.h"
+#include "Assembly.h"
 
 void User::Setuid()
 {
@@ -67,4 +69,12 @@ bool User::SUser()
 		this->u_error = User::EPERM;
 		return false;
 	}
+}
+
+void User::WritePageTable()
+{
+	Process *p = this->u_procp;
+	Machine& machine = Machine::Instance();
+	machine.WriteUserPageDirectoryEntry(p->p_pgDir, p->p_user1PageTable);
+	X86Assembly::FlushPageDirectory((unsigned long)p->p_pgDir);
 }

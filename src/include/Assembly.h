@@ -9,13 +9,20 @@
  * 指令，完成开/关中断、加载gdt、idt等任务。
 */
 
-/* 刷新页表，在每次对页表进行修改后需要调用，重新缓存页表 */
-#define FlushPageDirectory()	\
-	__asm__ __volatile__(" movl %0, %%cr3" : : "r"(0x200000) );
-
 class X86Assembly
 {
 	public:
+		/* 刷新页表，在每次对页表进行修改后需要调用，重新缓存页表 */
+		static inline void FlushPageDirectory(unsigned long pageDirectoryAddress)
+		{
+			unsigned long pageDirectoryPhysicalAddress = pageDirectoryAddress;
+			if ( pageDirectoryPhysicalAddress >= 0xC0000000 )
+			{
+				pageDirectoryPhysicalAddress -= 0xC0000000;
+			}
+			__asm__ __volatile__("movl %0, %%cr3" : : "r"(pageDirectoryPhysicalAddress));
+		}
+
 		//允许中断
 		static inline void STI()
 		{

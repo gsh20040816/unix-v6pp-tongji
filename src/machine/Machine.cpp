@@ -169,7 +169,7 @@ void Machine::InitPageDirectory()
 	 */
 	PageDirectory* pPageDirectory = (PageDirectory*)(PAGE_DIRECTORY_BASE_ADDRESS + KERNEL_SPACE_START_ADDRESS);
 	
-	/* 填写页目录（0x200#页表）的第0项，使线性地址0-4M映射到物理内存0-4M */
+	/* 若需要，可填写 0#PDE 以访问共享 0# 用户页表；此处由 InitUserPageTable() 负责 */
 	/*
 	pPageDirectory->m_Entrys[0].m_UserSupervisor = 1;                   //用户态
 	pPageDirectory->m_Entrys[0].m_Present = 1;
@@ -177,7 +177,7 @@ void Machine::InitPageDirectory()
 	pPageDirectory->m_Entrys[0].m_PageTableBaseAddress = KERNEL_PAGE_TABLE_BASE_ADDRESS >> 12;
 	*/
 
-	/* 填写页目录（0x200#）页表的第768项，使线性地址0xC0000000-0xC0400000映射到物理内存0-4M。未来核心态空间尺寸大于4M字节，记得这里要改*/
+	/* 填写 0# 进程页目录的核心空间 PDE，使线性地址 0xC0000000-0xC0400000 映射到物理内存 0-4M */
 	unsigned int kPageTableIdx = KERNEL_SPACE_START_ADDRESS / PageTable::SIZE_PER_PAGETABLE_MAP; 
 	pPageDirectory->m_Entrys[kPageTableIdx].m_UserSupervisor = 0;       // 核心态
 	pPageDirectory->m_Entrys[kPageTableIdx].m_Present = 1;
@@ -185,7 +185,7 @@ void Machine::InitPageDirectory()
 	pPageDirectory->m_Entrys[kPageTableIdx].m_PageTableBaseAddress = KERNEL_PAGE_TABLE_BASE_ADDRESS >> 12;
 
 	/* 
-	 * 初始化核心态页表。核心态页表被存放在物理地址
+	 * 初始化共享核心态页表。核心态页表被存放在物理地址
 	 * 0x200000(2M)，所对应线性地址则为0xC0200000
 	 */
 	PageTable* pPageTable = (PageTable*)(KERNEL_PAGE_TABLE_BASE_ADDRESS + KERNEL_SPACE_START_ADDRESS);
@@ -211,35 +211,68 @@ void Machine::InitUserPageTable()
 	PageTable* pUserPageTable = 
 		(PageTable*)(USER_PAGE_TABLE_BASE_ADDRESS + KERNEL_SPACE_START_ADDRESS);
 	unsigned int idx = USER_PAGE_TABLE_BASE_ADDRESS >> 12;
-	
-	for ( unsigned int j = 0; j < USER_PAGE_TABLE_CNT; j++, idx++ )
+
+	/* 0#PDE 指向共享的 0# 用户页表 */
+	pPageDirectory->m_Entrys[0].m_UserSupervisor = 1;
+	pPageDirectory->m_Entrys[0].m_Present = 1;
+	pPageDirectory->m_Entrys[0].m_ReadWriter = 1;
+	pPageDirectory->m_Entrys[0].m_PageTableBaseAddress = idx;
+
+	for ( unsigned int i = 0; i < PageTable::ENTRY_CNT_PER_PAGETABLE; i++ )
 	{
-		pPageDirectory->m_Entrys[j].m_UserSupervisor = 1;
-		pPageDirectory->m_Entrys[j].m_Present = 1;
-		pPageDirectory->m_Entrys[j].m_ReadWriter = 1;
-		/* 
-		 * 页目录项BaseAddress字段中记录页表的物理起始地址，而非线性地址。
-		 * 也就是说，分页机制中经由页目录项BaseAddress字段找下一级页表是
-		 * 根据页表的物理地址找到它。分页机制的运作不依赖分页机制的本身--对线性地址的解析。
-		 */
-		pPageDirectory->m_Entrys[j].m_PageTableBaseAddress = idx;
-		
-		for ( unsigned int i = 0; i < PageTable::ENTRY_CNT_PER_PAGETABLE; i++ )
-		{
-			pUserPageTable[j].m_Entrys[i].m_UserSupervisor = 1;
-			pUserPageTable[j].m_Entrys[i].m_Present = 1;
-			pUserPageTable[j].m_Entrys[i].m_ReadWriter = 1;
-			pUserPageTable[j].m_Entrys[i].m_PageBaseAddress = 0x00000 + i +j * 1024;
-		}
+		pUserPageTable->m_Entrys[i].m_UserSupervisor = 1;
+		pUserPageTable->m_Entrys[i].m_Present = 1;
+		pUserPageTable->m_Entrys[i].m_ReadWriter = 1;
+		pUserPageTable->m_Entrys[i].m_PageBaseAddress = i;
 	}
 
 	this->m_UserPageTable = pUserPageTable;	
 }
 
+void Machine::WriteUserPageDirectoryEntry(PageDirectory* pPageDirectory, PageTable* pUser1PageTable)
+{
+	PageTable* pUser0PageTable = &(this->m_UserPageTable[0]);
+	unsigned long user0PageTablePhysicalAddress =
+		((unsigned long)pUser0PageTable - KERNEL_SPACE_START_ADDRESS) >> 12;
+	unsigned int kernelPageTableIdx =
+		KERNEL_SPACE_START_ADDRESS / PageTable::SIZE_PER_PAGETABLE_MAP;
+
+	/* 0#PDE 指向共享的 0# 用户页表 */
+	pPageDirectory->m_Entrys[0].m_UserSupervisor = 1;
+	pPageDirectory->m_Entrys[0].m_Present = 1;
+	pPageDirectory->m_Entrys[0].m_ReadWriter = 1;
+	pPageDirectory->m_Entrys[0].m_PageTableBaseAddress = user0PageTablePhysicalAddress;
+
+	/* 1#PDE 指向进程私有的 1# 用户页表；0# 进程没有这张表 */
+	if ( pUser1PageTable != 0 )
+	{
+		unsigned long user1PageTablePhysicalAddress =
+			((unsigned long)pUser1PageTable - KERNEL_SPACE_START_ADDRESS) >> 12;
+		pPageDirectory->m_Entrys[1].m_UserSupervisor = 1;
+		pPageDirectory->m_Entrys[1].m_Present = 1;
+		pPageDirectory->m_Entrys[1].m_ReadWriter = 1;
+		pPageDirectory->m_Entrys[1].m_PageTableBaseAddress = user1PageTablePhysicalAddress;
+	}
+	else
+	{
+		pPageDirectory->m_Entrys[1].m_Present = 0;
+		pPageDirectory->m_Entrys[1].m_ReadWriter = 0;
+		pPageDirectory->m_Entrys[1].m_UserSupervisor = 1;
+		pPageDirectory->m_Entrys[1].m_PageTableBaseAddress = 0;
+	}
+
+	/* 核心空间 PDE 指向共享核心页表 */
+	pPageDirectory->m_Entrys[kernelPageTableIdx].m_UserSupervisor = 0;
+	pPageDirectory->m_Entrys[kernelPageTableIdx].m_Present = 1;
+	pPageDirectory->m_Entrys[kernelPageTableIdx].m_ReadWriter = 1;
+	pPageDirectory->m_Entrys[kernelPageTableIdx].m_PageTableBaseAddress =
+		KERNEL_PAGE_TABLE_BASE_ADDRESS >> 12;
+}
+
 void Machine::InitTaskStateSegment()
 {
 	TaskStateSegment& tss = this->GetTaskStateSegment();
-	tss.m_CR3 = 0x200000;	/* Physical base address of page directory */
+	tss.m_CR3 = PAGE_DIRECTORY_BASE_ADDRESS;	/* 0# 进程页目录的物理基址 */
 	tss.m_CS = Machine::USER_CODE_SEGMENT_SELECTOR;
 	tss.m_DS = Machine::USER_DATA_SEGMENT_SELECTOR;
 	tss.m_SS = Machine::USER_DATA_SEGMENT_SELECTOR;
@@ -275,8 +308,8 @@ void Machine::EnablePageProtection()
 	 * pageDirBaseAddr是在高位内核空间的线性地址，需要转换为物理地址。
 	 * PhysicalAddress = LinearAddress - 0xC0000000
 	 */
-	unsigned int pageDirBaseAddr = (unsigned int)(&GetPageDirectory());
-	unsigned int pageDirPhyBaseAddr = pageDirBaseAddr - Machine::KERNEL_SPACE_START_ADDRESS;
+	unsigned long pageDirBaseAddr = (unsigned long)(&GetPageDirectory());
+	unsigned long pageDirPhyBaseAddr = pageDirBaseAddr - Machine::KERNEL_SPACE_START_ADDRESS;
 	
 	/* 寄存器CR3中写入页目录起始物理地址，CR0的PG位置1，开启分页机制 */
 	__asm__ __volatile__("	movl %0, %%cr3;		\
@@ -314,5 +347,3 @@ TaskStateSegment& Machine::GetTaskStateSegment()
 {
 	return *(this->m_TaskStateSegment);
 }
-
-

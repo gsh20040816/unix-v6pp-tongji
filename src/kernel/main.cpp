@@ -215,8 +215,8 @@ extern "C" void next()
 	}
 	else               /* 1#进程执行应用程序shell.exe,是普通进程  */
 	{
-		Machine::Instance().InitUserPageTable();      //这是直接写0x202,0x203页表，没相对虚实地址映射表一样okay！
-		FlushPageDirectory();
+		Machine::Instance().InitUserPageTable();      // 初始化共享 0# 用户页表
+		X86Assembly::FlushPageDirectory((unsigned long)(&Machine::Instance().GetPageDirectory()));
 
 		CRT::ClearScreen();
 
@@ -225,5 +225,3 @@ extern "C" void next()
 		__asm__ __volatile__ ("call *%%eax" :: "a"((unsigned long)ExecShell - 0xC0000000));   //要访问用户栈，所以一定要有映射！
 	}
 }
-
-

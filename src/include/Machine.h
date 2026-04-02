@@ -26,10 +26,10 @@ public:
 	static const unsigned int TASK_STATE_SEGMENT_SELECTOR = 0x28;
 	static const unsigned int TASK_STATE_SEGMENT_IDX = 0x5;	/* TSS段描述符在GDT中的位置 */
 
-	/* 页目录、核心态页表、用户态页表在物理内存中的起始地址 */
-	static const unsigned long PAGE_DIRECTORY_BASE_ADDRESS = 0x200000;
-	static const unsigned long KERNEL_PAGE_TABLE_BASE_ADDRESS = 0x201000;
-	static const unsigned long USER_PAGE_TABLE_BASE_ADDRESS = 0x202000;
+	/* 固定页表布局：0x200 共享核心页表，0x201 共享 0# 用户页表，0x202 为 0# 进程页目录 */
+	static const unsigned long KERNEL_PAGE_TABLE_BASE_ADDRESS = 0x200000;
+	static const unsigned long USER_PAGE_TABLE_BASE_ADDRESS = 0x201000;
+	static const unsigned long PAGE_DIRECTORY_BASE_ADDRESS = 0x202000;
 	static const unsigned long USER_PAGE_TABLE_CNT = 2;
 	
 	/* 内核空间大小 4M 0xC0000000 - 0xC0400000 1 PageTable */
@@ -48,6 +48,7 @@ public:
 	void InitUserPageTable();
 	void InitTaskStateSegment();
 	void EnablePageProtection();
+	void WriteUserPageDirectoryEntry(PageDirectory* pPageDirectory, PageTable* pUser1PageTable); /* 按实验文档填写进程私有页目录 */
 	
 	/* property functions */
 public:
@@ -55,8 +56,7 @@ public:
 	GDT& GetGDT();						/* 获取当前正在使用的GDT */
 	PageDirectory& GetPageDirectory();	/* 获取当前正在使用的页目录表 */
 	PageTable& GetKernelPageTable();	/* 获取操作系统内核所使用的页表，用于map 0xc0000000以上地址 */
-	PageTable* GetUserPageTableArray();	/* 获取用户进程页表，共两张，被映射在0x202000和0x203000上，
-										    映射0x00000000 - 0x00800000用户态地址空间 */
+	PageTable* GetUserPageTableArray();	/* 获取共享的 0# 用户页表，位于 0x201000 */
 	TaskStateSegment& GetTaskStateSegment();
 	
 private:

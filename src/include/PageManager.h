@@ -58,12 +58,13 @@ class KernelPageManager : public PageManager
 {
 public:
 	/* 
-	 * 物理地址 0x200000 被用于PageDirectory, 
-	 * 物理地址 0x201000 被用于内核页表, 
-	 * 物理地址 0x202000 与 0x203000 用于用户程序页表.
+	 * 物理地址 0x200000 被用于共享核心页表，
+	 * 物理地址 0x201000 被用于共享 0# 用户页表，
+	 * 物理地址 0x202000 被用于 0# 进程页目录，
+	 * 0x203000 起用于普通进程的页目录和私有 1# 用户页表。
 	 */
-	static const unsigned int KERNEL_PAGE_POOL_START_ADDR = 0x200000 + 0x2000 + 0x2000;
-	static const unsigned int KERNEL_PAGE_POOL_SIZE = 0x200000 - 0x4000;
+	static const unsigned int KERNEL_PAGE_POOL_START_ADDR = 0x203000;
+	static const unsigned int KERNEL_PAGE_POOL_SIZE = 0x200000 - 0x3000;
 
 public:
 	KernelPageManager(Allocator* allocator);
