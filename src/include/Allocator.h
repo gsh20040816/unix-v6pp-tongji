@@ -15,6 +15,8 @@ class Allocator
 public:
 	unsigned long Alloc(MapNode map[], unsigned long size);
 	unsigned long Free(MapNode map[], unsigned long size, unsigned long addrIdx);
+	unsigned long AllocCheckedOneUnit(MapNode map[], unsigned long size);
+	unsigned long FreeCheckedOneUnit(MapNode map[], unsigned long size, unsigned long addrIdx);
 
 public:
 	static Allocator& GetInstance();

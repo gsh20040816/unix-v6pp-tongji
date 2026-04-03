@@ -21,6 +21,19 @@ EOF
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ssh_win="$script_dir/tools/ssh-win.sh"
+build_cache_dir="$script_dir/.build-cache"
+fingerprint_file="$build_cache_dir/build-inputs.sha1"
+
+compute_build_fingerprint() {
+  local source_root="$script_dir/src"
+
+  LC_ALL=C find "$source_root" -type f \
+    \( -name '*.h' -o -name '*.inc' -o -name '[Mm]akefile' \) -print0 \
+    | LC_ALL=C sort -z \
+    | xargs -0 sha1sum \
+    | sha1sum \
+    | awk '{print $1}'
+}
 
 ensure_fs_edit_tools() {
   local workspace="$script_dir/tools/v6pp-fs-edit-2022/workspace"
@@ -66,13 +79,46 @@ fi
 
 remote_repo="${OOS_WIN_REPO:-Z:\\UNIX V6++V1\\oos}"
 remote_tools="${remote_repo}\\tools"
-remote_command="${OOS_WIN_BUILD_COMMAND:-cd /d ${remote_tools} && call oosvars_mingw.bat && call all.bat}"
+default_remote_command="cd /d ${remote_tools} && call oosvars_mingw.bat && call all.bat"
+remote_command="${OOS_WIN_BUILD_COMMAND:-$default_remote_command}"
+user_provided_command=false
+env_provided_command=false
+force_clean=false
+current_fingerprint=""
+
+if [[ -n "${OOS_WIN_BUILD_COMMAND:-}" ]]; then
+  env_provided_command=true
+fi
 
 if (($# > 0)); then
   remote_command="$*"
+  user_provided_command=true
+fi
+
+if [[ "$user_provided_command" == false && "$env_provided_command" == false ]]; then
+  current_fingerprint="$(compute_build_fingerprint)"
+  previous_fingerprint=""
+  if [[ -f "$fingerprint_file" ]]; then
+    previous_fingerprint="$(cat "$fingerprint_file")"
+  fi
+
+  if [[ "$current_fingerprint" != "$previous_fingerprint" ]]; then
+    force_clean=true
+    remote_command="cd /d ${remote_tools} && call oosvars_mingw.bat && call clean.bat && call all.bat"
+    echo "Detected header/makefile changes, forcing clean rebuild."
+  fi
 fi
 
 ensure_fs_edit_tools
 
 echo "Building on Windows host ${OOS_WIN_HOST:-win}"
-exec "$ssh_win" "cmd.exe /c \"$remote_command\""
+if "$ssh_win" "cmd.exe /c \"$remote_command\""; then
+  if [[ "$force_clean" == true ]]; then
+    mkdir -p "$build_cache_dir"
+    printf '%s\n' "$current_fingerprint" > "$fingerprint_file"
+  fi
+  exit 0
+else
+  build_status=$?
+  exit $build_status
+fi

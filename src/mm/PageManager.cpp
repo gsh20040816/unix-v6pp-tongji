@@ -21,14 +21,24 @@ int PageManager::Initialize()
 
 unsigned long PageManager::AllocMemory(unsigned long size)
 {
-	return this->m_pAllocator->Alloc(this->map, 
-				(size + (PAGE_SIZE -1)) / PAGE_SIZE ) * PAGE_SIZE;
+	if ( size == 0 )
+	{
+		return 0;
+	}
+
+	unsigned long pageCount = (size + (PAGE_SIZE - 1)) / PAGE_SIZE;
+	return this->m_pAllocator->AllocCheckedOneUnit(this->map, pageCount) * PAGE_SIZE;
 }
 
 unsigned long PageManager::FreeMemory(unsigned long size, unsigned long startAddress)
 {
-	return this->m_pAllocator->Free(this->map, 
-				(size + (PAGE_SIZE -1)) / PAGE_SIZE, startAddress / PAGE_SIZE);
+	if ( size == 0 || startAddress == 0 )
+	{
+		return 0;
+	}
+
+	unsigned long pageCount = (size + (PAGE_SIZE - 1)) / PAGE_SIZE;
+	return this->m_pAllocator->FreeCheckedOneUnit(this->map, pageCount, startAddress / PAGE_SIZE);
 }
 
 PageManager::~PageManager()

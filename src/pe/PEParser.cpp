@@ -4,8 +4,76 @@
 #include "MemoryDescriptor.h"
 #include "User.h"
 #include "Kernel.h"
-#include "Machine.h"
 #include "Video.h"
+
+namespace
+{
+	static unsigned int BytesToPageCount(unsigned long size)
+	{
+		if ( size == 0 )
+		{
+			return 0;
+		}
+		return (unsigned int)((size + PageManager::PAGE_SIZE - 1) / PageManager::PAGE_SIZE);
+	}
+
+	static unsigned long AllocContiguousPages(KernelPageManager& pageManager, unsigned int pageCount)
+	{
+		if ( pageCount == 0 )
+		{
+			return 0;
+		}
+
+		unsigned long base = 0;
+		for ( unsigned int i = 0; i < pageCount; ++i )
+		{
+			unsigned long page = pageManager.AllocMemory(PageManager::PAGE_SIZE);
+			if ( page == 0 )
+			{
+				if ( base != 0 )
+				{
+					for ( unsigned int j = 0; j < i; ++j )
+					{
+						pageManager.FreeMemory(PageManager::PAGE_SIZE,
+							base + j * PageManager::PAGE_SIZE);
+					}
+				}
+				return 0;
+			}
+
+			if ( i == 0 )
+			{
+				base = page;
+			}
+			else if ( page != base + i * PageManager::PAGE_SIZE )
+			{
+				pageManager.FreeMemory(PageManager::PAGE_SIZE, page);
+				for ( unsigned int j = 0; j < i; ++j )
+				{
+					pageManager.FreeMemory(PageManager::PAGE_SIZE,
+						base + j * PageManager::PAGE_SIZE);
+				}
+				return 0;
+			}
+		}
+
+		return base;
+	}
+
+	static void FreeContiguousPages(KernelPageManager& pageManager, unsigned long base, unsigned int pageCount)
+	{
+		if ( base == 0 || pageCount == 0 )
+		{
+			return;
+		}
+
+		for ( unsigned int i = 0; i < pageCount; ++i )
+		{
+			pageManager.FreeMemory(PageManager::PAGE_SIZE,
+				base + i * PageManager::PAGE_SIZE);
+		}
+	}
+}
 
 PEParser::PEParser()
 {
@@ -77,11 +145,15 @@ unsigned int PEParser::Relocate(Inode* p_inode, int sharedText)
 	Diagnose::Write("Section initialize finished. i=%d\n",i);
 
 	/* 读正文段（optional）；读文件，得全局变量的初值  */
- 	if(sharedText == 1)
+	if ( sharedText == 1 )
+	{
 		i = 1;      // i是段头索引
+	}
 	else
-	// 修改正文段的读写标志，为内核写代码段做准备
+	{
+		// 修改正文段的读写标志，为内核写代码段做准备
 		i = 0;
+	}
 
 	for ( ; i <= lastDataSectionIdx; i++ )
 	{
@@ -122,7 +194,11 @@ unsigned int PEParser::Relocate(Inode* p_inode, int sharedText)
 	}
 
 	KernelPageManager& kpm = Kernel::Instance().GetKernelPageManager();
-	kpm.FreeMemory(PageManager::PAGE_SIZE * 2, (unsigned long)this->sectionHeaders - 0xC0000000 );
+	unsigned int sectionHeaderPageCount =
+		BytesToPageCount(section_size * ntHeader.FileHeader.NumberOfSections);
+	FreeContiguousPages(kpm,
+		(unsigned long)this->sectionHeaders - 0xC0000000,
+		sectionHeaderPageCount);
 //	kpm.FreeMemory(section_size * ntHeader.FileHeader.NumberOfSections, (unsigned long)this->sectionHeaders - 0xC0000000 );
 //	delete this->sectionHeaders;
 	return 	cnt;
@@ -178,7 +254,14 @@ bool PEParser::HeaderLoad(Inode* p_inode)
      * sectionHeaders = new ImageSectionHeader;
      * */
     //sectionHeaders = (ImageSectionHeader*)(kpm.AllocMemory(section_size * ntHeader.FileHeader.NumberOfSections)+0xC0000000);
-    sectionHeaders = (ImageSectionHeader*)(kpm.AllocMemory(PageManager::PAGE_SIZE * 2) + 0xC0000000);
+	unsigned int sectionHeaderPageCount =
+		BytesToPageCount(section_size * ntHeader.FileHeader.NumberOfSections);
+	unsigned long sectionHeadersPhysical = AllocContiguousPages(kpm, sectionHeaderPageCount);
+	if ( sectionHeadersPhysical == 0 )
+	{
+		return false;
+	}
+    sectionHeaders = (ImageSectionHeader*)(sectionHeadersPhysical + 0xC0000000);
     u.u_IOParam.m_Base = (unsigned char*)sectionHeaders;
     u.u_IOParam.m_Offset = dos_header.e_lfanew + ntHeader_size;
     u.u_IOParam.m_Count = section_size * ntHeader.FileHeader.NumberOfSections;

@@ -1,4 +1,5 @@
 #include "Allocator.h"
+#include "Utility.h"
 
 Allocator Allocator::m_Instance;
 
@@ -100,5 +101,23 @@ unsigned long Allocator::Free(MapNode map[], unsigned long size, unsigned long a
 		}
 	}
 	return 0;
+}
+
+unsigned long Allocator::AllocCheckedOneUnit(MapNode map[], unsigned long size)
+{
+	if ( size != 1 )
+	{
+		Utility::Panic("Page allocator only supports single-page allocations");
+	}
+	return this->Alloc(map, size);
+}
+
+unsigned long Allocator::FreeCheckedOneUnit(MapNode map[], unsigned long size, unsigned long addrIdx)
+{
+	if ( size != 1 )
+	{
+		Utility::Panic("Page allocator only supports single-page frees");
+	}
+	return this->Free(map, size, addrIdx);
 }
 

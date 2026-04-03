@@ -14,6 +14,72 @@ namespace
 {
 	static int g_NewProcTraceCount = 0;
 
+	static unsigned int BytesToPageCount(unsigned long size)
+	{
+		if ( size == 0 )
+		{
+			return 0;
+		}
+		return (unsigned int)((size + PageManager::PAGE_SIZE - 1) / PageManager::PAGE_SIZE);
+	}
+
+	static unsigned long AllocContiguousPages(PageManager& pageManager, unsigned int pageCount)
+	{
+		if ( pageCount == 0 )
+		{
+			return 0;
+		}
+
+		unsigned long base = 0;
+		for ( unsigned int i = 0; i < pageCount; ++i )
+		{
+			unsigned long page = pageManager.AllocMemory(PageManager::PAGE_SIZE);
+			if ( page == 0 )
+			{
+				if ( base != 0 )
+				{
+					for ( unsigned int j = 0; j < i; ++j )
+					{
+						pageManager.FreeMemory(PageManager::PAGE_SIZE,
+							base + j * PageManager::PAGE_SIZE);
+					}
+				}
+				return 0;
+			}
+
+			if ( i == 0 )
+			{
+				base = page;
+			}
+			else if ( page != base + i * PageManager::PAGE_SIZE )
+			{
+				pageManager.FreeMemory(PageManager::PAGE_SIZE, page);
+				for ( unsigned int j = 0; j < i; ++j )
+				{
+					pageManager.FreeMemory(PageManager::PAGE_SIZE,
+						base + j * PageManager::PAGE_SIZE);
+				}
+				return 0;
+			}
+		}
+
+		return base;
+	}
+
+	static void FreeContiguousPages(PageManager& pageManager, unsigned long base, unsigned int pageCount)
+	{
+		if ( base == 0 || pageCount == 0 )
+		{
+			return;
+		}
+
+		for ( unsigned int i = 0; i < pageCount; ++i )
+		{
+			pageManager.FreeMemory(PageManager::PAGE_SIZE,
+				base + i * PageManager::PAGE_SIZE);
+		}
+	}
+
 	static void DumpProcBrief(const char* tag, Process* p)
 	{
 		if ( p == NULL )
@@ -438,7 +504,19 @@ void ProcessManager::Exec()
 	 */
 	//unsigned long fakeStack = kernelPgMgr.AllocMemory(parser.StackSize);
 	int allocLength = (parser.StackSize + PageManager::PAGE_SIZE * 2 - 1) >> 13 << 13;
-	unsigned long fakeStack = kernelPgMgr.AllocMemory(allocLength);
+	unsigned int fakeStackPageCount = BytesToPageCount(allocLength);
+	unsigned long fakeStack = AllocContiguousPages(kernelPgMgr, fakeStackPageCount);
+	if ( fakeStack == 0 )
+	{
+		fileMgr.m_InodeTable->IPut(pInode);
+		if ( this->ExeCnt >= NEXEC )
+		{
+			WakeUpAll((unsigned long)&ExeCnt);
+		}
+		this->ExeCnt--;
+		u.u_error = User::ENOMEM;
+		return;
+	}
 
 	int argc = u.u_arg[1];
 	char** argv = (char **)u.u_arg[2];
@@ -502,8 +580,13 @@ void ProcessManager::Exec()
 			parser.DataSize,
 			parser.StackSize) == false )
 	{
-		kernelPgMgr.FreeMemory(allocLength, fakeStack);
+		FreeContiguousPages(kernelPgMgr, fakeStack, fakeStackPageCount);
 		fileMgr.m_InodeTable->IPut(pInode);
+		if ( this->ExeCnt >= NEXEC )
+		{
+			WakeUpAll((unsigned long)&ExeCnt);
+		}
+		this->ExeCnt--;
 		u.u_error = User::ENOMEM;
 		return;
 	}
@@ -552,14 +635,32 @@ void ProcessManager::Exec()
 		 * 则会错误地判断：pInode (当前exe对应Inode) == this->text[i].x_iptr(之前exe文件Inode)，
 		 * 导致和之前进程共享同一Text结构，即同一正文段，而实际上本该是两个独立的程序。
 		 */
-		pInode->i_count++;
-
 		pText->x_ccount = 1;
 		pText->x_count = 1;
-		pText->x_iptr = pInode;
 		pText->x_size = u.u_procp->p_memory.GetCodeSize();
 		/* 为正文段分配内存，而具体正文段内容的读入需要等到建立页表映射之后，再从mapAddress地址起始的exe文件中读入 */
-		pText->x_caddr = userPgMgr.AllocMemory(pText->x_size);
+		unsigned int textPageCount = BytesToPageCount(pText->x_size);
+		pText->x_caddr = AllocContiguousPages(userPgMgr, textPageCount);
+		if ( pText->x_caddr == 0 )
+		{
+			pText->x_ccount = 0;
+			pText->x_count = 0;
+			pText->x_size = 0;
+			pText->x_daddr = 0;
+			u.u_procp->p_textp = NULL;
+			FreeContiguousPages(kernelPgMgr, fakeStack, fakeStackPageCount);
+			fileMgr.m_InodeTable->IPut(pInode);
+			if ( this->ExeCnt >= NEXEC )
+			{
+				WakeUpAll((unsigned long)&ExeCnt);
+			}
+			this->ExeCnt--;
+			u.u_error = User::ENOMEM;
+			return;
+		}
+
+		pInode->i_count++;
+		pText->x_iptr = pInode;
 		pText->x_daddr = 0;
 		/* 建立u区和Text结构的勾连关系 */
 		u.u_procp->p_textp = pText;
@@ -597,7 +698,7 @@ void ProcessManager::Exec()
 	Utility::MemCopy(fakeStack + allocLength - parser.StackSize | 0xC0000000,
 		MemoryDescriptor::USER_SPACE_SIZE - parser.StackSize, parser.StackSize);
 	/* 释放用于读入exe文件和备份用户栈参数的内存：mapAddress和fakeStack */
-	kernelPgMgr.FreeMemory(allocLength, fakeStack);
+	FreeContiguousPages(kernelPgMgr, fakeStack, fakeStackPageCount);
 
 	/* 
 	  * 将runtime()、SignalHandler()函数拷贝到进程用户态地址空间0x00000000线性地址处，runtime()

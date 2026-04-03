@@ -2,10 +2,82 @@
 #include "Kernel.h"
 #include "Machine.h"
 #include "Process.h"
-#include "ProcessManager.h"
 #include "Utility.h"
 #include "Video.h"
 #include "Assembly.h"
+
+namespace
+{
+	static unsigned int BytesToPageCount(unsigned long size)
+	{
+		if ( size == 0 )
+		{
+			return 0;
+		}
+		return (unsigned int)((size + PageManager::PAGE_SIZE - 1) / PageManager::PAGE_SIZE);
+	}
+
+	static unsigned long AllocContiguousPages(KernelPageManager& pageManager, unsigned long size)
+	{
+		unsigned int pageCount = BytesToPageCount(size);
+		if ( pageCount == 0 )
+		{
+			return 0;
+		}
+
+		unsigned long base = 0;
+		for ( unsigned int i = 0; i < pageCount; ++i )
+		{
+			unsigned long page = pageManager.AllocMemory(PageManager::PAGE_SIZE);
+			if ( page == 0 )
+			{
+				if ( base != 0 )
+				{
+					for ( unsigned int j = 0; j < i; ++j )
+					{
+						pageManager.FreeMemory(PageManager::PAGE_SIZE,
+							base + j * PageManager::PAGE_SIZE);
+					}
+				}
+				return 0;
+			}
+
+			if ( i == 0 )
+			{
+				base = page;
+			}
+			else if ( page != base + i * PageManager::PAGE_SIZE )
+			{
+				pageManager.FreeMemory(PageManager::PAGE_SIZE, page);
+				for ( unsigned int j = 0; j < i; ++j )
+				{
+					pageManager.FreeMemory(PageManager::PAGE_SIZE,
+						base + j * PageManager::PAGE_SIZE);
+				}
+				return 0;
+			}
+		}
+
+		return base;
+	}
+
+	static void FreeContiguousPages(KernelPageManager& pageManager,
+		unsigned long base,
+		unsigned long size)
+	{
+		unsigned int pageCount = BytesToPageCount(size);
+		if ( base == 0 || pageCount == 0 )
+		{
+			return;
+		}
+
+		for ( unsigned int i = 0; i < pageCount; ++i )
+		{
+			pageManager.FreeMemory(PageManager::PAGE_SIZE,
+				base + i * PageManager::PAGE_SIZE);
+		}
+	}
+}
 
 MemoryDescriptor::MemoryDescriptor()
 {
@@ -130,7 +202,7 @@ void MemoryDescriptor::Initialize()
 
 	if ( this->m_PageDirectory == NULL )
 	{
-		unsigned long pageDirectory = kernelPageManager.AllocMemory(sizeof(PageDirectory));
+		unsigned long pageDirectory = AllocContiguousPages(kernelPageManager, sizeof(PageDirectory));
 		if ( pageDirectory == 0 )
 		{
 			Utility::Panic("Out of kernel memory for page directory");
@@ -140,7 +212,8 @@ void MemoryDescriptor::Initialize()
 
 	if ( this->m_UserPageTableArray == NULL )
 	{
-		unsigned long pageTables = kernelPageManager.AllocMemory(sizeof(PageTable) * USER_PRIVATE_PAGE_TABLE_CNT);
+		unsigned long pageTables = AllocContiguousPages(kernelPageManager,
+			sizeof(PageTable) * USER_PRIVATE_PAGE_TABLE_CNT);
 		if ( pageTables == 0 )
 		{
 			Utility::Panic("Out of kernel memory for user page tables");
@@ -150,7 +223,8 @@ void MemoryDescriptor::Initialize()
 
 	if ( this->m_Regions == NULL )
 	{
-		unsigned long regions = kernelPageManager.AllocMemory(sizeof(Region) * MAX_REGION_COUNT);
+		unsigned long regions = AllocContiguousPages(kernelPageManager,
+			sizeof(Region) * MAX_REGION_COUNT);
 		if ( regions == 0 )
 		{
 			Utility::Panic("Out of kernel memory for regions");
@@ -160,7 +234,8 @@ void MemoryDescriptor::Initialize()
 
 	if ( this->m_PageInfos == NULL )
 	{
-		unsigned long pageInfos = kernelPageManager.AllocMemory(sizeof(PageInfo) * USER_PAGE_COUNT);
+		unsigned long pageInfos = AllocContiguousPages(kernelPageManager,
+			sizeof(PageInfo) * USER_PAGE_COUNT);
 		if ( pageInfos == 0 )
 		{
 			Utility::Panic("Out of kernel memory for page infos");
@@ -189,29 +264,33 @@ void MemoryDescriptor::Release()
 
 	if ( this->m_UserPageTableArray != NULL )
 	{
-		kernelPageManager.FreeMemory(sizeof(PageTable) * USER_PRIVATE_PAGE_TABLE_CNT,
-			(unsigned long)this->m_UserPageTableArray - Machine::KERNEL_SPACE_START_ADDRESS);
+		FreeContiguousPages(kernelPageManager,
+			(unsigned long)this->m_UserPageTableArray - Machine::KERNEL_SPACE_START_ADDRESS,
+			sizeof(PageTable) * USER_PRIVATE_PAGE_TABLE_CNT);
 		this->m_UserPageTableArray = NULL;
 	}
 
 	if ( this->m_PageDirectory != NULL )
 	{
-		kernelPageManager.FreeMemory(sizeof(PageDirectory),
-			(unsigned long)this->m_PageDirectory - Machine::KERNEL_SPACE_START_ADDRESS);
+		FreeContiguousPages(kernelPageManager,
+			(unsigned long)this->m_PageDirectory - Machine::KERNEL_SPACE_START_ADDRESS,
+			sizeof(PageDirectory));
 		this->m_PageDirectory = NULL;
 	}
 
 	if ( this->m_Regions != NULL )
 	{
-		kernelPageManager.FreeMemory(sizeof(Region) * MAX_REGION_COUNT,
-			(unsigned long)this->m_Regions - Machine::KERNEL_SPACE_START_ADDRESS);
+		FreeContiguousPages(kernelPageManager,
+			(unsigned long)this->m_Regions - Machine::KERNEL_SPACE_START_ADDRESS,
+			sizeof(Region) * MAX_REGION_COUNT);
 		this->m_Regions = NULL;
 	}
 
 	if ( this->m_PageInfos != NULL )
 	{
-		kernelPageManager.FreeMemory(sizeof(PageInfo) * USER_PAGE_COUNT,
-			(unsigned long)this->m_PageInfos - Machine::KERNEL_SPACE_START_ADDRESS);
+		FreeContiguousPages(kernelPageManager,
+			(unsigned long)this->m_PageInfos - Machine::KERNEL_SPACE_START_ADDRESS,
+			sizeof(PageInfo) * USER_PAGE_COUNT);
 		this->m_PageInfos = NULL;
 	}
 
