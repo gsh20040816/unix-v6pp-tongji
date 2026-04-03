@@ -264,6 +264,8 @@ void Exception::PageFaultEntrance()
 	RestoreContext();		
 							
 	Leave();				
+
+	__asm__ __volatile__("addl $4, %%esp" ::);
 							
 	InterruptReturn();		
 }
@@ -277,17 +279,39 @@ void Exception::PageFault(struct pt_regs* regs, struct pte_context* context)
 	unsigned int cr2;
 	__asm__ __volatile__(" mov %%cr2, %0":"=r"(cr2) );
 
+	bool isUserMode = (context->xcs & USER_MODE) == USER_MODE;
+	bool pageNotPresent = (context->error_code & 0x1) == 0;
+	bool isUserAddress = cr2 < MemoryDescriptor::USER_SPACE_END;
+	unsigned long stackPointer = md.GetStackTop();
+
+	if ( isUserMode )
+	{
+		stackPointer = context->esp;
+	}
+	else if ( u.u_arg[4] != 0 )
+	{
+		pt_context* userContext = (pt_context*)u.u_arg[4];
+		if ( userContext->xcs == Machine::USER_CODE_SEGMENT_SELECTOR &&
+			userContext->xss == Machine::USER_DATA_SEGMENT_SELECTOR )
+		{
+			stackPointer = userContext->esp;
+		}
+	}
+
     /*由缺页异常处理程序每次扩展一页，如果合理的缺了多张堆栈页面，那就多执行几次缺页异常，直到把这些页面补齐*/
-	if( (context->xcs & USER_MODE) == USER_MODE)
+	if ( pageNotPresent && isUserAddress &&
+		md.HandlePageFault(cr2, stackPointer, isUserMode) )
+	{
+		return;
+	}
+
+	if( isUserMode )
 	{
 		Diagnose::Write("Page Fault in user Mode,CR2=%x\n",cr2);
-		if ( md.HandlePageFault(cr2, context->esp, true) == false )
-		{
-			Diagnose::Write("Invalid MM access\n");
-			current -> PSignal(User::SIGSEGV);
-			if ( current->IsSig() )
-				current->PSig( (pt_context *)&context->eip );
-		}
+		Diagnose::Write("Invalid MM access\n");
+		current -> PSignal(User::SIGSEGV);
+		if ( current->IsSig() )
+			current->PSig( (pt_context *)&context->eip );
 	}
 	else
 	{

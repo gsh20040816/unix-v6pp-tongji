@@ -279,21 +279,17 @@ int TTy::PassC(char ch)
 
 char TTy::CPass()
 {
-	char ch;
 	User& u = Kernel::Instance().GetUser();
 
-	ch = *(u.u_IOParam.m_Base++);
-	if ( u.u_IOParam.m_Count > 0 )
-	{
-		u.u_IOParam.m_Count--;
-		//u.u_IOParam.m_Offset++;
-		return ch;
-	}
-	else
+	if ( u.u_IOParam.m_Count <= 0 )
 	{
 		return -1;
 	}
-}
 
+	char ch = *(u.u_IOParam.m_Base++);
+	u.u_IOParam.m_Count--;
+	//u.u_IOParam.m_Offset++;
+	return ch;
+}
 
 

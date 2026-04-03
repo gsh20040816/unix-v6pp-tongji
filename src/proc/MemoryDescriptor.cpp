@@ -388,7 +388,7 @@ bool MemoryDescriptor::CheckUserSpace() const
 
 bool MemoryDescriptor::HandlePageFault(unsigned long faultAddress, unsigned long stackPointer, bool isUserMode)
 {
-	if ( isUserMode == false )
+	if ( faultAddress >= USER_SPACE_END )
 	{
 		return false;
 	}
@@ -396,6 +396,10 @@ bool MemoryDescriptor::HandlePageFault(unsigned long faultAddress, unsigned long
 	Region* region = this->FindRegion(faultAddress);
 	Region* stack = this->FindRegionByType(REGION_STACK);
 
+	/*
+	 * 无论缺页发生在用户态还是内核态，只要访问的是当前进程用户地址空间中的合法地址，
+	 * 都允许 MemoryDescriptor 负责补页。内核态常见于系统调用中直接拷贝用户缓冲区。
+	 */
 	if ( region == NULL && stack != NULL &&
 		faultAddress >= stackPointer - 8 && faultAddress < stack->start )
 	{

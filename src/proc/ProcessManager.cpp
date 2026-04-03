@@ -571,23 +571,11 @@ void ProcessManager::Exec()
         return;
     }
 
- 	/* 获取分析PE头结构得到正文段的起始地址、长度 */
-	if ( u.u_procp->p_memory.ConfigureExecutableLayout(parser.EntryPointAddress,
-			parser.TextAddress,
-			parser.TextSize,
-			parser.DataAddress,
-			parser.DataSize,
-			parser.StackSize) == false )
-	{
-		fileMgr.m_InodeTable->IPut(pInode);
-		u.u_error = User::ENOMEM;
-		return;
-	}
-
 	/* 
 	 * 分配内存用于存放用户程序运行需要的参数argc，argv[]，这些参数由exec()系统调用传入，
 	 * 位于进程图像改换前的用户栈中，将参数备份到fakeStack中，然后可以释放原进程图像，
 	 * 分配好新进程图像之后，再将fakeStack中的备份参数拷贝到新进程的用户栈中。
+	 * 注意：这里必须在ConfigureExecutableLayout()之前完成参数备份，否则旧用户栈映射会被清空。
 	 */
 	//unsigned long fakeStack = kernelPgMgr.AllocMemory(parser.StackSize);
 	int allocLength = (parser.StackSize + PageManager::PAGE_SIZE * 2 - 1) >> 13 << 13;
@@ -646,6 +634,20 @@ void ProcessManager::Exec()
 	desAddress -= sizeof(int);
 	esp -= sizeof(int);
 	Utility::MemCopy((unsigned long)&argc, desAddress, sizeof(int));	/* Done! */
+
+	/* 获取分析PE头结构得到正文段的起始地址、长度 */
+	if ( u.u_procp->p_memory.ConfigureExecutableLayout(parser.EntryPointAddress,
+			parser.TextAddress,
+			parser.TextSize,
+			parser.DataAddress,
+			parser.DataSize,
+			parser.StackSize) == false )
+	{
+		kernelPgMgr.FreeMemory(allocLength, fakeStack);
+		fileMgr.m_InodeTable->IPut(pInode);
+		u.u_error = User::ENOMEM;
+		return;
+	}
 
 
 	/* 释放原进程图像的共享正文段，数据段，堆栈段 */

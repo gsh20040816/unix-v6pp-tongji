@@ -1,5 +1,7 @@
 org 0x7c00
 
+%include "kernel_size.inc"
+
 ;section .code16
 [BITS 16]
 start:
@@ -118,7 +120,6 @@ _load_sector:
 	retn 8		
 		
 ;section .data
-KERNEL_SIZE		equ		180	    
 
 gdt:		
 		dw	0x0000

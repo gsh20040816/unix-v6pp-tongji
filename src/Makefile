@@ -75,6 +75,9 @@ $(KERNEL_SYM)	: $(KERNEL_EXE)
 $(KERNEL_ASM)	: $(KERNEL_EXE)
 	$(OBJDUMP) -d $< > $@
 
+$(TARGET)\boot.bin : $(KERNEL_BIN)
+	$(MAKE) --directory=boot ..\..\targets\objs\boot.bin
+
 $(IMG_BOOT)	: $(TARGET)\boot.bin
 	copy $< $@
 

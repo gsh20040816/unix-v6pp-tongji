@@ -26,6 +26,12 @@ unsigned int PEParser::Relocate(Inode* p_inode, int sharedText)
 	unsigned cnt = 0;
 	unsigned int i = 0;
 	unsigned int i0 = 0;
+	unsigned int lastDataSectionIdx = this->BSS_SECTION_IDX;
+
+	if ( this->ntHeader.FileHeader.NumberOfSections > this->IDATA_SECTION_IDX )
+	{
+		lastDataSectionIdx = this->IDATA_SECTION_IDX;
+	}
 
 	/* 如果可以和其它进程共享正文段，无需文件中读入正文段 */
 	PageTable* pUserPageTable = u.u_procp->p_memory.GetUserPageTableArray();
@@ -48,7 +54,7 @@ unsigned int PEParser::Relocate(Inode* p_inode, int sharedText)
 	}
 
     /* 对所有页面执行清0操作，这样bss变量的初值就是0 */
-	for (; i <= this->BSS_SECTION_IDX; i++ )
+	for (; i <= lastDataSectionIdx; i++ )
 	{
 		ImageSectionHeader* sectionHeader = &(this->sectionHeaders[i]);
 		int beginVM = sectionHeader->VirtualAddress + ntHeader.OptionalHeader.ImageBase;
@@ -71,8 +77,13 @@ unsigned int PEParser::Relocate(Inode* p_inode, int sharedText)
 	// 修改正文段的读写标志，为内核写代码段做准备
 		i = 0;
 
-	for ( ; i < this->BSS_SECTION_IDX; i++ )
+	for ( ; i <= lastDataSectionIdx; i++ )
 	{
+		if ( i == this->BSS_SECTION_IDX )
+		{
+			continue;
+		}
+
 		ImageSectionHeader* sectionHeader = &(this->sectionHeaders[i]);
 		srcAddress = sectionHeader->PointerToRawData;
 		desAddress =
@@ -170,10 +181,24 @@ bool PEParser::HeaderLoad(Inode* p_inode)
 
 	this->DataAddress =
 		ntHeader.OptionalHeader.BaseOfData + ntHeader.OptionalHeader.ImageBase;
-	this->DataSize =
-		(this->sectionHeaders[this->BSS_SECTION_IDX].VirtualAddress +
-		 this->sectionHeaders[this->BSS_SECTION_IDX].Misc.VirtualSize) -
-		ntHeader.OptionalHeader.BaseOfData;
+	unsigned long dataEnd =
+		this->sectionHeaders[this->BSS_SECTION_IDX].VirtualAddress +
+		this->sectionHeaders[this->BSS_SECTION_IDX].Misc.VirtualSize;
+	if ( ntHeader.FileHeader.NumberOfSections > this->IDATA_SECTION_IDX )
+	{
+		unsigned long idataSize = this->sectionHeaders[this->IDATA_SECTION_IDX].Misc.VirtualSize;
+		if ( idataSize < this->sectionHeaders[this->IDATA_SECTION_IDX].SizeOfRawData )
+		{
+			idataSize = this->sectionHeaders[this->IDATA_SECTION_IDX].SizeOfRawData;
+		}
+		unsigned long idataEnd =
+			this->sectionHeaders[this->IDATA_SECTION_IDX].VirtualAddress + idataSize;
+		if ( idataEnd > dataEnd )
+		{
+			dataEnd = idataEnd;
+		}
+	}
+	this->DataSize = dataEnd - ntHeader.OptionalHeader.BaseOfData;
 
     StackSize = ntHeader.OptionalHeader.SizeOfStackCommit;
     HeapSize = ntHeader.OptionalHeader.SizeOfHeapCommit;

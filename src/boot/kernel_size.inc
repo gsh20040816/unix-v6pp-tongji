@@ -1,0 +1,1 @@
+KERNEL_SIZE equ 192
