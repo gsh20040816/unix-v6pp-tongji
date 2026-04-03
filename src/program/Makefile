@@ -48,7 +48,8 @@ PROGRAM_WORKSPACE_TARGETS = \
 	$(MAKEIMAGEPATH)\$(BIN)\testSTDOUT \
 	$(MAKEIMAGEPATH)\$(BIN)\fork \
 	$(MAKEIMAGEPATH)\$(BIN)\HelloWorld \
-	$(MAKEIMAGEPATH)\$(BIN)\showStack
+	$(MAKEIMAGEPATH)\$(BIN)\showStack \
+	$(MAKEIMAGEPATH)\$(BIN)\testfork
 
 all	:	$(PROGRAM_WORKSPACE_TARGETS)
 
@@ -84,7 +85,7 @@ $(eval $(call BUILD_PROGRAM,testSTDOUT,testSTDOUT.c))
 $(eval $(call BUILD_PROGRAM,fork,fork.c))
 $(eval $(call BUILD_PROGRAM,HelloWorld,HelloWorld.c))
 $(eval $(call BUILD_PROGRAM,showStack,showStack.c))
-
+$(eval $(call BUILD_PROGRAM,testfork,testfork.c))
 clean:
 	del $(TARGET)\*.exe
 	del /Q $(MAKEIMAGEPATH)\$(BIN)\*
