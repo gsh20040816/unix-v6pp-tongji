@@ -130,12 +130,6 @@ void Time::Clock( struct pt_regs* regs, struct pt_context* context )
 		//Diagnose::Write("curpri = %d\n", procMgr.CurPri);
 		//Diagnose::Write("System Time: %d\n", Time::time);
 		
-		if ( procMgr.RunIn != 0 )
-		{
-			procMgr.RunIn = 0;
-			procMgr.WakeUpAll((unsigned long)&procMgr.RunIn);
-		}
-
 		/* 如果中断前为用户态，则考虑进行信号处理 */
 		if ( (context->xcs & USER_MODE) == USER_MODE )
 		{

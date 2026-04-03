@@ -66,10 +66,8 @@ void Kernel::InitMemory()
 	/* 设置new/delete operator需要使用的Allocator */
 	set_kernel_allocator(this->m_KernelAllocator);
 
+	/* 非交换模式：仅保留兼容对象，不在启动阶段启用交换区管理。 */
 	this->m_SwapperManager = &g_SwapperManager;
-	Diagnose::Write("Initialize Swapper...");
-	this->GetSwapperManager().Initialize();
-	Diagnose::Write("Ok.\n");
 
 }
 

@@ -36,11 +36,6 @@ void Process::SetRun()
 	{
 		procMgr.RunRun++;
 	}
-	if ( 0 != procMgr.RunOut && (this->p_flag & Process::SLOAD) == 0 )
-	{
-		procMgr.RunOut = 0;
-		procMgr.WakeUpAll((unsigned long)&procMgr.RunOut);
-	}
 }
 
 void Process::SetPri()
@@ -76,7 +71,6 @@ bool Process::IsSleepOn(unsigned long chan)
 void Process::Sleep(unsigned long chan, int pri)
 {
 	User& u = Kernel::Instance().GetUser();
-	ProcessManager& procMgr = Kernel::Instance().GetProcessManager();
 
 	if ( pri > 0 )
 	{
@@ -101,11 +95,6 @@ void Process::Sleep(unsigned long chan, int pri)
 		this->p_pri = pri;
 		X86Assembly::STI();
 
-		if ( procMgr.RunIn != 0 )
-		{
-			procMgr.RunIn = 0;
-			procMgr.WakeUpAll((unsigned long)&procMgr.RunIn);
-		}
 		/* 当前进程放弃CPU，切换其它进程上台 */
 		//Diagnose::Write("Process %d Start Sleep!\n", this->p_pid);
 		Kernel::Instance().GetProcessManager().Swtch();

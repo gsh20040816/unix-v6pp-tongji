@@ -55,6 +55,26 @@
                     "endsPattern": ".*Enabled gdbstub.*"
                 }
             }
+        },
+		{
+            "type": "shell",
+            "label": "OOS run bochs",
+            "command": "bochs-gdb",
+            "args": [
+                "-q",
+				"-f",
+				"bochsrc_nodebug.bxrc"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/targets/UNIXV6++"
+            },
+            "detail": "在 Linux 本机启动 bochs，不调试",
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "focus": false,
+                "clear": false
+            }
         }
     ],
     "version": "2.0.0"

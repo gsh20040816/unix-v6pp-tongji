@@ -41,8 +41,6 @@ ProcessManager::ProcessManager()
 {
 	CurPri = 0;
 	RunRun = 0;
-	RunIn = 0;
-	RunOut = 0;
 	ExeCnt = 0;
 	SwtchNum = 0;
 }
@@ -257,22 +255,6 @@ int ProcessManager::Swtch()
 
 	User& newu = Kernel::Instance().GetUser();
 	newu.WritePageTable();
-	
-	/*
-	 * If the new process paused because it was
-	 * swapped out, set the stack level to the last call
-	 * to savu(u_ssav).  This means that the return
-	 * which is executed immediately after the call to aretu
-	 * actually returns from the last routine which did
-	 * the savu.
-	 *
-	 * You are not expected to understand this.
-	 */
-	if ( newu.u_procp->p_flag & Process::SSWAP )
-	{
-		newu.u_procp->p_flag &= ~Process::SSWAP;
-		aRetU(newu.u_ssav);
-	}
 	
 	/* 
 	 * 被fork出的进程在上台之前会在被调度上台时返回1，
