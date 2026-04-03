@@ -25,7 +25,6 @@ unsigned int PEParser::Relocate(Inode* p_inode, int sharedText)
 	unsigned long srcAddress, desAddress;
 	unsigned cnt = 0;
 	unsigned int i = 0;
-	unsigned int i0 = 0;
 	unsigned int lastDataSectionIdx = this->BSS_SECTION_IDX;
 
 	if ( this->ntHeader.FileHeader.NumberOfSections > this->IDATA_SECTION_IDX )
@@ -34,11 +33,9 @@ unsigned int PEParser::Relocate(Inode* p_inode, int sharedText)
 	}
 
 	/* 如果可以和其它进程共享正文段，无需文件中读入正文段 */
-	PageTable* pUserPageTable = u.u_procp->p_memory.GetUserPageTableArray();
 	unsigned int textBegin = this->TextAddress >> 12;
 	unsigned int textLength =
 		(this->TextSize + PageManager::PAGE_SIZE - 1) >> 12;
-	PageTableEntry* pointer = (PageTableEntry *)pUserPageTable;
 
 	/*如果与其它进程共享正文段，共享正文段切不可清0*/
 	if(sharedText == 1)
@@ -47,10 +44,19 @@ unsigned int PEParser::Relocate(Inode* p_inode, int sharedText)
 	{
 		i = 0;
 		// 修改正文段的读写标志，为内核写代码段做准备
-		for (i0 = textBegin; i0 < textBegin + textLength; i0++)
-			pointer[i0].m_ReadWriter = 1;
+		for (unsigned int page = textBegin; page < textBegin + textLength; ++page)
+		{
+			unsigned int tableIndex = page / PageTable::ENTRY_CNT_PER_PAGETABLE;
+			unsigned int entryIndex = page % PageTable::ENTRY_CNT_PER_PAGETABLE;
+			PageTable* pageTable = u.u_procp->p_memory.GetUserPageTableByIndex(tableIndex);
+			if ( pageTable == NULL )
+			{
+				continue;
+			}
 
-			X86Assembly::FlushPageDirectory((unsigned long)u.u_procp->p_memory.GetPageDirectoryPointer());
+			pageTable->m_Entrys[entryIndex].m_ReadWriter = 1;
+		}
+		X86Assembly::FlushPageDirectory((unsigned long)u.u_procp->p_memory.GetPageDirectoryPointer());
 	}
 
     /* 对所有页面执行清0操作，这样bss变量的初值就是0 */
@@ -100,10 +106,19 @@ unsigned int PEParser::Relocate(Inode* p_inode, int sharedText)
 
 	if(sharedText == 0)
 	{   //将正文段页面改回只读
-		for (i0 = textBegin; i0 < textBegin + textLength; i0++)
-			pointer[i0].m_ReadWriter = 0;
+		for (unsigned int page = textBegin; page < textBegin + textLength; ++page)
+		{
+			unsigned int tableIndex = page / PageTable::ENTRY_CNT_PER_PAGETABLE;
+			unsigned int entryIndex = page % PageTable::ENTRY_CNT_PER_PAGETABLE;
+			PageTable* pageTable = u.u_procp->p_memory.GetUserPageTableByIndex(tableIndex);
+			if ( pageTable == NULL )
+			{
+				continue;
+			}
 
-			X86Assembly::FlushPageDirectory((unsigned long)u.u_procp->p_memory.GetPageDirectoryPointer());
+			pageTable->m_Entrys[entryIndex].m_ReadWriter = 0;
+		}
+		X86Assembly::FlushPageDirectory((unsigned long)u.u_procp->p_memory.GetPageDirectoryPointer());
 	}
 
 	KernelPageManager& kpm = Kernel::Instance().GetKernelPageManager();

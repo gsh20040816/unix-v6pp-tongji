@@ -16,6 +16,7 @@ public:
 	static const unsigned long USER_SPACE_END = 0x00800000;
 	static const unsigned long USER_SPACE_SIZE = USER_SPACE_END - USER_SPACE_START;
 	static const unsigned int USER_PAGE_TABLE_CNT = 0x2;
+	static const unsigned int USER_PRIVATE_PAGE_TABLE_CNT = 0x1;
 	static const unsigned int USER_PAGE_COUNT = USER_SPACE_SIZE / PageManager::PAGE_SIZE;
 	static const unsigned int MAX_REGION_COUNT = 16;
 
@@ -178,6 +179,7 @@ private:
 private:
 	Process* m_Owner;
 	PageDirectory* m_PageDirectory;
+	/* 仅保存进程私有的 1# 用户页表，0# 用户页表由 Machine 共享维护。 */
 	PageTable* m_UserPageTableArray;
 	Region* m_Regions;
 	PageInfo* m_PageInfos;

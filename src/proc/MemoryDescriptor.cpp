@@ -90,7 +90,7 @@ void MemoryDescriptor::ClearPageTables()
 		return;
 	}
 
-	for ( unsigned int i = 0; i < USER_PAGE_TABLE_CNT; ++i )
+	for ( unsigned int i = 0; i < USER_PRIVATE_PAGE_TABLE_CNT; ++i )
 	{
 		for ( unsigned int j = 0; j < PageTable::ENTRY_CNT_PER_PAGETABLE; ++j )
 		{
@@ -140,7 +140,7 @@ void MemoryDescriptor::Initialize()
 
 	if ( this->m_UserPageTableArray == NULL )
 	{
-		unsigned long pageTables = kernelPageManager.AllocMemory(sizeof(PageTable) * USER_PAGE_TABLE_CNT);
+		unsigned long pageTables = kernelPageManager.AllocMemory(sizeof(PageTable) * USER_PRIVATE_PAGE_TABLE_CNT);
 		if ( pageTables == 0 )
 		{
 			Utility::Panic("Out of kernel memory for user page tables");
@@ -189,7 +189,7 @@ void MemoryDescriptor::Release()
 
 	if ( this->m_UserPageTableArray != NULL )
 	{
-		kernelPageManager.FreeMemory(sizeof(PageTable) * USER_PAGE_TABLE_CNT,
+		kernelPageManager.FreeMemory(sizeof(PageTable) * USER_PRIVATE_PAGE_TABLE_CNT,
 			(unsigned long)this->m_UserPageTableArray - Machine::KERNEL_SPACE_START_ADDRESS);
 		this->m_UserPageTableArray = NULL;
 	}
@@ -281,6 +281,14 @@ bool MemoryDescriptor::CloneResidentPagesFrom(const MemoryDescriptor& other)
 		const PageInfo& srcPage = other.m_PageInfos[i];
 		const Region& region = other.m_Regions[srcPage.regionIndex];
 		unsigned long virtualAddress = USER_SPACE_START + i * PageManager::PAGE_SIZE;
+
+		if ( region.type == REGION_RUNTIME )
+		{
+			dstPage.state = PAGE_STATE_RESIDENT;
+			dstPage.frameAddress = 0;
+			this->MapPage(0, 0, true);
+			continue;
+		}
 
 		if ( region.backing.type == BACKING_SHARED_TEXT && other.m_Owner != NULL &&
 			other.m_Owner->p_textp != NULL )
@@ -470,11 +478,10 @@ bool MemoryDescriptor::MaterializeExecutableImage(unsigned long textPhysicalAddr
 {
 	if ( this->FindRegionByType(REGION_RUNTIME) != NULL )
 	{
-		if ( this->AllocateZeroedPage(0) == false )
-		{
-			return false;
-		}
-		Utility::CopyPage(0, this->m_PageInfos[this->AddressToPageIndex(0)].frameAddress);
+		unsigned int runtimePageIndex = this->AddressToPageIndex(0);
+		this->m_PageInfos[runtimePageIndex].state = PAGE_STATE_RESIDENT;
+		this->m_PageInfos[runtimePageIndex].frameAddress = 0;
+		this->MapPage(0, 0, true);
 	}
 
 	const Region* code = this->FindRegionByType(REGION_CODE);
@@ -597,26 +604,7 @@ void MemoryDescriptor::Activate()
 		return;
 	}
 
-	// this->ClearPageDirectory();
-
-	for ( unsigned int i = 0; i < USER_PAGE_TABLE_CNT; ++i )
-	{
-		unsigned long physicalAddress =
-			((unsigned long)&this->m_UserPageTableArray[i] - Machine::KERNEL_SPACE_START_ADDRESS) >> 12;
-
-		this->m_PageDirectory->m_Entrys[i].m_UserSupervisor = 1;
-		this->m_PageDirectory->m_Entrys[i].m_Present = 1;
-		this->m_PageDirectory->m_Entrys[i].m_ReadWriter = 1;
-		this->m_PageDirectory->m_Entrys[i].m_PageTableBaseAddress = physicalAddress;
-	}
-
-	unsigned int kernelPageTableIdx =
-		Machine::KERNEL_SPACE_START_ADDRESS / PageTable::SIZE_PER_PAGETABLE_MAP;
-	this->m_PageDirectory->m_Entrys[kernelPageTableIdx].m_UserSupervisor = 0;
-	this->m_PageDirectory->m_Entrys[kernelPageTableIdx].m_Present = 1;
-	this->m_PageDirectory->m_Entrys[kernelPageTableIdx].m_ReadWriter = 1;
-	this->m_PageDirectory->m_Entrys[kernelPageTableIdx].m_PageTableBaseAddress =
-		Machine::KERNEL_PAGE_TABLE_BASE_ADDRESS >> 12;
+	Machine::Instance().WriteUserPageDirectoryEntry(this->m_PageDirectory, this->m_UserPageTableArray);
 }
 
 void MemoryDescriptor::DisplayPageTable()
@@ -630,12 +618,17 @@ void MemoryDescriptor::DisplayPageTable()
 	Diagnose::Write("Process PT:");
 	for ( unsigned int i = 0; i < USER_PAGE_TABLE_CNT; ++i )
 	{
+		PageTable* table = this->GetUserPageTableByIndex(i);
+		if ( table == NULL )
+		{
+			continue;
+		}
 		for ( unsigned int j = 0; j < PageTable::ENTRY_CNT_PER_PAGETABLE; ++j )
 		{
-			if ( this->m_UserPageTableArray[i].m_Entrys[j].m_Present == 1 )
+			if ( table->m_Entrys[j].m_Present == 1 )
 			{
 				Diagnose::Write("<%d,%x>  ", i * 1024 + j,
-					this->m_UserPageTableArray[i].m_Entrys[j].m_PageBaseAddress);
+					table->m_Entrys[j].m_PageBaseAddress);
 			}
 		}
 	}
@@ -721,12 +714,17 @@ PageTable* MemoryDescriptor::GetUserPageTableArray() const
 
 PageTable* MemoryDescriptor::GetUserPageTableByIndex(unsigned int index) const
 {
-	if ( this->m_UserPageTableArray == NULL || index >= USER_PAGE_TABLE_CNT )
+	if ( index >= USER_PAGE_TABLE_CNT )
 	{
 		return NULL;
 	}
 
-	return &this->m_UserPageTableArray[index];
+	if ( index == 0 )
+	{
+		return Machine::Instance().GetUserPageTableArray();
+	}
+
+	return this->m_UserPageTableArray;
 }
 
 bool MemoryDescriptor::HasUserAddressSpace() const
@@ -975,11 +973,16 @@ void MemoryDescriptor::MapPage(unsigned long virtualAddress, unsigned long physi
 	unsigned int pageIndex = this->AddressToPageIndex(virtualAddress);
 	unsigned int tableIndex = pageIndex / PageTable::ENTRY_CNT_PER_PAGETABLE;
 	unsigned int entryIndex = pageIndex % PageTable::ENTRY_CNT_PER_PAGETABLE;
+	PageTable* table = this->GetUserPageTableByIndex(tableIndex);
+	if ( table == NULL )
+	{
+		return;
+	}
 
-	this->m_UserPageTableArray[tableIndex].m_Entrys[entryIndex].m_Present = 1;
-	this->m_UserPageTableArray[tableIndex].m_Entrys[entryIndex].m_UserSupervisor = 1;
-	this->m_UserPageTableArray[tableIndex].m_Entrys[entryIndex].m_ReadWriter = readWrite ? 1 : 0;
-	this->m_UserPageTableArray[tableIndex].m_Entrys[entryIndex].m_PageBaseAddress =
+	table->m_Entrys[entryIndex].m_Present = 1;
+	table->m_Entrys[entryIndex].m_UserSupervisor = 1;
+	table->m_Entrys[entryIndex].m_ReadWriter = readWrite ? 1 : 0;
+	table->m_Entrys[entryIndex].m_PageBaseAddress =
 		physicalAddress / PageManager::PAGE_SIZE;
 }
 
