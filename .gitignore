@@ -29,6 +29,7 @@ src/program/*.lnk
 .csettings/
 
 # Tool-side generated outputs and temporary workspaces.
+.build-cache/
 tools/MakeImage/bin/
 tools/MakeImage/obj/
 tools/MakeImage/*.suo

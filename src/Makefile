@@ -66,6 +66,9 @@ deploy	: $(DIRS) $(IMG_BOOT) $(IMG_KERNEL_BIN) $(IMG_KERNEL_SYM) $(IMG_KERNEL_AS
 $(KERNEL_EXE)	: $(OBJS)
 	$(LD) $(LDFLAGS) $(OBJS) -o $@
 
+# Parallel safety: link must wait until all per-directory sub-makes finish.
+$(KERNEL_EXE)	: $(DIRS)
+
 $(KERNEL_BIN)	: $(KERNEL_EXE)
 	$(OBJCOPY) -O binary $< $@
 
@@ -74,6 +77,9 @@ $(KERNEL_SYM)	: $(KERNEL_EXE)
 
 $(KERNEL_ASM)	: $(KERNEL_EXE)
 	$(OBJDUMP) -d $< > $@
+
+$(TARGET)\$(SECTOR2_OBJ) :
+	$(MAKE) --directory=boot ..\..\targets\objs\$(SECTOR2_OBJ)
 
 $(TARGET)\boot.bin : $(KERNEL_BIN)
 	$(MAKE) --directory=boot ..\..\targets\objs\boot.bin

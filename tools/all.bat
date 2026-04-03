@@ -1,6 +1,13 @@
+@setlocal
 @pushd .
 
 @call src
-@make all
+@if defined OOS_MAKE_JOBS (
+	@echo [oos] make all -j%OOS_MAKE_JOBS%
+	@make -j%OOS_MAKE_JOBS% all
+) else (
+	@make all
+)
 
 @popd
+@endlocal
