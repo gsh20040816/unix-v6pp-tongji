@@ -773,14 +773,23 @@ void ProcessManager::Exec()
 		u.u_signal[i] = 0;
 	}
 
-	/* 清0所有通用寄存器  */
-	for (int i = User::EAX - 4; i < User::EAX - 4*7 ; i = i - 4)
-	{
-		u.u_ar0[i] = 0;     /* 下标写成  User::EAX + i 可读性要强一些，但是运算速度慢了。就小抠，追求速度吧 */
-	}
+	/* u.u_ar0 指向 pt_regs::eax，不能再把“字节偏移”直接当成 unsigned int 下标使用。 */
+	struct pt_regs* pRegs =
+		(struct pt_regs*)((char*)u.u_ar0 - (unsigned long)&((struct pt_regs*)0)->eax);
+	pRegs->edi = 0;
+	pRegs->esi = 0;
+	pRegs->edx = 0;
+	pRegs->ecx = 0;
+	pRegs->ebx = 0;
 
 	/* 将exe程序的入口地址放入核心栈现场保护区中的EAX作为系统调用返回值，这个是runtime要用  */
 	u.u_ar0[User::EAX] = u.u_procp->p_memory.GetEntryPoint();
+
+	/* exec 改写的是同一份系统调用返回现场，数据段寄存器也要切回用户态。 */
+	pRegs->pad1 = Machine::USER_DATA_SEGMENT_SELECTOR;	/* gs */
+	pRegs->pad2 = Machine::USER_DATA_SEGMENT_SELECTOR;	/* fs */
+	pRegs->xds = Machine::USER_DATA_SEGMENT_SELECTOR;
+	pRegs->xes = Machine::USER_DATA_SEGMENT_SELECTOR;
 	
 	/* 构造出Exec()系统调用的退出环境，使之退出到ring3时，开始执行user code */
 	struct pt_context* pContext = (struct pt_context *)u.u_arg[4];
