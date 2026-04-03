@@ -4,8 +4,7 @@
 #include "Text.h"
 #include "TTy.h"
 #include "Regs.h"
-#include "PageDirectory.h"
-#include "PageTable.h"
+#include "MemoryDescriptor.h"
 
 /*
  * Process类与UNIX V6中进程控制块proc结构对应，这里只改变
@@ -26,15 +25,16 @@ public:
 		SSTOP	= 6		/* 进程正被跟踪 */
 	};
 
-	enum ProcessFlag	/* 进程标志位 */
-	{
-		SLOAD	= 0x1,	/* 进程图像在内存中 */
-		SSYS	= 0x2,	/* 系统进程图像，不允许被换出 */
-		SLOCK	= 0x4,	/* 含有该标志的进程图像暂不允许换出 */
-		SSWAP	= 0x8,	/* 该进程被创建时图像就在交换区上 */
-		STRC	= 0x10,	/* 父子进程跟踪标志，UNIX V6++未有效使用到 */
-		STWED	= 0x20	/* 父子进程跟踪标志，UNIX V6++未有效使用到 */
-	};
+		enum ProcessFlag	/* 进程标志位 */
+		{
+			SLOAD	= 0x1,	/* 进程图像在内存中 */
+			SSYS	= 0x2,	/* 系统进程图像，不允许被换出 */
+			SLOCK	= 0x4,	/* 含有该标志的进程图像暂不允许换出 */
+			SSWAP	= 0x8,	/* 该进程被创建时图像就在交换区上 */
+			STRC	= 0x10,	/* 父子进程跟踪标志，UNIX V6++未有效使用到 */
+			STWED	= 0x20,	/* 父子进程跟踪标志，UNIX V6++未有效使用到 */
+			SFORKRET = 0x40	/* fork 出来的进程首次上台时，直接从 Swtch() 返回到 NewProc() 调用点 */
+		};
 public:
 	Process();
 	~Process();
@@ -99,10 +99,7 @@ public:
 	int p_sig;			/* 进程信号 */
 	TTy* p_ttyp;		/* 进程tty结构地址 */
 	unsigned long p_sigmap;
-
-	/* 进程私有页表 */
-	PageDirectory* p_pgDir;		/* 页目录，进程私有 */
-	PageTable* p_user1PageTable;	/* 1# 用户页表，进程私有 */
+	MemoryDescriptor p_memory;
 };
 
 #endif

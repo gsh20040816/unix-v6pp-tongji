@@ -10,6 +10,33 @@
 
 unsigned int ProcessManager::m_NextUniquePid = 0;
 
+namespace
+{
+	static int g_NewProcTraceCount = 0;
+
+	static void DumpProcBrief(const char* tag, Process* p)
+	{
+		if ( p == NULL )
+		{
+			Diagnose::Write("%s: <null>\n", tag);
+			return;
+		}
+
+		Diagnose::Write(
+			"%s: pid=%d ppid=%d stat=%d flag=%x addr=%x size=%x text=%x pri=%d time=%d\n",
+			tag,
+			p->p_pid,
+			p->p_ppid,
+			p->p_stat,
+			p->p_flag,
+			p->p_addr,
+			p->p_size,
+			p->p_textp,
+			p->p_pri,
+			p->p_time);
+	}
+}
+
 ProcessManager::ProcessManager()
 {
 	CurPri = 0;
@@ -42,18 +69,11 @@ void ProcessManager::SetupProcessZero()
 	pProcZero->p_size = 0x1000;
 	pProcZero->p_addr = PROCESS_ZERO_PPDA_ADDRESS;
 	pProcZero->p_textp = NULL;
-	pProcZero->p_pgDir = (PageDirectory*)(Machine::PAGE_DIRECTORY_BASE_ADDRESS + Machine::KERNEL_SPACE_START_ADDRESS);
-	pProcZero->p_user1PageTable = NULL;
+	pProcZero->p_memory.UseKernelAddressSpace(
+		(PageDirectory*)(Machine::PAGE_DIRECTORY_BASE_ADDRESS + Machine::KERNEL_SPACE_START_ADDRESS));
 
 	User& u = Kernel::Instance().GetUser();
 	u.u_procp = pProcZero;
-	u.u_MemoryDescriptor.m_TextStartAddress = 0;
-	u.u_MemoryDescriptor.m_TextSize = 0;
-	u.u_MemoryDescriptor.m_DataStartAddress = 0;
-	u.u_MemoryDescriptor.m_DataSize = 0;
-	u.u_MemoryDescriptor.m_StackSize = 0;
-	u.u_MemoryDescriptor.m_UserPageTableArray = NULL;
-//	u.u_MemoryDescriptor.Initialize();
 }
 
 unsigned int ProcessManager::NextUniquePid()
@@ -80,71 +100,81 @@ int ProcessManager::NewProc()
 	User& u = Kernel::Instance().GetUser();
 	Process* current = (Process*)u.u_procp;
 
+	if ( g_NewProcTraceCount < 24 )
+	{
+		Diagnose::Write("NewProc begin #%d u=%x u_procp=%x rsav=[%x,%x]\n",
+			g_NewProcTraceCount, &u, u.u_procp, u.u_rsav[0], u.u_rsav[1]);
+		DumpProcBrief("NewProc current", current);
+	}
+
 	current->Clone(*child);
+	child->p_flag |= Process::SFORKRET;
 
 	SaveU(u.u_rsav);
 
-	PageTable* pgTable = u.u_MemoryDescriptor.m_UserPageTableArray;  	// 将父进程的用户页表指针m_UserPageTableArray备份至pgTable
-	u.u_MemoryDescriptor.Initialize();  // 为子进程分配页表
-
-	u.u_procp = child;
+	PageTable* pgTable = current->p_memory.GetUserPageTableArray();
+	child->p_memory.Initialize();
+	child->p_memory.CloneFrom(current->p_memory);
 
 	UserPageManager& userPageManager = Kernel::Instance().GetUserPageManager();
-
-	unsigned long srcAddress = current->p_addr;
-	unsigned long desAddress = userPageManager.AllocMemory(current->p_size);   // 为子进程图像分配内存
-
-	if ( desAddress == 0 ) /* 不成功，将父进程图像复制到盘交换区。这块还没好 */
+	child->p_addr = userPageManager.AllocMemory(ProcessManager::USIZE);
+	if ( child->p_addr == 0 )
 	{
-		current->p_stat = Process::SIDL;
-		/* 子进程p_addr指向父进程图像，因为子进程换出至交换区需要以父进程图像为蓝本 */
-		child->p_addr = current->p_addr;
-		SaveU(u.u_ssav);
-		this->XSwap(child, false, 0);
-		child->p_flag |= Process::SSWAP;
-		current->p_stat = Process::SRUN;
+		Utility::Panic("Out of user memory for child u area");
+	}
+
+	if ( g_NewProcTraceCount < 24 )
+	{
+		DumpProcBrief("NewProc child after Clone", child);
+		Diagnose::Write("NewProc child alloc u-page=%x current_u_page=%x\n",
+			child->p_addr, current->p_addr);
+	}
+
+	child->p_size = current->p_size;
+
+	X86Assembly::CLI();
+	Utility::CopyPage(current->p_addr, child->p_addr);
+
+	unsigned long userProcOffset =
+		(unsigned long)((char*)&u.u_procp - (char*)&u);
+	if ( g_NewProcTraceCount < 24 )
+	{
+		Diagnose::Write(
+			"NewProc patch child u_procp at phys=%x offset=%x\n",
+			child->p_addr,
+			userProcOffset);
+	}
+	Utility::CopyToPhysical(child->p_addr + userProcOffset, &child, sizeof(child));
+
+	if ( pgTable == NULL )
+	{
+		if ( child->p_memory.MaterializeBootstrapStack() == false )
+		{
+			Utility::Panic("Bootstrap child address space failed");
+		}
 	}
 	else
-	{   // 成功，为子进程写页表，复制父进程可交换部分
-		int n = current->p_size;
-		child->p_addr = desAddress;
-
-		if ( NULL != pgTable )
+	{
+		if ( child->p_memory.CloneResidentPagesFrom(current->p_memory) == false )
 		{
-			u.u_MemoryDescriptor.EstablishUserPageTable(u.u_MemoryDescriptor.m_TextStartAddress, u.u_MemoryDescriptor.m_TextSize,
-					                                    u.u_MemoryDescriptor.m_DataStartAddress, u.u_MemoryDescriptor.m_DataSize,
-					                                    u.u_MemoryDescriptor.m_StackSize);
-		}
-		else {
-			u.u_MemoryDescriptor.m_UserPageTableArray[0].m_Entrys[0].m_PageBaseAddress = 0;
-		}
-
-		/**  这个版本容易懂
-		if ( NULL != pgTable )
-		{
-			Utility::MemCopy((unsigned long)pgTable, (unsigned long)u.u_MemoryDescriptor.m_UserPageTableArray, sizeof(PageTable) * MemoryDescriptor::USER_SPACE_PAGE_TABLE_CNT);
-
-			for (unsigned int i = 0; i < Machine::USER_PAGE_TABLE_CNT; i++)
-			{
-				for ( unsigned int j = 0; j < PageTable::ENTRY_CNT_PER_PAGETABLE; j++ )
-				{
-					if ( pgTable[i].m_Entrys[j].m_ReadWriter == 1)
-						u.u_MemoryDescriptor.m_UserPageTableArray[i].m_Entrys[j].m_PageBaseAddress =
-								pgTable[i].m_Entrys[j].m_PageBaseAddress + ((desAddress >> 12) - (srcAddress >> 12));  // 子进程私有的数据页
-				}
-			}
-		}
-
-		u.u_MemoryDescriptor.m_UserPageTableArray[0].m_Entrys[0].m_PageBaseAddress = 0;  */
-
-		while (n--)
-		{
-			Utility::CopySeg(srcAddress++, desAddress++);
+			Utility::Panic("Clone child address space failed");
 		}
 	}
 
-	u.u_procp = current;
-	u.u_MemoryDescriptor.m_UserPageTableArray = pgTable;
+	child->p_memory.BuildPageTablesForImage();
+	child->p_memory.Activate();
+
+	if ( g_NewProcTraceCount < 24 )
+	{
+		DumpProcBrief("NewProc child ready", child);
+		Diagnose::Write("NewProc child pgdir=%x userpt=%x\n",
+			child->p_memory.GetPageDirectoryPointer(),
+			child->p_memory.GetUserPageTableArray());
+	}
+	g_NewProcTraceCount++;
+
+	X86Assembly::STI();
+
 	return 0;
 }
 
@@ -183,6 +213,15 @@ int ProcessManager::Swtch()
 	//Diagnose::Write("Process id = %d Selected!\n", selected->p_pid);
 
 	/* 恢复被保存进程的现场 */
+	if ( selected->p_flag & Process::SFORKRET )
+	{
+		selected->p_flag &= ~Process::SFORKRET;
+		X86Assembly::CLI();
+		SwtchUStruct(selected);
+		RetU();
+		return 1;
+	}
+
 	X86Assembly::CLI();
 	SwtchUStruct(selected);
 
@@ -190,8 +229,7 @@ int ProcessManager::Swtch()
 	X86Assembly::STI();
 
 	User& newu = Kernel::Instance().GetUser();
-
-	newu.u_MemoryDescriptor.MapToPageTable();
+	newu.WritePageTable();
 	
 	/*
 	 * If the new process paused because it was
@@ -447,7 +485,7 @@ void ProcessManager::Fork()
 	if ( this->NewProc() )	/* 子进程返回1，父进程返回0 */
 	{
 		/* 子进程fork()系统调用返回0 */
-		u.u_MemoryDescriptor.DisplayPageTable();
+		u.u_procp->p_memory.DisplayPageTable();
 		u.u_ar0[User::EAX] = 0;
 		u.u_cstime = 0;
 		u.u_stime = 0;
@@ -512,17 +550,12 @@ void ProcessManager::Exec()
     }
 
  	/* 获取分析PE头结构得到正文段的起始地址、长度 */
-	u.u_MemoryDescriptor.m_TextStartAddress = parser.TextAddress;
-	u.u_MemoryDescriptor.m_TextSize = parser.TextSize;
-
-	/* 数据段的起始地址、长度 */
-	u.u_MemoryDescriptor.m_DataStartAddress = parser.DataAddress;
-	u.u_MemoryDescriptor.m_DataSize = parser.DataSize;
-
-	/* 堆栈段初始化长度 */
-	u.u_MemoryDescriptor.m_StackSize = parser.StackSize;
-	
-	if ( parser.TextSize + parser.DataSize + parser.StackSize  + PageManager::PAGE_SIZE > MemoryDescriptor::USER_SPACE_SIZE - parser.TextAddress)
+	if ( u.u_procp->p_memory.ConfigureExecutableLayout(parser.EntryPointAddress,
+			parser.TextAddress,
+			parser.TextSize,
+			parser.DataAddress,
+			parser.DataSize,
+			parser.StackSize) == false )
 	{
 		fileMgr.m_InodeTable->IPut(pInode);
 		u.u_error = User::ENOMEM;
@@ -594,12 +627,13 @@ void ProcessManager::Exec()
 
 
 	/* 释放原进程图像的共享正文段，数据段，堆栈段 */
+	u.u_procp->p_memory.ReleaseResidentPages(false);
 	if ( u.u_procp->p_textp != NULL )
 	{
 		u.u_procp->p_textp->XFree();
 		u.u_procp->p_textp = NULL;
 	}
-	u.u_procp->Expand(ProcessManager::USIZE);
+	u.u_procp->p_size = ProcessManager::USIZE;
 
 	pText = NULL;
 	/* 分配一个空闲Text结构，或者和其它进程共享同一正文段 */
@@ -640,7 +674,7 @@ void ProcessManager::Exec()
 		pText->x_ccount = 1;
 		pText->x_count = 1;
 		pText->x_iptr = pInode;
-		pText->x_size = u.u_MemoryDescriptor.m_TextSize;
+		pText->x_size = u.u_procp->p_memory.GetCodeSize();
 		/* 为正文段分配内存，而具体正文段内容的读入需要等到建立页表映射之后，再从mapAddress地址起始的exe文件中读入 */
 		pText->x_caddr = userPgMgr.AllocMemory(pText->x_size);
 		pText->x_daddr = Kernel::Instance().GetSwapperManager().AllocSwap(pText->x_size);
@@ -653,19 +687,24 @@ void ProcessManager::Exec()
 		sharedText = 1;
 	}
 
-	unsigned int newSize = ProcessManager::USIZE + u.u_MemoryDescriptor.m_DataSize + u.u_MemoryDescriptor.m_StackSize;
-	if ( false == u.u_MemoryDescriptor.CheckUserSpaceSize(parser.TextAddress, parser.TextSize, parser.DataAddress, parser.DataSize, parser.StackSize) )
+	unsigned int newSize = ProcessManager::USIZE + u.u_procp->p_memory.GetWritableSize();
+	if ( false == u.u_procp->p_memory.CheckUserSpace() )
 	{
 		return;   // out of virtual space. fail
 	}
 
-	u.u_procp->Expand(newSize);
+	u.u_procp->p_size = newSize;
 	Diagnose::Write("Process %x, p_addr %x, x_addr %x, p_size %x, x_size %x\n",
 			u.u_procp->p_pid,u.u_procp->p_addr,u.u_procp->p_textp->x_caddr,u.u_procp->p_size,u.u_procp->p_textp->x_size);
 
-	u.u_MemoryDescriptor.EstablishUserPageTable(parser.TextAddress, parser.TextSize, parser.DataAddress, parser.DataSize, parser.StackSize);
-	u.u_MemoryDescriptor.MapToPageTable();
-    u.u_MemoryDescriptor.DisplayPageTable();
+	if ( u.u_procp->p_memory.MaterializeExecutableImage(u.u_procp->p_textp->x_caddr) == false )
+	{
+		u.u_error = User::ENOMEM;
+		return;
+	}
+	u.u_procp->p_memory.BuildPageTablesForImage();
+	u.u_procp->p_memory.Activate();
+    u.u_procp->p_memory.DisplayPageTable();
 
 	/* 从exe文件中依次读入.text段、.data段、.rdata段、.bss段 */
 	parser.Relocate(pInode, sharedText);
@@ -680,7 +719,8 @@ void ProcessManager::Exec()
 
 	/* 将fakeStack中备份的用户栈参数复制到新进程图像的用户栈中 */
 	//Utility::MemCopy(fakeStack | 0xC0000000, MemoryDescriptor::USER_SPACE_SIZE - parser.StackSize, parser.StackSize);
-	Utility::MemCopy(fakeStack + allocLength - parser.StackSize | 0xC0000000, MemoryDescriptor::USER_SPACE_SIZE - parser.StackSize, parser.StackSize);
+	Utility::MemCopy(fakeStack + allocLength - parser.StackSize | 0xC0000000,
+		MemoryDescriptor::USER_SPACE_SIZE - parser.StackSize, parser.StackSize);
 	/* 释放用于读入exe文件和备份用户栈参数的内存：mapAddress和fakeStack */
 	kernelPgMgr.FreeMemory(allocLength, fakeStack);
 
@@ -718,7 +758,7 @@ void ProcessManager::Exec()
 	}
 
 	/* 将exe程序的入口地址放入核心栈现场保护区中的EAX作为系统调用返回值，这个是runtime要用  */
-	u.u_ar0[User::EAX] = parser.EntryPointAddress;
+	u.u_ar0[User::EAX] = u.u_procp->p_memory.GetEntryPoint();
 	
 	/* 构造出Exec()系统调用的退出环境，使之退出到ring3时，开始执行user code */
 	struct pt_context* pContext = (struct pt_context *)u.u_arg[4];

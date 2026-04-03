@@ -63,7 +63,8 @@ loop:
 	{
 		short major = Utility::GetMajor(dev);
 		/* 根据主设备号获得块设备表 */
-		dp = this->m_DeviceManager->GetBlockDevice(major).d_tab;
+		BlockDevice& blockDevice = this->m_DeviceManager->GetBlockDevice(major);
+		dp = blockDevice.d_tab;
 
 		if(dp == NULL)
 		{
@@ -498,4 +499,3 @@ Buf& BufferManager::GetBFreeList()
 {
 	return this->bFreeList;
 }
-

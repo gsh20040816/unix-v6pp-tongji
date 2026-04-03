@@ -28,7 +28,7 @@ unsigned int PEParser::Relocate(Inode* p_inode, int sharedText)
 	unsigned int i0 = 0;
 
 	/* 如果可以和其它进程共享正文段，无需文件中读入正文段 */
-	PageTable* pUserPageTable = Machine::Instance().GetUserPageTableArray();
+	PageTable* pUserPageTable = u.u_procp->p_memory.GetUserPageTableArray();
 	unsigned int textBegin = this->TextAddress >> 12 , textLength = this->TextSize >> 12;
 	PageTableEntry* pointer = (PageTableEntry *)pUserPageTable;
 
@@ -42,7 +42,7 @@ unsigned int PEParser::Relocate(Inode* p_inode, int sharedText)
 		for (i0 = textBegin; i0 < textBegin + textLength; i0++)
 			pointer[i0].m_ReadWriter = 1;
 
-		X86Assembly::FlushPageDirectory((unsigned long)u.u_procp->p_pgDir);
+			X86Assembly::FlushPageDirectory((unsigned long)u.u_procp->p_memory.GetPageDirectoryPointer());
 	}
 
     /* 对所有页面执行清0操作，这样bss变量的初值就是0 */
@@ -90,7 +90,7 @@ unsigned int PEParser::Relocate(Inode* p_inode, int sharedText)
 		for (i0 = textBegin; i0 < textBegin + textLength; i0++)
 			pointer[i0].m_ReadWriter = 0;
 
-		X86Assembly::FlushPageDirectory((unsigned long)u.u_procp->p_pgDir);
+			X86Assembly::FlushPageDirectory((unsigned long)u.u_procp->p_memory.GetPageDirectoryPointer());
 	}
 
 	KernelPageManager& kpm = Kernel::Instance().GetKernelPageManager();
@@ -168,7 +168,10 @@ bool PEParser::HeaderLoad(Inode* p_inode)
 
 	this->DataAddress =
 		ntHeader.OptionalHeader.BaseOfData + ntHeader.OptionalHeader.ImageBase;
-	this->DataSize = this->sectionHeaders[this->IDATA_SECTION_IDX].VirtualAddress - ntHeader.OptionalHeader.BaseOfData;
+	this->DataSize =
+		(this->sectionHeaders[this->BSS_SECTION_IDX].VirtualAddress +
+		 this->sectionHeaders[this->BSS_SECTION_IDX].Misc.VirtualSize) -
+		ntHeader.OptionalHeader.BaseOfData;
 
     StackSize = ntHeader.OptionalHeader.SizeOfStackCommit;
     HeapSize = ntHeader.OptionalHeader.SizeOfHeapCommit;

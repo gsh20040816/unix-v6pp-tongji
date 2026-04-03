@@ -74,7 +74,6 @@ bool User::SUser()
 void User::WritePageTable()
 {
 	Process *p = this->u_procp;
-	Machine& machine = Machine::Instance();
-	machine.WriteUserPageDirectoryEntry(p->p_pgDir, p->p_user1PageTable);
-	X86Assembly::FlushPageDirectory((unsigned long)p->p_pgDir);
+	p->p_memory.Activate();
+	X86Assembly::FlushPageDirectory((unsigned long)p->p_memory.GetPageDirectoryPointer());
 }

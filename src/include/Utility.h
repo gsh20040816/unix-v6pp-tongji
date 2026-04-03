@@ -50,6 +50,9 @@ public:
 	 */
 	static void CopySeg(unsigned long src, unsigned long des);
 	static void CopySeg2(unsigned long src, unsigned long des);
+	static void CopyPage(unsigned long src, unsigned long des);
+	static void CopyToPhysical(unsigned long des, const void* src, unsigned int count);
+	static void ZeroPage(unsigned long des);
 	/* 提取参数dev中的主设备号major，高8比特 */
 	static short GetMajor(const short dev);
 	/* 提取参数dev中的次设备号minor，低8比特 */

@@ -1,75 +1,194 @@
 #ifndef MEMORY_DESCRIPTOR_H
 #define MEMORY_DESCRIPTOR_H
 
+#include "PageDirectory.h"
 #include "PageTable.h"
+#include "INode.h"
+#include "Text.h"
+#include "PageManager.h"
+
+class Process;
 
 class MemoryDescriptor
 {
 public:
-	/* 用户空间大小 8M 0x0 - 0x800000 2 PageTable */
-	static const unsigned int USER_SPACE_SIZE	= 0x800000; 
-	static const unsigned int USER_SPACE_PAGE_TABLE_CNT = 0x2;
-	static const unsigned long USER_SPACE_START_ADDRESS		= 0x0;
+	static const unsigned long USER_SPACE_START = 0x00000000;
+	static const unsigned long USER_SPACE_END = 0x00800000;
+	static const unsigned long USER_SPACE_SIZE = USER_SPACE_END - USER_SPACE_START;
+	static const unsigned int USER_PAGE_TABLE_CNT = 0x2;
+	static const unsigned int USER_PAGE_COUNT = USER_SPACE_SIZE / PageManager::PAGE_SIZE;
+	static const unsigned int MAX_REGION_COUNT = 16;
 
+	enum RegionType
+	{
+		REGION_INVALID = 0,
+		REGION_RUNTIME,
+		REGION_CODE,
+		REGION_RODATA,
+		REGION_DATA,
+		REGION_BSS,
+		REGION_HEAP,
+		REGION_STACK
+	};
 
+	enum BackingType
+	{
+		BACKING_NONE = 0,
+		BACKING_ZERO,
+		BACKING_EXEC_FILE,
+		BACKING_SHARED_TEXT,
+		BACKING_ANON
+	};
+
+	enum PageState
+	{
+		PAGE_STATE_FREE = 0,
+		PAGE_STATE_RESERVED,
+		PAGE_STATE_RESIDENT
+	};
+
+	enum ProtFlags
+	{
+		PROT_READ = 0x1,
+		PROT_WRITE = 0x2,
+		PROT_EXEC = 0x4,
+		PROT_USER = 0x8
+	};
+
+	enum PageFlags
+	{
+		PAGE_FLAG_NONE = 0x0,
+		PAGE_FLAG_DIRTY = 0x1,
+		PAGE_FLAG_ACCESSED = 0x2,
+		PAGE_FLAG_GROWSDOWN = 0x4
+	};
+
+	struct BackingStore
+	{
+		BackingType type;
+		Inode* inode;
+		Text* text;
+		unsigned long fileOffset;
+		unsigned long validBytes;
+	};
+
+	struct Region
+	{
+		unsigned long start;
+		unsigned long end;
+		unsigned int prot;
+		unsigned int flags;
+		RegionType type;
+		BackingStore backing;
+	};
+
+	struct PageInfo
+	{
+		PageState state;
+		unsigned int flags;
+		unsigned short regionIndex;
+		unsigned long frameAddress;
+		unsigned long backingOffset;
+	};
 
 public:
 	MemoryDescriptor();
 	~MemoryDescriptor();
 
-public:
-	/* 申请并初始化PageDirectory，在做Map操作前使用 */
+	void Attach(Process* owner);
+	void Reset();
 	void Initialize();
-	/* 在释放进程时，需要调用该操作释放被占用的页表 */
 	void Release();
 
-	/* 以下函数用户完成对user结构中页表Entry的填充，该页表在进程切换时填充现有的页表 */
-	void MapTextEntrys(unsigned long textStartAddress, unsigned long textSize, unsigned long textPageIdxInPhyMemory);
-	void MapDataEntrys(unsigned long dataStartAddress, unsigned long dataSize, unsigned long dataPageIdxInPhyMemory);
-	void MapStackEntrys(unsigned long stackSize, unsigned long stackPageIdxInPhyMemory);
+	void UseKernelAddressSpace(PageDirectory* pageDirectory);
+	void CloneFrom(const MemoryDescriptor& other);
+	bool CloneResidentPagesFrom(const MemoryDescriptor& other);
 
-	/* @comment 原unixv6中sureg()函数.原函数用于将进程u区中的uisa和uisd两数组中的内存页映射数据映射到UISA与UISD
-	 * 寄存器中.由于体系结构的关系，使用MapToPageTable()函数将MemoryDescriptor中的页表copy到操作系统正使用的
-	 * PageTable中，然后使用FlushPageDirectory()函数完成页表映射，新上台进程的用户区数据映射完成 */
-	void MapToPageTable();
+	bool ConfigureExecutableLayout(unsigned long entryPoint,
+								   unsigned long codeStart,
+								   unsigned long codeSize,
+								   unsigned long dataStart,
+								   unsigned long dataSize,
+								   unsigned long stackSize);
+
+	bool CheckUserSpace() const;
+	bool HandlePageFault(unsigned long faultAddress, unsigned long stackPointer, bool isUserMode);
+	bool MaterializeBootstrapStack();
+	bool MaterializeExecutableImage(unsigned long textPhysicalAddress);
+	bool EnsurePagePresent(unsigned long faultAddress);
+	void ReleaseResidentPages(bool releaseSharedText);
+
+	void BuildPageTablesForImage();
+	void Activate();
 	void DisplayPageTable();
 
-	/* 
-	 * @comment 原unix v6中estabur()函数，用于建立用户态地址空间的相对地址映射表，然后调用
-	 * MapToPageTable()函数将相对地址映射表加载到用户态页表中。
-	 */
-	bool CheckUserSpaceSize( unsigned long textVirtualAddress, unsigned long textSize, unsigned long dataVirtualAddress, unsigned long dataSize, unsigned long stackSize );
-	void EstablishUserPageTable(unsigned long textVirtualAddress, unsigned long textSize, unsigned long dataVirtualAddress, unsigned long dataSize, unsigned long stackSize);
+	bool SetHeapBreak(unsigned long newBreak);
+	void GrowStackByPage();
 
-	void ClearUserPageTable();
-	PageTable* GetUserPageTableArray();
-	unsigned long GetTextStartAddress();
-	unsigned long GetTextSize();
-	unsigned long GetDataStartAddress();
-	unsigned long GetDataSize();
-	unsigned long GetStackSize();
+	PageDirectory* GetPageDirectoryPointer() const;
+	PageTable* GetUserPageTableArray() const;
+	PageTable* GetUserPageTableByIndex(unsigned int index) const;
+	bool HasUserAddressSpace() const;
+
+	unsigned long GetEntryPoint() const;
+	unsigned long GetCodeStart() const;
+	unsigned long GetCodeSize() const;
+	unsigned long GetDataStart() const;
+	unsigned long GetDataSize() const;
+	unsigned long GetHeapBase() const;
+	unsigned long GetHeapBreak() const;
+	unsigned long GetStackTop() const;
+	unsigned long GetStackBottom() const;
+	unsigned long GetStackSize() const;
+	unsigned long GetWritableSize() const;
+
+	Region* FindRegion(unsigned long address);
+	const Region* FindRegion(unsigned long address) const;
 
 private:
-	/* @comment设置页表目录项
-	 * @param
-	 * unsigned long virtualAddress:	虚拟地址(以字节为单位) 
-	 * unsigned int size:				需要映射的虚拟地址大小(以字节为单位) 
-	 * unsigned long phyPageIdx:		其实物理页索引号(页为单位)		
-	 * bool isReadWrite:				页属性，true为可读可写页
-	 */
-	unsigned int MapEntry(unsigned long virtualAddress, unsigned int size, unsigned long phyPageIdx, bool isReadWrite);
-	
-public:
-	PageTable*		m_UserPageTableArray;
-	/* 以下数据都是线性地址 */
-	unsigned long	m_TextStartAddress;	/* 代码段起始地址 */
-	unsigned long	m_TextSize;			/* 代码段长度 */
+	static unsigned long AlignDown(unsigned long value);
+	static unsigned long AlignUp(unsigned long value);
 
-	unsigned long	m_DataStartAddress; /* 数据段起始地址 */
-	unsigned long	m_DataSize;			/* 数据段长度 */
+	void ResetLayout();
+	void ClearPageInfos();
+	void ClearPageTables();
+	void ClearPageDirectory();
 
-	unsigned long	m_StackSize;		/* 栈段长度 */
-	//unsigned long	m_HeapSize;			/* 堆段长度 */
+	bool AddRegion(RegionType type,
+				   unsigned long start,
+				   unsigned long end,
+				   unsigned int prot,
+				   unsigned int flags,
+				   BackingType backingType);
+	void ReservePagesForRegion(unsigned int regionIndex);
+	bool AllocateZeroedPage(unsigned long virtualAddress);
+	bool ShareTextPage(unsigned long virtualAddress, unsigned long textPhysicalAddress);
+	void FreePageInfo(PageInfo& pageInfo, bool releaseSharedText);
+	void RemapResidentPages();
+
+	unsigned int AddressToPageIndex(unsigned long address) const;
+	void MapPage(unsigned long virtualAddress, unsigned long physicalAddress, bool readWrite);
+	void MarkRangeResident(unsigned long virtualAddress,
+						   unsigned long size,
+						   unsigned long physicalAddress,
+						   bool readWrite);
+	Region* FindRegionByType(RegionType type);
+	const Region* FindRegionByType(RegionType type) const;
+
+private:
+	Process* m_Owner;
+	PageDirectory* m_PageDirectory;
+	PageTable* m_UserPageTableArray;
+	Region* m_Regions;
+	PageInfo* m_PageInfos;
+	bool m_UsesKernelAddressSpace;
+
+	unsigned int m_RegionCount;
+
+	unsigned long m_EntryPoint;
+	unsigned long m_HeapBase;
+	unsigned long m_HeapBreak;
+	unsigned long m_StackTop;
 };
 
 #endif

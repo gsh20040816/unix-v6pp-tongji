@@ -23,6 +23,17 @@ class X86Assembly
 			__asm__ __volatile__("movl %0, %%cr3" : : "r"(pageDirectoryPhysicalAddress));
 		}
 
+		static inline void FlushCurrentPageDirectory()
+		{
+			unsigned long pageDirectoryPhysicalAddress;
+			__asm__ __volatile__(
+				"movl %%cr3, %0\n\t"
+				"movl %0, %%cr3"
+				: "=r"(pageDirectoryPhysicalAddress)
+				:
+				: "memory");
+		}
+
 		//允许中断
 		static inline void STI()
 		{

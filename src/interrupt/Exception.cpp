@@ -253,20 +253,16 @@ void Exception::PageFault(struct pt_regs* regs, struct pte_context* context)
 
 	User& u = Kernel::Instance().GetUser();
 	Process* current = u.u_procp;
-	MemoryDescriptor& md = u.u_MemoryDescriptor;
+	MemoryDescriptor& md = current->p_memory;
 
 	unsigned int cr2;
 	__asm__ __volatile__(" mov %%cr2, %0":"=r"(cr2) );
 
     /*由缺页异常处理程序每次扩展一页，如果合理的缺了多张堆栈页面，那就多执行几次缺页异常，直到把这些页面补齐*/
-
 	if( (context->xcs & USER_MODE) == USER_MODE)
 	{
-		Diagnose::Write("Page Fault in user Mode,CR2=%x",cr2);
-		if( cr2 < MemoryDescriptor::USER_SPACE_SIZE - md.m_StackSize && cr2 >= context->esp - 8
-				&& md.m_DataSize + md.m_StackSize + PageManager::PAGE_SIZE < MemoryDescriptor::USER_SPACE_SIZE - md.m_DataStartAddress )
-			current->SStack();
-		else
+		Diagnose::Write("Page Fault in user Mode,CR2=%x\n",cr2);
+		if ( md.HandlePageFault(cr2, context->esp, true) == false )
 		{
 			Diagnose::Write("Invalid MM access\n");
 			current -> PSignal(User::SIGSEGV);
@@ -275,7 +271,11 @@ void Exception::PageFault(struct pt_regs* regs, struct pte_context* context)
 		}
 	}
 	else
+	{
+		Diagnose::Write("Kernel PF: cr2=%x eip=%x err=%x cs=%x esp=%x\n",
+			cr2, context->eip, context->error_code, context->xcs, context->esp);
 		Utility::Panic("Page Fault in Kernel Mode.");
+	}
 }
 
 //x87 FPU浮点错误(INT 16)
