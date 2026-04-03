@@ -1,7 +1,6 @@
 #ifndef USER_H
 #define USER_H
 
-#include "MemoryDescriptor.h"
 #include "Process.h"
 #include "File.h"
 #include "INode.h"
@@ -98,8 +97,6 @@ public:
 	unsigned long u_ssav[2];	/* 用于对esp和ebp指针的二次保护 */
 	Process* u_procp;			/* 指向该u结构对应的Process结构 */
 
-	MemoryDescriptor u_MemoryDescriptor;
-
 	/* 系统调用相关成员 */
 	unsigned int	*u_ar0;		/* 指向核心栈现场保护区中EAX寄存器
 								存放的栈单元，本字段存放该栈单元的地址。
@@ -168,4 +165,3 @@ public:
 };
 
 #endif
-
