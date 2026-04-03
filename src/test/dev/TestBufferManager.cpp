@@ -142,30 +142,3 @@ bool TestBufferManager()
 	}
 }
 
-bool TestSwap()
-{
-	BufferManager& bufMgr = Kernel::Instance().GetBufferManager();
-	int count = SwapperManager::BLOCK_SIZE * 2;
-	char swapBuf[1024];
-
-	/* 将1#，2#这两个磁盘块读入swapBuf，相当于进程图像换入，因为还没有可用于测试的进程图像 */
-	if( bufMgr.Swap(1, (unsigned long)swapBuf, count, Buf::B_READ) == false )
-	{
-		while(true);
-	}
-
-	/* 分配交换区空间，并将进程图像“换出”到交换区中，运行结果使用UltraEdit打开c.img查看 */
-	int blkno = Kernel::Instance().GetSwapperManager().AllocSwap(count);
-	
-	if( bufMgr.Swap(blkno, (unsigned long)swapBuf, count, Buf::B_WRITE) == false )
-	{
-		while(true);
-	}
-
-	return true;
-	/* 注意：目前用于测试Swap()函数的进程图像首地址swapBuf是位于核心态地址空间，即大于0xC0000000，
-	 * 真正进程图像换入换出时，用户态地址空间从线性地址0开始，而ATADriver::DevStart()函数中，在
-	 * 物理区域描述符表(PRD Table)填入的是实际物理地址，统一进行Buf - 0xC0000000的换算。这操作对于指向
-	 * 进程图像起始地址的swbuf会是灾难性的，后面需要对其进行修改。
-	 */
-}

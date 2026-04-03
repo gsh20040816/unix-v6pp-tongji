@@ -751,14 +751,6 @@ void ProcessManager::WakeUpAll(unsigned long chan)
 	}
 }
 
-void ProcessManager::XSwap( Process* pProcess, bool bFreeMemory, int size )
-{
-	(void)pProcess;
-	(void)bFreeMemory;
-	(void)size;
-	Utility::Panic("XSwap disabled in non-swap mode");
-}
-
 void ProcessManager::Signal( TTy* pTTy, int signal )
 {
 	for ( int i = 0; i < ProcessManager::NPROC; i++ )

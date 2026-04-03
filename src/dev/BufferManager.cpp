@@ -408,50 +408,6 @@ loop:
 	return;
 }
 
-bool BufferManager::Swap(int blkno, unsigned long addr, int count, enum Buf::BufFlag flag)
-{
-	User& u = Kernel::Instance().GetUser();
-
-	X86Assembly::CLI();
-
-	/* swbuf正在被其它进程使用，则睡眠等待 */
-	while ( this->SwBuf.b_flags & Buf::B_BUSY )
-	{
-		this->SwBuf.b_flags |= Buf::B_WANTED;
-		u.u_procp->Sleep((unsigned long)&SwBuf, ProcessManager::PSWP);
-	}
-
-	this->SwBuf.b_flags = Buf::B_BUSY | flag;
-	this->SwBuf.b_dev = DeviceManager::ROOTDEV;
-	this->SwBuf.b_wcount = count;
-	this->SwBuf.b_blkno = blkno;
-	/* b_addr指向要传输部分的内存首地址 */
-	this->SwBuf.b_addr = (unsigned char *)addr;
-	this->m_DeviceManager->GetBlockDevice(Utility::GetMajor(this->SwBuf.b_dev)).Strategy(&this->SwBuf);
-
-	/* 关中断进行B_DONE标志的检查 */
-	X86Assembly::CLI();
-	/* 这里Sleep()等同于同步I/O中IOWait()的效果 */
-	while ( (this->SwBuf.b_flags & Buf::B_DONE) == 0 )
-	{
-		u.u_procp->Sleep((unsigned long)&SwBuf, ProcessManager::PSWP);
-	}
-
-	/* 这里Wakeup()等同于Brelse()的效果 */
-	if ( this->SwBuf.b_flags & Buf::B_WANTED )
-	{
-		Kernel::Instance().GetProcessManager().WakeUpAll((unsigned long)&SwBuf);
-	}
-	X86Assembly::STI();
-	this->SwBuf.b_flags &= ~(Buf::B_BUSY | Buf::B_WANTED);
-
-	if ( this->SwBuf.b_flags & Buf::B_ERROR )
-	{
-		return false;
-	}
-	return true;
-}
-
 void BufferManager::GetError(Buf* bp)
 {
 	User& u = Kernel::Instance().GetUser();
@@ -488,11 +444,6 @@ Buf* BufferManager::InCore(short adev, int blkno)
 			return bp;
 	}
 	return NULL;
-}
-
-Buf& BufferManager::GetSwapBuf()
-{
-	return this->SwBuf;
 }
 
 Buf& BufferManager::GetBFreeList()

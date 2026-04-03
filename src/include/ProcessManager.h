@@ -161,14 +161,6 @@ public:
 	void WakeUpAll(unsigned long chan);
 
 	/*
-	 * 将进程从内存换出至磁盘交换区上
-	 * pProcess: 指向要换出的进程
-	 * bFreeMemory: 是否释放进程图像占据的内存
-	 * size: 除共享正文段外，进程可交换部分图像长度；参数size为0时，直接使用p_size
-	 */
-	void XSwap(Process* pProcess, bool bFreeMemory, int size);
-
-	/*
 	 * 将信号signal发送至与发送进程所在同一终端的所有进程
 	 */
 	void Signal(TTy* pTTy, int signal);

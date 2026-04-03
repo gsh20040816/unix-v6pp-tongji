@@ -12,11 +12,6 @@ UserPageManager g_UserPageManager(&(Allocator::GetInstance()));
 KernelPageManager g_KernelPageManager(&(Allocator::GetInstance()));
 KernelAllocator g_KernelAllocator(&(Allocator::GetInstance()));
 
-/*
- * 交换区相关全局manager
- */
-SwapperManager g_SwapperManager(&(Allocator::GetInstance()));
-
 /* 
  * 进程相关全局manager
  */
@@ -65,9 +60,6 @@ void Kernel::InitMemory()
 
 	/* 设置new/delete operator需要使用的Allocator */
 	set_kernel_allocator(this->m_KernelAllocator);
-
-	/* 非交换模式：仅保留兼容对象，不在启动阶段启用交换区管理。 */
-	this->m_SwapperManager = &g_SwapperManager;
 
 }
 
@@ -134,11 +126,6 @@ ProcessManager& Kernel::GetProcessManager()
 KernelAllocator& Kernel::GetKernelAllocator()
 {
 	return *(this->m_KernelAllocator);
-}
-
-SwapperManager& Kernel::GetSwapperManager()
-{
-	return *(this->m_SwapperManager);
 }
 
 BufferManager& Kernel::GetBufferManager()

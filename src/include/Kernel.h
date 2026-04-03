@@ -9,7 +9,6 @@
 #include "DeviceManager.h"
 #include "FileManager.h"
 #include "FileSystem.h"
-#include "SwapperManager.h"
 
 /*
  * Kernel类用于封装所有内核相关的全局类实例对象，
@@ -34,7 +33,6 @@ public:
 	UserPageManager& GetUserPageManager();
 	ProcessManager& GetProcessManager();
 	KernelAllocator& GetKernelAllocator();
-	SwapperManager& GetSwapperManager();
 	BufferManager& GetBufferManager();
 	DeviceManager& GetDeviceManager();
 	FileSystem& GetFileSystem();
@@ -54,7 +52,6 @@ private:
 	UserPageManager* m_UserPageManager;
 	ProcessManager* m_ProcessManager;
 	KernelAllocator* m_KernelAllocator;
-	SwapperManager* m_SwapperManager;
 	BufferManager* m_BufferManager;
 	DeviceManager* m_DeviceManager;
 	FileSystem* m_FileSystem;

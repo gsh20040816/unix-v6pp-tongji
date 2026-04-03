@@ -19,7 +19,4 @@
 #include "lib/Lib.h"
 #include "lib/TestLib.h"
 
-/* mm */
-#include "mm/TestSwapperManager.h"
-
 #endif

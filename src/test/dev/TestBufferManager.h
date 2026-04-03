@@ -20,6 +20,4 @@ bool WriteTest();
 
 bool TestBufferManager();
 
-bool TestSwap();
-
 #endif
