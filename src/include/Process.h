@@ -99,6 +99,14 @@ public:
 	int p_sig;			/* 进程信号 */
 	TTy* p_ttyp;		/* 进程tty结构地址 */
 	unsigned long p_sigmap;
+
+	/* 僵尸进程阶段保留给wait()读取的退出信息 */
+	int p_xstat;		/* exit(status)的status */
+	int p_utime;		/* 退出时用户态时间 */
+	int p_stime;		/* 退出时核心态时间 */
+	int p_cutime;		/* 退出时子进程用户态时间总和 */
+	int p_cstime;		/* 退出时子进程核心态时间总和 */
+
 	MemoryDescriptor p_memory;
 };
 

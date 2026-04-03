@@ -26,13 +26,9 @@ void Text::XccDec()
 void Text::XFree()
 {
 	this->XccDec();
-	/* 
-	 * 如果引用该共享正文段的进程数为0，进程都已终止
-	 * 则没有必要在交换区上保存共享正文段的副本。
-	 */
+	/* 非交换模式下，x_daddr不再使用。 */
 	if ( --this->x_count == 0 )
 	{
-		Kernel::Instance().GetSwapperManager().FreeSwap(this->x_size, this->x_daddr);
 		Kernel::Instance().GetFileManager().m_InodeTable->IPut(this->x_iptr);
 		this->x_iptr = NULL;
 	}

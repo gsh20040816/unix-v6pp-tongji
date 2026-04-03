@@ -27,7 +27,7 @@ public:
 	void XFree();
 
 public:
-	int				x_daddr;	/* 代码正文段在盘交换区上的地址 */
+	int				x_daddr;	/* 兼容旧结构保留字段，非交换模式不使用 */
 	unsigned long	x_caddr;	/* 代码正文段在物理内存中的起始地址，以字节为单位 */
 	unsigned int	x_size;		/* 代码段长度，以字节为单位 */
 	Inode*			x_iptr;		/* 内存inode地址 */

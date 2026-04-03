@@ -12,6 +12,11 @@ Process::Process()
 	this->p_stat = SNULL;
 	/* 避免0#进程在Wait()时，许多空闲process项以0#进程为父进程 */
 	this->p_ppid = -1;
+	this->p_xstat = 0;
+	this->p_utime = 0;
+	this->p_stime = 0;
+	this->p_cutime = 0;
+	this->p_cstime = 0;
 	this->p_memory.Attach(this);
 }
 
@@ -178,26 +183,24 @@ void Process::Exit()
 		u.u_procp->p_textp = NULL;
 	}
 
-	/* 将u区写入交换区，等待父进程做善后处理 */
-	SwapperManager& swapperMgr = Kernel::Instance().GetSwapperManager();
-	BufferManager& bufMgr = Kernel::Instance().GetBufferManager();
+	/* 在进程控制块中保存wait()需要回收的退出信息 */
 	Process* current = u.u_procp;
-	/* u区的大小不会超过512字节，所以只写入ppda区的前512字节，已囊括u结构的全部信息 */
-	int blkno = swapperMgr.AllocSwap(BufferManager::BUFFER_SIZE);
-	if ( NULL == blkno )
-	{
-		Utility::Panic("Out of Swapper Space");
-	}
-	Buf* pBuf = bufMgr.GetBlk(DeviceManager::ROOTDEV, blkno);
-	Utility::DWordCopy((int *)&u, (int *)pBuf->b_addr, BufferManager::BUFFER_SIZE / sizeof(int));
-	bufMgr.Bwrite(pBuf);
+	current->p_xstat = u.u_arg[0];
+	current->p_utime = u.u_utime;
+	current->p_stime = u.u_stime;
+	current->p_cutime = u.u_cutime;
+	current->p_cstime = u.u_cstime;
 
 	/* 释放内存资源 */
 	current->p_memory.ReleaseResidentPages(false);
 	current->p_memory.Release();
 	UserPageManager& userPageMgr = Kernel::Instance().GetUserPageManager();
-	userPageMgr.FreeMemory(ProcessManager::USIZE, current->p_addr);
-	current->p_addr = blkno;
+	if ( current->p_addr != 0 )
+	{
+		userPageMgr.FreeMemory(ProcessManager::USIZE, current->p_addr);
+	}
+	current->p_addr = 0;
+	current->p_size = 0;
 	current->p_stat = Process::SZOMB;
 
 	/* 唤醒父进程进行善后处理 */
@@ -253,6 +256,11 @@ void Process::Clone(Process& proc)
 	/* 初始化进程调度相关成员 */
 	proc.p_pri = 0;		/* 确保child的优先数较小，与其它进程相比更有机会占用CPU */
 	proc.p_time = 0;
+	proc.p_xstat = 0;
+	proc.p_utime = 0;
+	proc.p_stime = 0;
+	proc.p_cutime = 0;
+	proc.p_cstime = 0;
 	
 
 	/* 打开文件控制块File结构引用计数+1 */
