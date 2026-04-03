@@ -12,6 +12,8 @@
 class Text
 {
 public:
+	static const unsigned int MAX_TEXT_PAGE_COUNT = 10;
+
 	Text();
 	~Text();
 
@@ -28,7 +30,7 @@ public:
 
 public:
 	int				x_daddr;	/* 兼容旧结构保留字段，非交换模式不使用 */
-	unsigned long	x_caddr;	/* 代码正文段在物理内存中的起始地址，以字节为单位 */
+	unsigned long	x_addr[MAX_TEXT_PAGE_COUNT];	/* 代码正文段每一页的物理地址，以字节为单位 */
 	unsigned int	x_size;		/* 代码段长度，以字节为单位 */
 	Inode*			x_iptr;		/* 内存inode地址 */
 	unsigned short	x_count;	/* 共享正文段的进程数 */

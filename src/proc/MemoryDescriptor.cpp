@@ -77,6 +77,32 @@ namespace
 				base + i * PageManager::PAGE_SIZE);
 		}
 	}
+
+	static bool ResolveTextPhysicalAddress(const Text* text,
+		unsigned long backingOffset,
+		unsigned long& textPhysicalAddress)
+	{
+		if ( text == NULL )
+		{
+			return false;
+		}
+
+		unsigned int pageIndex =
+			(unsigned int)(backingOffset / PageManager::PAGE_SIZE);
+		if ( pageIndex >= Text::MAX_TEXT_PAGE_COUNT )
+		{
+			return false;
+		}
+
+		if ( text->x_addr[pageIndex] == 0 )
+		{
+			return false;
+		}
+
+		textPhysicalAddress =
+			text->x_addr[pageIndex] + (backingOffset % PageManager::PAGE_SIZE);
+		return true;
+	}
 }
 
 MemoryDescriptor::MemoryDescriptor()
@@ -372,13 +398,16 @@ bool MemoryDescriptor::CloneResidentPagesFrom(const MemoryDescriptor& other)
 		if ( region.backing.type == BACKING_SHARED_TEXT && other.m_Owner != NULL &&
 			other.m_Owner->p_textp != NULL )
 		{
-			if ( this->ShareTextPage(virtualAddress,
-				other.m_Owner->p_textp->x_caddr + srcPage.backingOffset) == false )
+			unsigned long textPhysicalAddress = 0;
+			if ( ResolveTextPhysicalAddress(other.m_Owner->p_textp,
+				srcPage.backingOffset,
+				textPhysicalAddress) == false ||
+				this->ShareTextPage(virtualAddress, textPhysicalAddress) == false )
 			{
 				return false;
 			}
 			dstPage.state = PAGE_STATE_RESIDENT;
-			dstPage.frameAddress = other.m_Owner->p_textp->x_caddr + srcPage.backingOffset;
+			dstPage.frameAddress = textPhysicalAddress;
 			continue;
 		}
 
@@ -553,7 +582,7 @@ bool MemoryDescriptor::MaterializeBootstrapStack()
 	return true;
 }
 
-bool MemoryDescriptor::MaterializeExecutableImage(unsigned long textPhysicalAddress)
+bool MemoryDescriptor::MaterializeExecutableImage()
 {
 	if ( this->FindRegionByType(REGION_RUNTIME) != NULL )
 	{
@@ -566,9 +595,18 @@ bool MemoryDescriptor::MaterializeExecutableImage(unsigned long textPhysicalAddr
 	const Region* code = this->FindRegionByType(REGION_CODE);
 	if ( code != NULL )
 	{
+		if ( this->m_Owner == NULL || this->m_Owner->p_textp == NULL )
+		{
+			return false;
+		}
+
 		for ( unsigned long va = code->start; va < code->end; va += PageManager::PAGE_SIZE )
 		{
-			if ( this->ShareTextPage(va, textPhysicalAddress + (va - code->start)) == false )
+			unsigned long textPhysicalAddress = 0;
+			if ( ResolveTextPhysicalAddress(this->m_Owner->p_textp,
+				va - code->start,
+				textPhysicalAddress) == false ||
+				this->ShareTextPage(va, textPhysicalAddress) == false )
 			{
 				return false;
 			}
@@ -634,8 +672,16 @@ bool MemoryDescriptor::EnsurePagePresent(unsigned long faultAddress)
 		{
 			return false;
 		}
-		ok = this->ShareTextPage(virtualAddress,
-			this->m_Owner->p_textp->x_caddr + pageInfo.backingOffset);
+		{
+			unsigned long textPhysicalAddress = 0;
+			if ( ResolveTextPhysicalAddress(this->m_Owner->p_textp,
+				pageInfo.backingOffset,
+				textPhysicalAddress) == false )
+			{
+				return false;
+			}
+			ok = this->ShareTextPage(virtualAddress, textPhysicalAddress);
+		}
 		break;
 	case BACKING_EXEC_FILE:
 		ok = this->AllocateZeroedPage(virtualAddress);

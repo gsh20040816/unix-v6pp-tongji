@@ -80,6 +80,51 @@ namespace
 		}
 	}
 
+	static void ClearTextPageArray(Text* text)
+	{
+		if ( text == NULL )
+		{
+			return;
+		}
+
+		for ( unsigned int i = 0; i < Text::MAX_TEXT_PAGE_COUNT; ++i )
+		{
+			text->x_addr[i] = 0;
+		}
+	}
+
+	static bool AllocateTextPages(PageManager& pageManager, Text* text, unsigned int pageCount)
+	{
+		if ( text == NULL )
+		{
+			return false;
+		}
+
+		if ( pageCount > Text::MAX_TEXT_PAGE_COUNT )
+		{
+			return false;
+		}
+
+		ClearTextPageArray(text);
+		for ( unsigned int i = 0; i < pageCount; ++i )
+		{
+			unsigned long page = pageManager.AllocMemory(PageManager::PAGE_SIZE);
+			if ( page == 0 )
+			{
+				for ( unsigned int j = 0; j < i; ++j )
+				{
+					pageManager.FreeMemory(PageManager::PAGE_SIZE, text->x_addr[j]);
+					text->x_addr[j] = 0;
+				}
+				return false;
+			}
+
+			text->x_addr[i] = page;
+		}
+
+		return true;
+	}
+
 	static void DumpProcBrief(const char* tag, Process* p)
 	{
 		if ( p == NULL )
@@ -640,13 +685,34 @@ void ProcessManager::Exec()
 		pText->x_size = u.u_procp->p_memory.GetCodeSize();
 		/* 为正文段分配内存，而具体正文段内容的读入需要等到建立页表映射之后，再从mapAddress地址起始的exe文件中读入 */
 		unsigned int textPageCount = BytesToPageCount(pText->x_size);
-		pText->x_caddr = AllocContiguousPages(userPgMgr, textPageCount);
-		if ( pText->x_caddr == 0 )
+		if ( textPageCount > Text::MAX_TEXT_PAGE_COUNT )
+		{
+			Diagnose::Write("Exec text too large: %d pages (max %d)\n",
+				textPageCount, Text::MAX_TEXT_PAGE_COUNT);
+			pText->x_ccount = 0;
+			pText->x_count = 0;
+			pText->x_size = 0;
+			pText->x_daddr = 0;
+			ClearTextPageArray(pText);
+			u.u_procp->p_textp = NULL;
+			FreeContiguousPages(kernelPgMgr, fakeStack, fakeStackPageCount);
+			fileMgr.m_InodeTable->IPut(pInode);
+			if ( this->ExeCnt >= NEXEC )
+			{
+				WakeUpAll((unsigned long)&ExeCnt);
+			}
+			this->ExeCnt--;
+			u.u_error = User::ENOEXEC;
+			return;
+		}
+
+		if ( AllocateTextPages(userPgMgr, pText, textPageCount) == false )
 		{
 			pText->x_ccount = 0;
 			pText->x_count = 0;
 			pText->x_size = 0;
 			pText->x_daddr = 0;
+			ClearTextPageArray(pText);
 			u.u_procp->p_textp = NULL;
 			FreeContiguousPages(kernelPgMgr, fakeStack, fakeStackPageCount);
 			fileMgr.m_InodeTable->IPut(pInode);
@@ -678,10 +744,14 @@ void ProcessManager::Exec()
 	}
 
 	u.u_procp->p_size = newSize;
-	Diagnose::Write("Process %x, p_addr %x, x_addr %x, p_size %x, x_size %x\n",
-			u.u_procp->p_pid,u.u_procp->p_addr,u.u_procp->p_textp->x_caddr,u.u_procp->p_size,u.u_procp->p_textp->x_size);
+	Diagnose::Write("Process %x, p_addr %x, x_addr0 %x, p_size %x, x_size %x\n",
+			u.u_procp->p_pid,
+			u.u_procp->p_addr,
+			u.u_procp->p_textp->x_addr[0],
+			u.u_procp->p_size,
+			u.u_procp->p_textp->x_size);
 
-	if ( u.u_procp->p_memory.MaterializeExecutableImage(u.u_procp->p_textp->x_caddr) == false )
+	if ( u.u_procp->p_memory.MaterializeExecutableImage() == false )
 	{
 		u.u_error = User::ENOMEM;
 		return;

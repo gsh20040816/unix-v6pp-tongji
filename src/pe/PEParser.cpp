@@ -73,6 +73,69 @@ namespace
 				base + i * PageManager::PAGE_SIZE);
 		}
 	}
+
+	static bool ReadInPagedChunks(Inode* p_inode,
+		unsigned long fileOffset,
+		unsigned long virtualAddress,
+		unsigned long size)
+	{
+		User& u = Kernel::Instance().GetUser();
+		unsigned long remaining = size;
+
+		while ( remaining != 0 )
+		{
+			unsigned long pageRemain =
+				PageManager::PAGE_SIZE - (virtualAddress & (PageManager::PAGE_SIZE - 1));
+			unsigned long chunk = remaining;
+			if ( chunk > pageRemain )
+			{
+				chunk = pageRemain;
+			}
+
+			u.u_IOParam.m_Base = (unsigned char*)virtualAddress;
+			u.u_IOParam.m_Offset = fileOffset;
+			u.u_IOParam.m_Count = chunk;
+			p_inode->ReadI();
+
+			if ( u.u_error != User::NOERROR || u.u_IOParam.m_Count != 0 )
+			{
+				if ( u.u_error == User::NOERROR )
+				{
+					u.u_error = User::ENOEXEC;
+				}
+				return false;
+			}
+
+			fileOffset += chunk;
+			virtualAddress += chunk;
+			remaining -= chunk;
+		}
+
+		return true;
+	}
+
+	static void CopyInPagedChunks(unsigned long srcAddress,
+		unsigned long desAddress,
+		unsigned long size)
+	{
+		unsigned long remaining = size;
+
+		while ( remaining != 0 )
+		{
+			unsigned long pageRemain =
+				PageManager::PAGE_SIZE - (desAddress & (PageManager::PAGE_SIZE - 1));
+			unsigned long chunk = remaining;
+			if ( chunk > pageRemain )
+			{
+				chunk = pageRemain;
+			}
+
+			Utility::MemCopy(srcAddress, desAddress, chunk);
+			srcAddress += chunk;
+			desAddress += chunk;
+			remaining -= chunk;
+		}
+	}
 }
 
 PEParser::PEParser()
@@ -131,13 +194,14 @@ unsigned int PEParser::Relocate(Inode* p_inode, int sharedText)
 	for (; i <= lastDataSectionIdx; i++ )
 	{
 		ImageSectionHeader* sectionHeader = &(this->sectionHeaders[i]);
-		int beginVM = sectionHeader->VirtualAddress + ntHeader.OptionalHeader.ImageBase;
-		int size = ((sectionHeader->Misc.VirtualSize + PageManager::PAGE_SIZE - 1)>>12)<<12;
-		int j;
+		unsigned long beginVM =
+			sectionHeader->VirtualAddress + ntHeader.OptionalHeader.ImageBase;
+		unsigned long size =
+			((sectionHeader->Misc.VirtualSize + PageManager::PAGE_SIZE - 1) >> 12) << 12;
 
-		for (j=0; j<size; j++)
+		for (unsigned long j = 0; j < size; ++j)
 		{
-			unsigned char* b =(unsigned char*)(j + beginVM);
+			unsigned char* b = (unsigned char*)(beginVM + j);
 			*b = 0;
 		}
 	}
@@ -166,12 +230,13 @@ unsigned int PEParser::Relocate(Inode* p_inode, int sharedText)
 		srcAddress = sectionHeader->PointerToRawData;
 		desAddress =
 			this->ntHeader.OptionalHeader.ImageBase + sectionHeader->VirtualAddress;
-
-	    u.u_IOParam.m_Base = (unsigned char*)desAddress;
-	    u.u_IOParam.m_Offset = srcAddress;
-	    u.u_IOParam.m_Count = sectionHeader->Misc.VirtualSize;
-
-	    p_inode->ReadI();
+		if ( ReadInPagedChunks(p_inode,
+			srcAddress,
+			desAddress,
+			sectionHeader->Misc.VirtualSize) == false )
+		{
+			return cnt;
+		}
 
 		cnt += sectionHeader->Misc.VirtualSize;
 	}
@@ -216,7 +281,7 @@ unsigned int PEParser::Relocate()
 		srcAddress = this->peAddress + sectionHeader->PointerToRawData;
 		desAddress = 
 			this->ntHeader.OptionalHeader.ImageBase + sectionHeader->VirtualAddress;
-		Utility::MemCopy(srcAddress, desAddress, sectionHeader->Misc.VirtualSize);
+		CopyInPagedChunks(srcAddress, desAddress, sectionHeader->Misc.VirtualSize);
 		cnt += sectionHeader->Misc.VirtualSize;
 	}
 
@@ -273,9 +338,14 @@ bool PEParser::HeaderLoad(Inode* p_inode)
     	 *
     */
 	this->TextAddress =
-		ntHeader.OptionalHeader.BaseOfCode + ntHeader.OptionalHeader.ImageBase;
+		this->sectionHeaders[this->TEXT_SECTION_IDX].VirtualAddress +
+		ntHeader.OptionalHeader.ImageBase;
 	this->TextSize =
-		ntHeader.OptionalHeader.BaseOfData - ntHeader.OptionalHeader.BaseOfCode;
+		this->sectionHeaders[this->TEXT_SECTION_IDX].Misc.VirtualSize;
+	if ( this->TextSize < this->sectionHeaders[this->TEXT_SECTION_IDX].SizeOfRawData )
+	{
+		this->TextSize = this->sectionHeaders[this->TEXT_SECTION_IDX].SizeOfRawData;
+	}
 
 	this->DataAddress =
 		ntHeader.OptionalHeader.BaseOfData + ntHeader.OptionalHeader.ImageBase;

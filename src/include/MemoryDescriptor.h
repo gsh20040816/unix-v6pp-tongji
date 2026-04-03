@@ -115,7 +115,7 @@ public:
 	bool CheckUserSpace() const;
 	bool HandlePageFault(unsigned long faultAddress, unsigned long stackPointer, bool isUserMode);
 	bool MaterializeBootstrapStack();
-	bool MaterializeExecutableImage(unsigned long textPhysicalAddress);
+	bool MaterializeExecutableImage();
 	bool EnsurePagePresent(unsigned long faultAddress);
 	void ReleaseResidentPages(bool releaseSharedText);
 
