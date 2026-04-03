@@ -593,7 +593,7 @@ void MemoryDescriptor::Activate()
 		return;
 	}
 
-	this->ClearPageDirectory();
+	// this->ClearPageDirectory();
 
 	for ( unsigned int i = 0; i < USER_PAGE_TABLE_CNT; ++i )
 	{

@@ -22,13 +22,14 @@ public:
 	static void Write(const char* fmt, ...);
 	static void ClearScreen();
 
-private:	
-	static void PrintInt(unsigned int value, int base);
-	static void NextLine();
-	static void WriteChar(const char ch);
+	private:	
+		static void PrintInt(unsigned int value, int base);
+		static void NextLine();
+		static void WriteChar(const char ch);
+		static void RepairState();
 
-public:
-	static unsigned int		m_Row;
+	public:
+		static unsigned int		m_Row;
 	static unsigned int		m_Column;
 
 private:

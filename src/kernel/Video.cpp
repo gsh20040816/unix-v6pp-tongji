@@ -1,5 +1,29 @@
 #include "Video.h"
 
+namespace
+{
+	static const unsigned long DIAGNOSE_VIDEO_MEMORY_BASE = 0xC00B8000;
+	static const unsigned int DIAGNOSE_DEFAULT_ROWS = 10;
+	typedef __builtin_va_list DiagnoseVaList;
+
+	/*
+	 * 内核以 -nostdinc 构建，不能直接包含 <stdarg.h>，
+	 * 因此这里使用编译器内建的可变参数支持。
+	 */
+#define DIAGNOSE_VA_START(ap, last) __builtin_va_start(ap, last)
+#define DIAGNOSE_VA_ARG(ap, type) __builtin_va_arg(ap, type)
+#define DIAGNOSE_VA_END(ap) __builtin_va_end(ap)
+
+	static inline unsigned short* ResolveDiagnoseVideoMemory(unsigned short*& videoMemory)
+	{
+		if ( videoMemory == 0 )
+		{
+			videoMemory = (unsigned short*)DIAGNOSE_VIDEO_MEMORY_BASE;
+		}
+		return videoMemory;
+	}
+}
+
 unsigned short* Diagnose::m_VideoMemory = (unsigned short *)(0xB8000 + 0xC0000000);
 unsigned int Diagnose::m_Row = 10;
 unsigned int Diagnose::m_Column = 0;
@@ -18,9 +42,38 @@ Diagnose::~Diagnose()
 	//this is an empty dtor
 }
 
+void Diagnose::RepairState()
+{
+	ResolveDiagnoseVideoMemory(Diagnose::m_VideoMemory);
+
+	if ( Diagnose::trace_on )
+	{
+		if ( Diagnose::ROWS == 0 || Diagnose::ROWS > Diagnose::SCREEN_ROWS )
+		{
+			Diagnose::ROWS = DIAGNOSE_DEFAULT_ROWS;
+		}
+
+		unsigned int firstRow = Diagnose::SCREEN_ROWS - Diagnose::ROWS;
+		if ( Diagnose::m_Row < firstRow || Diagnose::m_Row >= Diagnose::SCREEN_ROWS )
+		{
+			Diagnose::m_Row = firstRow;
+		}
+	}
+	else if ( Diagnose::ROWS > Diagnose::SCREEN_ROWS )
+	{
+		Diagnose::ROWS = 0;
+	}
+
+	if ( Diagnose::m_Column >= Diagnose::COLUMNS )
+	{
+		Diagnose::m_Column = 0;
+	}
+}
+
 void Diagnose::TraceOn()
 {
 	Diagnose::trace_on = 1;
+	Diagnose::RepairState();
 }
 
 void Diagnose::TraceOff()
@@ -38,10 +91,11 @@ void Diagnose::Write(const char* fmt, ...)
 	{
 		return;
 	}
-	//使va_arg中存放参数fmt的 “后一个参数” 所在的内存地址
-	//fmt的内容本身是字符串的首地址(这不是我们要的)，而&fmt + 1则是下一个参数的地址
-	//参考UNIX v6中的函数prf.c/printf(fmt, x1,x2,x3,x4,x5,x6,x7,x8,x9,xa,xb,xc)
-	unsigned int * va_arg = (unsigned int *)&fmt + 1;
+
+	Diagnose::RepairState();
+
+	DiagnoseVaList args;
+	DIAGNOSE_VA_START(args, fmt);
 	const char * ch = fmt;
 	
 	while(1)
@@ -49,7 +103,10 @@ void Diagnose::Write(const char* fmt, ...)
 		while(*ch != '%' && *ch != '\n')
 		{
 			if(*ch == '\0')
+			{
+				DIAGNOSE_VA_END(args);
 				return;
+			}
 			if(*ch == '\n')
 				break;
 			/*注意： '\n'是一个单一字符，而不是'\\'和 ‘n'两个字符的相加， 
@@ -62,19 +119,32 @@ void Diagnose::Write(const char* fmt, ...)
 
 		if(*ch == 'd' || *ch == 'x')
 		{//%d 或 %x 格式来输出，当然要添加八进制和二进制也很容易，但用处不大。
-			int value = (int)(*va_arg);
-			va_arg++;
 			if(*ch == 'x')
+			{
+				unsigned int value = DIAGNOSE_VA_ARG(args, unsigned int);
 				Write("0x");   //as prefix for HEX value
-			PrintInt(value, *ch == 'd' ? 10 : 16);
+				PrintInt(value, 16);
+			}
+			else
+			{
+				int value = DIAGNOSE_VA_ARG(args, int);
+				if ( value < 0 )
+				{
+					WriteChar('-');
+					PrintInt((unsigned int)(-(value + 1)) + 1, 10);
+				}
+				else
+				{
+					PrintInt((unsigned int)value, 10);
+				}
+			}
 			ch++;	//skip the 'd' or 'x'
 		}
 		
 		else if(*ch == 's')
 		{//%s 格式来输出
 			ch++;	//skip the 's'
-			char *str = (char *)(*va_arg);
-			va_arg++;
+			char *str = DIAGNOSE_VA_ARG(args, char *);
 			while(char tmp = *str++)
 			{
 				WriteChar(tmp);
@@ -93,14 +163,13 @@ void Diagnose::Write(const char* fmt, ...)
 */
 void Diagnose::PrintInt(unsigned int value, int base)
 {
-	//因为数字0～9 和 A~F的ASCII码之间不是连续的，所以不能简单通过
-	//ASCII(i) = i + '0'直接计算得到，因此用了Digits字符数组。
-	static char Digits[] = "0123456789ABCDEF";
 	int i;
 	
 	if((i = value / base) != 0)
 		PrintInt(i ,base);
-	WriteChar(Digits[value % base]);
+
+	unsigned int digit = value % base;
+	WriteChar(digit < 10 ? (char)('0' + digit) : (char)('A' + digit - 10));
 }
 
 void Diagnose::NextLine()
@@ -111,6 +180,9 @@ void Diagnose::NextLine()
 
 void Diagnose::WriteChar(const char ch)
 {
+	Diagnose::RepairState();
+	unsigned short* videoMemory = Diagnose::m_VideoMemory;
+
 	if(Diagnose::m_Column >= Diagnose::COLUMNS)
 	{
 		NextLine();
@@ -121,12 +193,14 @@ void Diagnose::WriteChar(const char ch)
 		Diagnose::ClearScreen();
 	}
 
-	Diagnose::m_VideoMemory[Diagnose::m_Row * COLUMNS + Diagnose::m_Column] = (unsigned char) ch | Diagnose::COLOR;
+	videoMemory[Diagnose::m_Row * COLUMNS + Diagnose::m_Column] = (unsigned char) ch | Diagnose::COLOR;
 	Diagnose::m_Column++;
 }
 
 void Diagnose::ClearScreen()
 {
+	Diagnose::RepairState();
+	unsigned short* videoMemory = Diagnose::m_VideoMemory;
 	unsigned int i;
 
 	Diagnose::m_Row = Diagnose::SCREEN_ROWS - Diagnose::ROWS;
@@ -134,6 +208,6 @@ void Diagnose::ClearScreen()
 
 	for(i = 0; i < (COLUMNS * ROWS); i++)
 	{
-		Diagnose::m_VideoMemory[i + m_Row * COLUMNS] = (unsigned char) ' ' | Diagnose::COLOR;
+		videoMemory[i + m_Row * COLUMNS] = (unsigned char) ' ' | Diagnose::COLOR;
 	}
 }

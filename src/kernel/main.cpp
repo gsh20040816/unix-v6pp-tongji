@@ -16,7 +16,6 @@
 #include "SystemCall.h"
 
 #include "Exception.h"
-#include "Regs.h"
 #include "DMA.h"
 #include "CRT.h"
 #include "TimeInterrupt.h"
@@ -121,7 +120,18 @@ extern "C" void ExecShell()
 {
 	int argc = 0;
 	char* argv = NULL;
-	char* pathname = "/Shell.exe";
+	char pathname[11];
+	pathname[0] = '/';
+	pathname[1] = 'S';
+	pathname[2] = 'h';
+	pathname[3] = 'e';
+	pathname[4] = 'l';
+	pathname[5] = 'l';
+	pathname[6] = '.';
+	pathname[7] = 'e';
+	pathname[8] = 'x';
+	pathname[9] = 'e';
+	pathname[10] = '\0';
 	__asm__ __volatile__ ("int $0x80"::"a"(11/* execv */),"b"(pathname),"c"(argc),"d"(argv));
 	return;
 }
@@ -137,77 +147,6 @@ extern "C" void Delay()
 			int c=a+b;
 			c++;
 		}
-}
-
-static void BootstrapInitProcess()
-{
-	User& initUser = Kernel::Instance().GetUser();
-	ProcessManager& procMgr = Kernel::Instance().GetProcessManager();
-	struct pt_context initContext;
-	unsigned int initAr0[32];
-	unsigned int* initAr0Base = &initAr0[24];
-	char* initPath = "/Shell.exe";
-
-	CRT::ClearScreen();
-
-	initContext.eip = 0;
-	initContext.xcs = 0;
-	initContext.eflags = 0;
-	initContext.esp = 0;
-	initContext.xss = 0;
-	for ( int i = 0; i < 32; ++i )
-	{
-		initAr0[i] = 0;
-	}
-
-	int fd_tty = lib_open("/dev/tty1", File::FREAD);
-	if ( fd_tty != 0 )
-	{
-		Utility::Panic("STDIN Error!");
-	}
-	fd_tty = lib_open("/dev/tty1", File::FWRITE);
-	if ( fd_tty != 1 )
-	{
-		Utility::Panic("STDOUT Error!");
-	}
-	Diagnose::TraceOn();
-
-	initUser.u_ar0 = initAr0Base;
-	initUser.u_dirp = initPath;
-	initUser.u_arg[0] = (int)initPath;
-	initUser.u_arg[1] = 0;
-	initUser.u_arg[2] = 0;
-	initUser.u_arg[3] = 0;
-	initUser.u_arg[4] = (int)&initContext;
-
-	procMgr.Exec();
-	if ( initUser.u_error != User::NOERROR )
-	{
-		Utility::Panic("Bootstrap exec shell failed");
-	}
-
-	unsigned int userEntry = initAr0Base[User::EAX];
-	unsigned int userEip = initContext.eip;
-	unsigned int userCs = initContext.xcs;
-	unsigned int userEflags = initContext.eflags;
-	unsigned int userEsp = initContext.esp;
-	unsigned int userSs = initContext.xss;
-
-	__asm__ __volatile__(
-		"movl %0, %%eax\n\t"
-		"pushl %5\n\t"
-		"pushl %4\n\t"
-		"pushl %3\n\t"
-		"pushl %2\n\t"
-		"pushl %1\n\t"
-		"iret\n\t"
-		:
-		: "m"(userEntry), "m"(userEip), "m"(userCs),
-		  "m"(userEflags), "m"(userEsp), "m"(userSs)
-		: "eax", "memory");
-	for ( ;; )
-	{
-	}
 }
 
 extern "C" void next()
@@ -257,33 +196,53 @@ extern "C" void next()
 	us.u_cdir->i_flag &= (~Inode::ILOCK);
 	Utility::StringCopy("/", us.u_curdir);
 
+	/* 打开TTy设备 */
+	int fd_tty = lib_open("/dev/tty1", File::FREAD);
+
+	if ( fd_tty != 0 )
+	{
+		Utility::Panic("STDIN Error!");
+	}
+	fd_tty = lib_open("/dev/tty1", File::FWRITE);
+	if ( fd_tty != 1 )
+	{
+		Utility::Panic("STDOUT Error!");
+	}
+	Diagnose::TraceOn();
+	Diagnose::ClearScreen();
+	Diagnose::Write("boot: legacy main path\n");
+
 	unsigned char* runtimeSrc = (unsigned char*)runtime;
 	unsigned char* runtimeDst = 0x00000000;
-	for (unsigned int i = 0; i < (unsigned long)ExecShell - (unsigned long)runtime; i++)
+	for (unsigned int i = 0; i < (unsigned long)Delay - (unsigned long)runtime; i++)
 	{
 		*runtimeDst++ = *runtimeSrc++;
 	}
 
-	ProcessManager& procMgr = Kernel::Instance().GetProcessManager();
-	(void)procMgr.NewProc();         /* 0#进程创建1#进程 */
+	int pid = Kernel::Instance().GetProcessManager().NewProc();         /* 0#进程创建1#进程 */
+	if( 0 == pid )     /* 0#进程执行Sched()，成为系统中永远运行在核心态的唯一进程  */
+	{
+		us.u_procp->p_ttyp = NULL;
+		Kernel::Instance().GetProcessManager().Sched();
+	}
+		else               /* 1#进程执行应用程序shell.exe,是普通进程  */
+		{
+			Diagnose::Write("boot: init shell path\n");
 
-	Process* schedulerProc = &procMgr.process[0];
-	Process* initProc = &procMgr.process[1];
+			CRT::ClearScreen();
 
-	/*
-	 * 先直接把 1# 进程切到前台启动 shell，绕开当前尚未修好的
-	 * fork 首次返回链路；0# 进程留作后续继续调度/回切时使用。
-	 */
-	schedulerProc->p_stat = Process::SSLEEP;
-	schedulerProc->p_pri = ProcessManager::PSWP;
-	schedulerProc->p_wchan = (unsigned long)&procMgr.RunOut;
-
-	initProc->p_flag &= ~Process::SFORKRET;
-	initProc->p_stat = Process::SRUN;
-
-	X86Assembly::CLI();
-	SwtchUStruct(initProc);
-	RetU();
-	X86Assembly::STI();
-	BootstrapInitProcess();
-}
+			/* 1#进程首次回用户态时，直接从用户地址0处的runtime开始执行。 */
+			__asm__ __volatile__(
+				"movl %0, %%eax\n\t"
+				"movl $0x800000, %%edx\n\t"
+				"pushl $0x23\n\t"
+				"pushl %%edx\n\t"
+				"pushfl\n\t"
+				"pushl $0x1b\n\t"
+				"pushl $0x0\n\t"
+				"iret"
+				:
+				: "r"((unsigned long)ExecShell - (unsigned long)runtime)
+				: "eax", "edx");
+		}
+	}

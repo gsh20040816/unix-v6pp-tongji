@@ -29,7 +29,9 @@ unsigned int PEParser::Relocate(Inode* p_inode, int sharedText)
 
 	/* 如果可以和其它进程共享正文段，无需文件中读入正文段 */
 	PageTable* pUserPageTable = u.u_procp->p_memory.GetUserPageTableArray();
-	unsigned int textBegin = this->TextAddress >> 12 , textLength = this->TextSize >> 12;
+	unsigned int textBegin = this->TextAddress >> 12;
+	unsigned int textLength =
+		(this->TextSize + PageManager::PAGE_SIZE - 1) >> 12;
 	PageTableEntry* pointer = (PageTableEntry *)pUserPageTable;
 
 	/*如果与其它进程共享正文段，共享正文段切不可清0*/

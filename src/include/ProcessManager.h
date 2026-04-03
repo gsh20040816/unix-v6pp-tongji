@@ -29,10 +29,24 @@
  * 刷新内核页表第1023项的宏，在进程调度时，指向指定进程的u区地址，使
  * 得GetUser()函数返回当前进程的u结构
  */
-#define SwtchUStruct(p) \
-	Machine::Instance().GetKernelPageTable().m_Entrys[Kernel::USER_PAGE_INDEX].m_PageBaseAddress \
-		= (p)->p_addr / PageManager::PAGE_SIZE; \
-	X86Assembly::FlushPageDirectory((unsigned long)((p)->p_memory.GetPageDirectoryPointer()));
+#define SwtchUStruct(p)															\
+	do																			\
+	{																			\
+		Process* __switch_proc = (p);											\
+		unsigned long __switch_user_phys = __switch_proc->p_addr;				\
+		unsigned long __switch_page_dir_phys =									\
+			(unsigned long)__switch_proc->p_memory.GetPageDirectoryPointer();	\
+		if ( __switch_page_dir_phys >= Machine::KERNEL_SPACE_START_ADDRESS )	\
+		{																		\
+			__switch_page_dir_phys -= Machine::KERNEL_SPACE_START_ADDRESS;		\
+		}																		\
+		Machine::Instance().GetKernelPageTable().m_Entrys[Kernel::USER_PAGE_INDEX].m_PageBaseAddress \
+				= __switch_user_phys / PageManager::PAGE_SIZE;						\
+		__asm__ __volatile__("movl %0, %%cr3"									\
+							 :													\
+							 : "r"(__switch_page_dir_phys)						\
+							 : "memory");										\
+	} while (0)
 
 /* 
  * 恢复esp与ebp到u结构的宏，使用宏的理由同SaveU()

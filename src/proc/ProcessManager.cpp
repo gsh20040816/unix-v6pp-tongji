@@ -133,7 +133,29 @@ int ProcessManager::NewProc()
 	child->p_size = current->p_size;
 
 	X86Assembly::CLI();
-	Utility::CopyPage(current->p_addr, child->p_addr);
+	if ( current->p_memory.GetUserPageTableArray() == NULL )
+	{
+		KernelPageManager& kernelPgMgr = Kernel::Instance().GetKernelPageManager();
+		unsigned long scratchPage = kernelPgMgr.AllocMemory(ProcessManager::USIZE);
+		if ( scratchPage == 0 )
+		{
+			Utility::Panic("Out of kernel memory for bootstrap copy");
+		}
+
+		Utility::MemCopy(
+			current->p_addr + Machine::KERNEL_SPACE_START_ADDRESS,
+			scratchPage + Machine::KERNEL_SPACE_START_ADDRESS,
+			ProcessManager::USIZE);
+		Utility::CopyToPhysical(
+			child->p_addr,
+			(void*)(scratchPage + Machine::KERNEL_SPACE_START_ADDRESS),
+			ProcessManager::USIZE);
+		kernelPgMgr.FreeMemory(ProcessManager::USIZE, scratchPage);
+	}
+	else
+	{
+		Utility::CopyPage(current->p_addr, child->p_addr);
+	}
 
 	unsigned long userProcOffset =
 		(unsigned long)((char*)&u.u_procp - (char*)&u);

@@ -501,6 +501,7 @@ int SystemCall::Sys_Trace()
 		Diagnose::m_Column = 0;
 
 		CRT::ROWS = Diagnose::SCREEN_ROWS - Diagnose::ROWS;
+		Diagnose::TraceOn();
 	}
 	else /* if enabled already */
 	{
@@ -513,6 +514,7 @@ int SystemCall::Sys_Trace()
 
 		/* 字符设备输出使用整个屏幕所有行 */
 		CRT::ROWS = Diagnose::SCREEN_ROWS;
+		Diagnose::TraceOff();
 	}
 	u.u_ar0[User::EAX] = Diagnose::ROWS;
 
