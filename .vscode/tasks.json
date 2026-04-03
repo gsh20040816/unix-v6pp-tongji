@@ -6,7 +6,7 @@
             "command": "bash",
             "args": [
                 "-lc",
-                "./build.sh"
+                "bash ./build.sh"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"
@@ -31,7 +31,7 @@
             "command": "bash",
             "args": [
                 "-lc",
-                "./debug.sh"
+                "bash ./debug.sh"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"

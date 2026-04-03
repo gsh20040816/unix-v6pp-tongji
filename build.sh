@@ -16,6 +16,7 @@ Environment overrides:
   OOS_WIN_HOST
   OOS_WIN_REPO
   OOS_WIN_BUILD_COMMAND
+  OOS_MAKE_JOBS (or OOS_WIN_MAKE_JOBS)
 EOF
 }
 
@@ -28,7 +29,8 @@ compute_build_fingerprint() {
   local source_root="$script_dir/src"
 
   LC_ALL=C find "$source_root" -type f \
-    \( -name '*.h' -o -name '*.inc' -o -name '[Mm]akefile' \) -print0 \
+    \( -name '*.h' -o -name '*.inc' -o -name '[Mm]akefile' \) \
+    ! -path "$source_root/boot/kernel_size.inc" -print0 \
     | LC_ALL=C sort -z \
     | xargs -0 sha1sum \
     | sha1sum \
@@ -67,8 +69,8 @@ ensure_fs_edit_tools() {
   fi
 }
 
-if [[ ! -x "$ssh_win" ]]; then
-  echo "ssh helper not found or not executable: $ssh_win" >&2
+if [[ ! -f "$ssh_win" ]]; then
+  echo "ssh helper not found: $ssh_win" >&2
   exit 1
 fi
 
@@ -83,8 +85,15 @@ default_remote_command="cd /d ${remote_tools} && call oosvars_mingw.bat && call 
 remote_command="${OOS_WIN_BUILD_COMMAND:-$default_remote_command}"
 user_provided_command=false
 env_provided_command=false
-force_clean=false
+make_jobs="${OOS_WIN_MAKE_JOBS:-${OOS_MAKE_JOBS:-}}"
 current_fingerprint=""
+
+if [[ -n "$make_jobs" ]]; then
+  if ! [[ "$make_jobs" =~ ^[1-9][0-9]*$ ]]; then
+    echo "invalid make jobs value: $make_jobs (must be positive integer)" >&2
+    exit 1
+  fi
+fi
 
 if [[ -n "${OOS_WIN_BUILD_COMMAND:-}" ]]; then
   env_provided_command=true
@@ -103,19 +112,23 @@ if [[ "$user_provided_command" == false && "$env_provided_command" == false ]]; 
   fi
 
   if [[ "$current_fingerprint" != "$previous_fingerprint" ]]; then
-    force_clean=true
     remote_command="cd /d ${remote_tools} && call oosvars_mingw.bat && call clean.bat && call all.bat"
     echo "Detected header/makefile changes, forcing clean rebuild."
   fi
 fi
 
+if [[ -n "$make_jobs" ]]; then
+  remote_command="set OOS_MAKE_JOBS=${make_jobs} && ${remote_command}"
+fi
+
 ensure_fs_edit_tools
 
 echo "Building on Windows host ${OOS_WIN_HOST:-win}"
-if "$ssh_win" "cmd.exe /c \"$remote_command\""; then
-  if [[ "$force_clean" == true ]]; then
+if bash "$ssh_win" "cmd.exe /c \"$remote_command\""; then
+  if [[ "$user_provided_command" == false && "$env_provided_command" == false ]]; then
     mkdir -p "$build_cache_dir"
-    printf '%s\n' "$current_fingerprint" > "$fingerprint_file"
+    post_fingerprint="$(compute_build_fingerprint)"
+    printf '%s\n' "$post_fingerprint" > "$fingerprint_file"
   fi
   exit 0
 else

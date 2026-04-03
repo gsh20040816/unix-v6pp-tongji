@@ -28,6 +28,8 @@ DummyClass::~DummyClass()
 
 bool TestNew()
 {
+	const unsigned int headerSize = 8;
+	const unsigned int alignment = 8;
 	Allocator allocator;
 	KernelAllocator kAllocator(&allocator);
 	kAllocator.Initialize();
@@ -41,15 +43,17 @@ bool TestNew()
 	DummyClass* p = 0;
 	//Case1 new
 	p = new DummyClass();
+	unsigned int allocSize = sizeof(DummyClass) + headerSize;
+	allocSize = (allocSize + alignment - 1) & ~(alignment - 1);
 	PrintResult(
 		"Case1", 
-		(unsigned long)p == ((unsigned long)&buffer + 4)
-		&& kAllocator.map[0].m_AddressIdx == (unsigned long)&buffer + sizeof(DummyClass) + sizeof(int) 
-		&& kAllocator.map[0].m_Size == 1024 - (sizeof(DummyClass) + sizeof(int))
+		(unsigned long)p == ((unsigned long)&buffer + headerSize)
+		&& kAllocator.map[0].m_AddressIdx == (unsigned long)&buffer + allocSize
+		&& kAllocator.map[0].m_Size == 1024 - allocSize
 		);
 
 	//Case2 delete
-	delete (void*)p;
+	delete p;
 	PrintResult(
 		"Case2",
 		kAllocator.map[0].m_AddressIdx == (unsigned long)&buffer 

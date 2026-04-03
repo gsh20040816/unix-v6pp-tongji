@@ -1,6 +1,5 @@
 #include "FileSystem.h"
 #include "Utility.h"
-#include "New.h"
 #include "Kernel.h"
 #include "OpenFileManager.h"
 #include "TimeInterrupt.h"
@@ -33,11 +32,11 @@ Mount::~Mount()
 	this->m_dev = -1;
 	this->m_inodep = NULL;
 	//释放内存SuperBlock副本
-	if(this->m_spb != NULL)
+	if(this->m_spb != NULL && this->m_spb != &g_spb)
 	{
 		delete this->m_spb;
-		this->m_spb = NULL;
 	}
+	this->m_spb = NULL;
 }
 
 /*==============================class FileSystem===================================*/
