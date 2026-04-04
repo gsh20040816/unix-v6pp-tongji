@@ -181,6 +181,21 @@ int UserPageManager::Initialize()
 	{
 		this->m_CowRefCount[i] = 0;
 	}
+
+	/*
+	 * 固定保留用户区第一页(0x400000)作为全局零页：
+	 * 1) 不参与普通分配；
+	 * 2) BACKING_ZERO 缺页时统一只读映射到该页；
+	 * 3) 首次写入通过 COW 分裂获得私有页。
+	 */
+	unsigned long zeroPage = PageManager::AllocatePage();
+	if ( zeroPage != USER_ZERO_PAGE_ADDRESS )
+	{
+		Utility::Panic("User zero page init failed");
+	}
+	this->m_CowRefCount[0] = 1;	/* 基线引用，防止零页被当作普通 COW 页释放。 */
+	Utility::ZeroPage(zeroPage);
+
 	return ret;
 }
 
@@ -230,16 +245,31 @@ unsigned long UserPageManager::AllocatePages(unsigned long pageCount)
 unsigned long UserPageManager::FreePages(unsigned long pageCount,
 	unsigned long startAddress)
 {
-	unsigned long startIndex = 0;
-	if ( this->ResolvePoolPageIndex(startAddress, startIndex) )
+	if ( pageCount == 0 )
 	{
-		for ( unsigned long i = 0; i < pageCount; ++i )
-		{
-			this->m_CowRefCount[startIndex + i] = 0;
-		}
+		return 0;
 	}
 
-	return PageManager::FreePages(pageCount, startAddress);
+	for ( unsigned long i = 0; i < pageCount; ++i )
+	{
+		unsigned long pageAddress =
+			startAddress + i * PageManager::PAGE_SIZE;
+
+		if ( this->IsZeroPage(pageAddress) )
+		{
+			continue;
+		}
+
+		unsigned long pageIndex = 0;
+		if ( this->ResolvePoolPageIndex(pageAddress, pageIndex) )
+		{
+			this->m_CowRefCount[pageIndex] = 0;
+		}
+
+		PageManager::FreePage(pageAddress);
+	}
+
+	return 0;
 }
 
 unsigned long UserPageManager::AllocatePage()
@@ -250,6 +280,16 @@ unsigned long UserPageManager::AllocatePage()
 unsigned long UserPageManager::FreePage(unsigned long startAddress)
 {
 	return this->FreePages(1, startAddress);
+}
+
+unsigned long UserPageManager::GetZeroPageAddress() const
+{
+	return USER_ZERO_PAGE_ADDRESS;
+}
+
+bool UserPageManager::IsZeroPage(unsigned long pageAddress) const
+{
+	return pageAddress == USER_ZERO_PAGE_ADDRESS;
 }
 
 bool UserPageManager::ShareAsCopyOnWrite(unsigned long pageAddress)

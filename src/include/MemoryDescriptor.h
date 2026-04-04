@@ -298,6 +298,8 @@ private:
 	void ReservePagesForRegion(unsigned int regionIndex);
 	/* 分配一个用户物理页并清零后映射到 virtualAddress。 */
 	bool AllocateZeroedPage(unsigned long virtualAddress);
+	/* 将 BACKING_ZERO 页只读映射到全局零页，并纳入 COW 追踪。 */
+	bool MapZeroPageForCopyOnWrite(unsigned long virtualAddress);
 	/* 将共享正文物理页映射到 virtualAddress，可按需设置写权限。 */
 	bool ShareTextPage(unsigned long virtualAddress,
 		unsigned long textPhysicalAddress,

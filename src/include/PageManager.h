@@ -71,6 +71,7 @@ class UserPageManager : public PageManager
 public:
 	/* static const member */
 	static const unsigned int USER_PAGE_POOL_START_ADDR = 0x400000;		/* 用户物理内存区域起始地址 */
+	static const unsigned int USER_ZERO_PAGE_ADDRESS = USER_PAGE_POOL_START_ADDR;	/* 固定零页，供 BACKING_ZERO 共享映射 */
 	/* static member */
 	static unsigned int USER_PAGE_POOL_SIZE;		/* 用户物理内存区域大小：由内核初始化时进行设置 */
 	
@@ -81,6 +82,8 @@ public:
 	unsigned long FreePages(unsigned long pageCount, unsigned long startAddress);
 	unsigned long AllocatePage();
 	unsigned long FreePage(unsigned long startAddress);
+	unsigned long GetZeroPageAddress() const;
+	bool IsZeroPage(unsigned long pageAddress) const;
 
 	/* 将页纳入 COW 追踪：首次共享时置为2，后续共享继续递增。 */
 	bool ShareAsCopyOnWrite(unsigned long pageAddress);

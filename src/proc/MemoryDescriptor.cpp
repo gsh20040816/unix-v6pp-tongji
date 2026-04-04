@@ -1002,8 +1002,10 @@ bool MemoryDescriptor::EnsurePagePresent(unsigned long faultAddress)
 	switch ( region.backing.type )
 	{
 	case BACKING_ZERO:
+		ok = this->MapZeroPageForCopyOnWrite(virtualAddress);
+		break;
 	case BACKING_ANON:
-		/* 匿名/零页后备：直接分配清零页。 */
+		/* 匿名后备：直接分配清零页。 */
 		ok = this->AllocateZeroedPage(virtualAddress);
 		break;
 	case BACKING_SHARED_TEXT:
@@ -1584,6 +1586,39 @@ bool MemoryDescriptor::AllocateZeroedPage(unsigned long virtualAddress)
 	}
 
 	this->MapPage(virtualAddress, newPage, readWrite);
+	return true;
+}
+
+bool MemoryDescriptor::MapZeroPageForCopyOnWrite(unsigned long virtualAddress)
+{
+	if ( this->m_PageInfos == NULL )
+	{
+		return false;
+	}
+
+	unsigned int pageIndex = this->AddressToPageIndex(virtualAddress);
+	PageInfo& pageInfo = this->m_PageInfos[pageIndex];
+	if ( pageInfo.state == PAGE_STATE_RESIDENT )
+	{
+		return true;
+	}
+
+	if ( pageInfo.state != PAGE_STATE_RESERVED || pageInfo.regionIndex == 0xffff )
+	{
+		return false;
+	}
+
+	UserPageManager& userPageManager = Kernel::Instance().GetUserPageManager();
+	unsigned long zeroPage = userPageManager.GetZeroPageAddress();
+	if ( userPageManager.ShareAsCopyOnWrite(zeroPage) == false )
+	{
+		return false;
+	}
+
+	pageInfo.state = PAGE_STATE_RESIDENT;
+	pageInfo.frameAddress = zeroPage;
+	/* BACKING_ZERO 初次映射保持只读，后续写访问进入 COW 分裂。 */
+	this->MapPage(virtualAddress, zeroPage, false);
 	return true;
 }
 
