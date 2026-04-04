@@ -90,6 +90,15 @@ int syncFileSystem()
 	return -1;
 }
 
+int shutdownSystem()
+{
+	int res;
+	__asm__ volatile ( "int $0x80":"=a"(res):"a"(51) );
+	if ( res >= 0 )
+		return res;
+	return -1;
+}
+
 int getPath(char *path)
 {
 	int res;

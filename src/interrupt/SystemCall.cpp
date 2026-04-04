@@ -3,6 +3,7 @@
 #include "Kernel.h"
 #include "Regs.h"
 #include "TimeInterrupt.h"
+#include "IOPort.h"
 #include "CRT.h"
 #include "Video.h"
 
@@ -62,7 +63,7 @@ SystemCallTableEntry SystemCall::m_SystemEntranceTable[SYSTEM_CALL_NUM] =
 	{ 2, &Sys_Ssig	},				/* 48 = sig	*/
 	{ 2, &Sys_GetUsrPt},			/* 49 = getusrpt	*/
 	{ 0, &Sys_GetUsrMem},			/* 50 = getusrmem	*/
-	{ 0, &Sys_Nosys	},				/* 51 = nosys	*/
+	{ 0, &Sys_Shutdown},			/* 51 = shutdown	*/
 	{ 0, &Sys_Nosys	},				/* 52 = nosys	*/
 	{ 0, &Sys_Nosys	},				/* 53 = nosys	*/
 	{ 0, &Sys_Nosys	},				/* 54 = nosys	*/
@@ -770,5 +771,29 @@ int SystemCall::Sys_GetUsrMem()
 	}
 
 	u.u_ar0[User::EAX] = (int)freeBytes;
+	return 0;	/* GCC likes it ! */
+}
+
+/*	51 = shutdown	count = 0	*/
+int SystemCall::Sys_Shutdown()
+{
+	Kernel::Instance().GetFileSystem().Update();
+
+	/*
+	 * 依次尝试常见虚拟机的电源管理端口：
+	 * - 0xB004/0x2000: Bochs, old QEMU
+	 * - 0x604/0x2000 : QEMU (PIIX4 ACPI)
+	 * - 0x4004/0x3400: VirtualBox
+	 */
+	X86Assembly::CLI();
+	IOPort::OutWord(0xB004, 0x2000);
+	IOPort::OutWord(0x604, 0x2000);
+	IOPort::OutWord(0x4004, 0x3400);
+
+	while ( true )
+	{
+		__asm__ __volatile__("hlt");
+	}
+
 	return 0;	/* GCC likes it ! */
 }

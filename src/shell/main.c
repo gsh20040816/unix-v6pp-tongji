@@ -25,9 +25,16 @@ int main1()
 		gets( lineInput );		
 		if ( strcmp( "shutdown", lineInput ) == 0 )
 		{
-			syncFileSystem();
-			printf("You can safely turn down the computer now!\n");
-			break;
+			if ( -1 == syncFileSystem() )
+			{
+				printf("sync failed before shutdown\n");
+			}
+			printf("Requesting power off...\n");
+			if ( -1 == shutdownSystem() )
+			{
+				printf("Power off request failed\n");
+			}
+			continue;
 		}
 		argsCnt = SpiltCommand(lineInput);
 		root = AnalizeCommand(0, argsCnt - 1, 0);

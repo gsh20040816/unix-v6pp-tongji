@@ -57,6 +57,9 @@ int sbrk(int increment);
 
 int syncFileSystem();
 
+/* 写盘并请求系统关机（成功时通常不会返回） */
+int shutdownSystem();
+
 int getPath(char* path);
 
 int getpid();
