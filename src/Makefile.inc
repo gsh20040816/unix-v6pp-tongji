@@ -21,7 +21,6 @@ INCLUDE = ..\include
 IMGTARGET = ..\targets\img
 #"++"号是特殊符号，因此需要加引号
 UNIXV6PPTARGET = "..\targets\UNIXV6++"
-MakeImageDebug = ..\tools\MakeImage\bin\Debug
 V6PP_FS_EDIT_WORKSPACE := ..\tools\v6pp-fs-edit-2022\workspace
 
 #文件定义

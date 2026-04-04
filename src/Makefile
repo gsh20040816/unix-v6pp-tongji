@@ -96,16 +96,6 @@ $(IMG_KERNEL_SYM)	: $(KERNEL_SYM)
 $(IMG_KERNEL_ASM)	: $(KERNEL_ASM)
 	copy $< $@
 
-#	cd $(IMGTARGET) && partcopy boot.bin 0 200 c.img 0
-#	cd $(IMGTARGET) && partcopy kernel.bin 0 13000 c.img 200
-
-#	copy $(TARGET)\boot.bin $(MakeImageDebug)\boot.bin
-#	copy $(TARGET)\kernel.bin $(MakeImageDebug)\kernel.bin
-#	copy $(IMGTARGET)\c.img $(MakeImageDebug)\c.img
-
-#	cd $(MakeImageDebug) && build.exe c.img boot.bin kernel.bin programs
-#	copy $(MakeImageDebug)\$(IMG) $(UNIXV6PPTARGET)\$(IMG)
-
 $(WORKSPACE_BOOT)	: $(TARGET)\boot.bin
 	copy $< $@
 

@@ -20,7 +20,6 @@ V6++LIB_DEP = ..\lib\Lib_V6++.a
 INCLUDE = .
 LIB_INCLUDE = ..\lib\include
 
-#MAKEIMAGEPATH = ..\..\tools\MakeImage\bin\Debug\programs
 MAKEIMAGEPATH = ..\..\tools\v6pp-fs-edit-2022\workspace\programs
 BIN = bin
 
