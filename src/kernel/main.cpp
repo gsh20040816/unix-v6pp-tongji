@@ -21,7 +21,6 @@
 #include "TimeInterrupt.h"
 #include "PEParser.h"
 #include "CMOSTime.h"
-#include "../test/TestInclude.h"
 
 bool isInit = false;
 
@@ -93,7 +92,8 @@ extern "C" int main0(void)
 		mov $0xc0400000, %esp \n\t \
 		jmp $0x8, $_next"
 		);
-	
+
+	return 0;
 }
 
 /* 应用程序从main返回，进程就终止了，这全是runtime()的功劳。没有它，就只能用exit终止进程了。xV6没这个功能^-^ */
@@ -135,6 +135,39 @@ extern "C" void ExecShell()
 	pathname[10] = '\0';
 	__asm__ __volatile__ ("int $0x80"::"a"(11/* execv */),"b"(pathname),"c"(argc),"d"(argv));
 	return;
+}
+
+/*
+ * 内核早期初始化阶段直接复用 FileManager::Open 逻辑，
+ * 语义与原先 lib_open 一致：成功返回 fd，失败返回 -1。
+ */
+static int open(char* pathname, unsigned int mode)
+{
+	User& u = Kernel::Instance().GetUser();
+	unsigned int savedRetSlot = 0;
+	unsigned int* oldAr0 = u.u_ar0;
+	int oldArg0 = u.u_arg[0];
+	int oldArg1 = u.u_arg[1];
+	char* oldDirp = u.u_dirp;
+	User::ErrorCode oldError = u.u_error;
+
+	u.u_ar0 = &savedRetSlot;
+	u.u_arg[0] = (int)(unsigned long)pathname;
+	u.u_arg[1] = (int)mode;
+	u.u_dirp = pathname;
+	u.u_error = User::NOERROR;
+
+	Kernel::Instance().GetFileManager().Open();
+
+	int result = (u.u_error == User::NOERROR) ? (int)savedRetSlot : -1;
+
+	u.u_ar0 = oldAr0;
+	u.u_arg[0] = oldArg0;
+	u.u_arg[1] = oldArg1;
+	u.u_dirp = oldDirp;
+	u.u_error = oldError;
+
+	return result;
 }
 
 /* 此函数test文件夹中的代码会引用，但貌似可以删除，记得把它删掉*/
@@ -196,13 +229,13 @@ extern "C" void next()
 	Utility::StringCopy("/", us.u_curdir);
 
 	/* 打开TTy设备 */
-	int fd_tty = lib_open("/dev/tty1", File::FREAD);
+	int fd_tty = open("/dev/tty1", File::FREAD);
 
 	if ( fd_tty != 0 )
 	{
 		Utility::Panic("STDIN Error!");
 	}
-	fd_tty = lib_open("/dev/tty1", File::FWRITE);
+	fd_tty = open("/dev/tty1", File::FWRITE);
 	if ( fd_tty != 1 )
 	{
 		Utility::Panic("STDOUT Error!");
