@@ -7,12 +7,17 @@ Text::Text()
 {
 	this->x_daddr = 0;
 	this->x_size = 0;
+	this->x_rosize = 0;
 	this->x_iptr = NULL;
 	this->x_count = 0;
 	this->x_ccount = 0;
 	for ( unsigned int i = 0; i < Text::MAX_TEXT_PAGE_COUNT; ++i )
 	{
 		this->x_addr[i] = 0;
+	}
+	for ( unsigned int i = 0; i < Text::MAX_RODATA_PAGE_COUNT; ++i )
+	{
+		this->x_roaddr[i] = 0;
 	}
 }
 
@@ -49,6 +54,27 @@ void Text::XccDec()
 				this->x_addr[i] = 0;
 			}
 		}
+
+		if ( this->x_rosize != 0 )
+		{
+			unsigned int roPageCount =
+				(this->x_rosize + PageManager::PAGE_SIZE - 1) / PageManager::PAGE_SIZE;
+			if ( roPageCount > Text::MAX_RODATA_PAGE_COUNT )
+			{
+				Utility::Panic("Rodata page count overflow");
+			}
+
+			for ( unsigned int i = 0; i < roPageCount; ++i )
+			{
+				if ( this->x_roaddr[i] == 0 )
+				{
+					continue;
+				}
+
+				Kernel::Instance().GetUserPageManager().FreePage(this->x_roaddr[i]);
+				this->x_roaddr[i] = 0;
+			}
+		}
 	}
 }
 
@@ -61,10 +87,15 @@ void Text::XFree()
 		Kernel::Instance().GetFileManager().m_InodeTable->IPut(this->x_iptr);
 		this->x_iptr = NULL;
 		this->x_size = 0;
+		this->x_rosize = 0;
 		this->x_daddr = 0;
 		for ( unsigned int i = 0; i < Text::MAX_TEXT_PAGE_COUNT; ++i )
 		{
 			this->x_addr[i] = 0;
+		}
+		for ( unsigned int i = 0; i < Text::MAX_RODATA_PAGE_COUNT; ++i )
+		{
+			this->x_roaddr[i] = 0;
 		}
 	}
 }

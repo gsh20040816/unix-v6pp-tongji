@@ -23,6 +23,48 @@ namespace
 		return (unsigned int)((size + PageManager::PAGE_SIZE - 1) / PageManager::PAGE_SIZE);
 	}
 
+	static unsigned long AlignDownToPage(unsigned long value)
+	{
+		return value & ~(PageManager::PAGE_SIZE - 1);
+	}
+
+	static unsigned long AlignUpToPage(unsigned long value)
+	{
+		return (value + PageManager::PAGE_SIZE - 1) & ~(PageManager::PAGE_SIZE - 1);
+	}
+
+	static unsigned long ComputeShareableRodataSize(const PEParser& parser)
+	{
+		if ( parser.RodataSize == 0 )
+		{
+			return 0;
+		}
+
+		unsigned long dataStart = parser.DataAddress;
+		unsigned long dataEnd = AlignUpToPage(parser.DataAddress + parser.DataSize);
+		unsigned long roStart = AlignUpToPage(parser.RodataAddress);
+		unsigned long roEnd = AlignDownToPage(parser.RodataAddress + parser.RodataSize);
+
+		if ( roStart < dataStart )
+		{
+			roStart = dataStart;
+		}
+		if ( roEnd > dataEnd )
+		{
+			roEnd = dataEnd;
+		}
+
+		return roStart < roEnd ? (roEnd - roStart) : 0;
+	}
+
+	static void ClearPageArray(unsigned long pages[], unsigned int maxPageCount)
+	{
+		for ( unsigned int i = 0; i < maxPageCount; ++i )
+		{
+			pages[i] = 0;
+		}
+	}
+
 	static void ClearTextPageArray(Text* text)
 	{
 		if ( text == NULL )
@@ -30,39 +72,47 @@ namespace
 			return;
 		}
 
-		for ( unsigned int i = 0; i < Text::MAX_TEXT_PAGE_COUNT; ++i )
+		ClearPageArray(text->x_addr, Text::MAX_TEXT_PAGE_COUNT);
+		ClearPageArray(text->x_roaddr, Text::MAX_RODATA_PAGE_COUNT);
+	}
+
+	static void ReleaseSharedPages(PageManager& pageManager,
+		unsigned long pages[],
+		unsigned int maxPageCount)
+	{
+		for ( unsigned int i = 0; i < maxPageCount; ++i )
 		{
-			text->x_addr[i] = 0;
+			if ( pages[i] == 0 )
+			{
+				continue;
+			}
+
+			pageManager.FreePage(pages[i]);
+			pages[i] = 0;
 		}
 	}
 
-	static bool AllocateTextPages(PageManager& pageManager, Text* text, unsigned int pageCount)
+	static bool AllocateSharedPages(PageManager& pageManager,
+		unsigned long pages[],
+		unsigned int maxPageCount,
+		unsigned int pageCount)
 	{
-		if ( text == NULL )
+		if ( pageCount > maxPageCount )
 		{
 			return false;
 		}
 
-		if ( pageCount > Text::MAX_TEXT_PAGE_COUNT )
-		{
-			return false;
-		}
-
-		ClearTextPageArray(text);
+		ClearPageArray(pages, maxPageCount);
 		for ( unsigned int i = 0; i < pageCount; ++i )
 		{
 			unsigned long page = pageManager.AllocatePage();
 			if ( page == 0 )
 			{
-				for ( unsigned int j = 0; j < i; ++j )
-				{
-					pageManager.FreePage(text->x_addr[j]);
-					text->x_addr[j] = 0;
-				}
+				ReleaseSharedPages(pageManager, pages, maxPageCount);
 				return false;
 			}
 
-			text->x_addr[i] = page;
+			pages[i] = page;
 		}
 
 		return true;
@@ -642,15 +692,20 @@ void ProcessManager::Exec()
 		pText->x_ccount = 1;
 		pText->x_count = 1;
 		pText->x_size = u.u_procp->p_memory.GetCodeSize();
+		pText->x_rosize = ComputeShareableRodataSize(parser);
 		/* 为正文段分配内存，而具体正文段内容的读入需要等到建立页表映射之后，再从mapAddress地址起始的exe文件中读入 */
 		unsigned int textPageCount = BytesToPageCount(pText->x_size);
-		if ( textPageCount > Text::MAX_TEXT_PAGE_COUNT )
+		unsigned int rodataPageCount = BytesToPageCount(pText->x_rosize);
+		if ( textPageCount > Text::MAX_TEXT_PAGE_COUNT ||
+			rodataPageCount > Text::MAX_RODATA_PAGE_COUNT )
 		{
-			Diagnose::Write("Exec text too large: %d pages (max %d)\n",
-				textPageCount, Text::MAX_TEXT_PAGE_COUNT);
+			Diagnose::Write("Exec shared text/rodata too large: text=%d/%d ro=%d/%d\n",
+				textPageCount, Text::MAX_TEXT_PAGE_COUNT,
+				rodataPageCount, Text::MAX_RODATA_PAGE_COUNT);
 			pText->x_ccount = 0;
 			pText->x_count = 0;
 			pText->x_size = 0;
+			pText->x_rosize = 0;
 			pText->x_daddr = 0;
 			ClearTextPageArray(pText);
 			u.u_procp->p_textp = NULL;
@@ -665,11 +720,39 @@ void ProcessManager::Exec()
 			return;
 		}
 
-		if ( AllocateTextPages(userPgMgr, pText, textPageCount) == false )
+		if ( AllocateSharedPages(userPgMgr,
+				pText->x_addr,
+				Text::MAX_TEXT_PAGE_COUNT,
+				textPageCount) == false )
 		{
 			pText->x_ccount = 0;
 			pText->x_count = 0;
 			pText->x_size = 0;
+			pText->x_rosize = 0;
+			pText->x_daddr = 0;
+			ClearTextPageArray(pText);
+			u.u_procp->p_textp = NULL;
+			delete [] fakeStack;
+			fileMgr.m_InodeTable->IPut(pInode);
+			if ( this->ExeCnt >= NEXEC )
+			{
+				WakeUpAll((unsigned long)&ExeCnt);
+			}
+			this->ExeCnt--;
+			u.u_error = User::ENOMEM;
+			return;
+		}
+
+		if ( AllocateSharedPages(userPgMgr,
+				pText->x_roaddr,
+				Text::MAX_RODATA_PAGE_COUNT,
+				rodataPageCount) == false )
+		{
+			ReleaseSharedPages(userPgMgr, pText->x_addr, Text::MAX_TEXT_PAGE_COUNT);
+			pText->x_ccount = 0;
+			pText->x_count = 0;
+			pText->x_size = 0;
+			pText->x_rosize = 0;
 			pText->x_daddr = 0;
 			ClearTextPageArray(pText);
 			u.u_procp->p_textp = NULL;

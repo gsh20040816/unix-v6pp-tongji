@@ -13,6 +13,7 @@ namespace
 	 * 注意：Text 物理页地址改为 x_addr[] 离散存放，不能再按单基址连续计算。
 	 */
 	static bool ResolveTextPhysicalAddress(const Text* text,
+		MemoryDescriptor::RegionType regionType,
 		unsigned long backingOffset,
 		unsigned long& textPhysicalAddress)
 	{
@@ -23,18 +24,36 @@ namespace
 
 		unsigned int pageIndex =
 			(unsigned int)(backingOffset / PageManager::PAGE_SIZE);
-		if ( pageIndex >= Text::MAX_TEXT_PAGE_COUNT )
+
+		const unsigned long* pageArray = NULL;
+		unsigned int maxPageCount = 0;
+		if ( regionType == MemoryDescriptor::REGION_CODE )
+		{
+			pageArray = text->x_addr;
+			maxPageCount = Text::MAX_TEXT_PAGE_COUNT;
+		}
+		else if ( regionType == MemoryDescriptor::REGION_RODATA )
+		{
+			pageArray = text->x_roaddr;
+			maxPageCount = Text::MAX_RODATA_PAGE_COUNT;
+		}
+		else
 		{
 			return false;
 		}
 
-		if ( text->x_addr[pageIndex] == 0 )
+		if ( pageIndex >= maxPageCount )
+		{
+			return false;
+		}
+
+		if ( pageArray[pageIndex] == 0 )
 		{
 			return false;
 		}
 
 		textPhysicalAddress =
-			text->x_addr[pageIndex] + (backingOffset % PageManager::PAGE_SIZE);
+			pageArray[pageIndex] + (backingOffset % PageManager::PAGE_SIZE);
 		return true;
 	}
 }
@@ -338,6 +357,7 @@ bool MemoryDescriptor::CloneResidentPagesFrom(const MemoryDescriptor& other)
 			/* Text 页共享：新进程直接映射同一物理页，不做复制。 */
 			unsigned long textPhysicalAddress = 0;
 			if ( ResolveTextPhysicalAddress(other.m_Owner->p_textp,
+				region.type,
 				srcPage.backingOffset,
 				textPhysicalAddress) == false ||
 				this->ShareTextPage(virtualAddress, textPhysicalAddress, false) == false )
@@ -521,7 +541,7 @@ bool MemoryDescriptor::ConfigureExecutableLayout(unsigned long entryPoint,
 		if ( ranges[i].type == REGION_RODATA )
 		{
 			if ( this->AddRegion(REGION_RODATA, start, end,
-					PROT_READ | PROT_USER, PAGE_FLAG_NONE, BACKING_EXEC_FILE) == false )
+					PROT_READ | PROT_USER, PAGE_FLAG_NONE, BACKING_SHARED_TEXT) == false )
 			{
 				return false;
 			}
@@ -764,6 +784,7 @@ bool MemoryDescriptor::EnsurePagePresent(unsigned long faultAddress)
 		{
 			unsigned long textPhysicalAddress = 0;
 			if ( ResolveTextPhysicalAddress(this->m_Owner->p_textp,
+				region.type,
 				pageInfo.backingOffset,
 				textPhysicalAddress) == false )
 			{
