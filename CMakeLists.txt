@@ -14,6 +14,7 @@ set(OOS_SRC_DIR "${OOS_ROOT_DIR}/src")
 set(OOS_INCLUDE_DIR "${OOS_SRC_DIR}/include")
 set(OOS_TARGET_OBJ_DIR "${CMAKE_BINARY_DIR}/objs")
 set(OOS_BOCHS_DIR "${OOS_ROOT_DIR}/bochs")
+set(OOS_QEMU_DIR "${OOS_ROOT_DIR}/qemu")
 set(OOS_BOCHS_LOCK_FILE "${OOS_BOCHS_DIR}/c.img.lock")
 set(OOS_FS_ROOT "${OOS_ROOT_DIR}/tools/v6pp-fs-edit-2022")
 set(OOS_FS_WORKSPACE "${OOS_FS_ROOT}/workspace")
@@ -27,6 +28,7 @@ find_program(OOS_OBJDUMP_EXECUTABLE NAMES objdump REQUIRED)
 find_program(OOS_NM_EXECUTABLE NAMES nm REQUIRED)
 find_program(OOS_BOCHS_EXECUTABLE NAMES bochs)
 find_program(OOS_BOCHS_GDB_EXECUTABLE NAMES bochs-gdb)
+find_program(OOS_QEMU_EXECUTABLE NAMES qemu-system-i386)
 
 add_subdirectory(tools/v6pp-fs-edit-2022)
 add_subdirectory(src)
@@ -74,4 +76,28 @@ if(OOS_BOCHS_GDB_EXECUTABLE)
   )
 else()
   message(STATUS "bochs-gdb executable not found; target 'bochsrc_gui' is not generated.")
+endif()
+
+if(OOS_QEMU_EXECUTABLE)
+  add_custom_target(qemu
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${OOS_QEMU_DIR}"
+    COMMAND "${CMAKE_COMMAND}" -E env "QEMU_BIN=${OOS_QEMU_EXECUTABLE}"
+            bash "${OOS_QEMU_DIR}/qemu_curses.sh"
+    WORKING_DIRECTORY "${OOS_ROOT_DIR}"
+    DEPENDS image
+    USES_TERMINAL
+    VERBATIM
+  )
+
+  add_custom_target(qemu-gdb
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${OOS_QEMU_DIR}"
+    COMMAND "${CMAKE_COMMAND}" -E env "QEMU_BIN=${OOS_QEMU_EXECUTABLE}"
+            bash "${OOS_QEMU_DIR}/qemu_gdb_curses.sh"
+    WORKING_DIRECTORY "${OOS_ROOT_DIR}"
+    DEPENDS image
+    USES_TERMINAL
+    VERBATIM
+  )
+else()
+  message(STATUS "qemu-system-i386 executable not found; targets 'qemu' and 'qemu-gdb' are not generated.")
 endif()

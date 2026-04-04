@@ -6,7 +6,39 @@
             "type": "cppdbg",
             "request": "launch",
             "preLaunchTask": "OOS cmake debug prep",
-            "program": "${workspaceFolder}/build/cmake-debug/objs/kernel",
+            "program": "${workspaceFolder}/build/objs/kernel",
+            "cwd": "${workspaceFolder}",
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb",
+            "miDebuggerArgs": "-x ${workspaceFolder}/.vscode/gdbinit.bochs",
+            "miDebuggerServerAddress": "127.0.0.1:1234",
+            "targetArchitecture": "x86",
+            "stopAtEntry": true,
+            "externalConsole": false,
+            "launchCompleteCommand": "None",
+            "stopAtConnect": true,
+            "logging": {
+                "engineLogging": true
+            },
+            "setupCommands": [
+                {
+                    "description": "Use Intel disassembly syntax",
+                    "text": "set disassembly-flavor intel",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Add kernel source directories",
+                    "text": "directory src/boot src/dev src/fs src/include src/interrupt src/kernel src/lib src/machine src/mm src/pe src/proc src/test src/tty",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "QEMU GDB (Linux Local)",
+            "type": "cppdbg",
+            "request": "launch",
+            "preLaunchTask": "OOS cmake qemu debug prep",
+            "program": "${workspaceFolder}/build/objs/kernel",
             "cwd": "${workspaceFolder}",
             "MIMode": "gdb",
             "miDebuggerPath": "/usr/bin/gdb",

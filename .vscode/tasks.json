@@ -8,7 +8,7 @@
 				"-S",
 				".",
 				"-B",
-				"build/cmake-debug"
+				"build"
 			],
 			"options": {
 				"cwd": "${workspaceFolder}"
@@ -22,7 +22,7 @@
 			"command": "cmake",
 			"args": [
 				"--build",
-				"build/cmake-debug",
+				"build",
 				"--target",
 				"image",
 				"-j"
@@ -46,7 +46,7 @@
 			"command": "cmake",
 			"args": [
 				"--build",
-				"build/cmake-debug",
+				"build",
 				"--target",
 				"clean"
 			],
@@ -66,7 +66,7 @@
 			"command": "cmake",
 			"args": [
 				"--build",
-				"build/cmake-debug",
+				"build",
 				"--target",
 				"image",
 				"-j"
@@ -98,12 +98,21 @@
 			]
 		},
 		{
+			"label": "OOS cmake qemu debug prep",
+			"detail": "在 Linux 本机串行执行调试前构建与 qemu-gdb 主机启动",
+			"dependsOrder": "sequence",
+			"dependsOn": [
+				"OOS cmake prelaunch",
+				"OOS cmake qemu-gdb host"
+			]
+		},
+		{
 			"type": "shell",
 			"label": "OOS cmake bochs-gdb host",
 			"command": "cmake",
 			"args": [
 				"--build",
-				"build/cmake-debug",
+				"build",
 				"--target",
 				"bochs-gdb",
 				"-j"
@@ -137,11 +146,49 @@
 		},
 		{
 			"type": "shell",
+			"label": "OOS cmake qemu-gdb host",
+			"command": "cmake",
+			"args": [
+				"--build",
+				"build",
+				"--target",
+				"qemu-gdb",
+				"-j"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"detail": "在 Linux 本机通过 QEMU 启动 qemu-gdb（terminal/curses 配置）并等待 gdbstub 可连接",
+			"dependsOrder": "sequence",
+			"dependsOn": [
+				"OOS cmake configure"
+			],
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"focus": true,
+				"clear": false
+			},
+			"isBackground": true,
+			"problemMatcher": {
+				"owner": "custom",
+				"pattern": {
+					"regexp": "^(?!)$"
+				},
+				"background": {
+					"activeOnStart": true,
+					"beginsPattern": ".*",
+					"endsPattern": ".*Enabled gdbstub.*"
+				}
+			}
+		},
+		{
+			"type": "shell",
 			"label": "OOS cmake bochs run",
 			"command": "cmake",
 			"args": [
 				"--build",
-				"build/cmake-debug",
+				"build",
 				"--target",
 				"bochs",
 				"-j"
@@ -168,7 +215,7 @@
 			"command": "cmake",
 			"args": [
 				"--build",
-				"build/cmake-debug",
+				"build",
 				"--target",
 				"bochsrc_gui",
 				"-j"
@@ -177,6 +224,33 @@
 				"cwd": "${workspaceFolder}"
 			},
 			"detail": "在 Linux 本机通过 CMake 启动 bochs（gui 配置）",
+			"dependsOrder": "sequence",
+			"dependsOn": [
+				"OOS cmake configure"
+			],
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"focus": true,
+				"clear": false
+			},
+			"problemMatcher": []
+		},
+		{
+			"type": "shell",
+			"label": "OOS cmake qemu run",
+			"command": "cmake",
+			"args": [
+				"--build",
+				"build",
+				"--target",
+				"qemu",
+				"-j"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"detail": "在 Linux 本机通过 QEMU 启动 qemu（terminal/curses 配置）",
 			"dependsOrder": "sequence",
 			"dependsOn": [
 				"OOS cmake configure"

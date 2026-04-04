@@ -1,5 +1,5 @@
 CompileFlags:
-  CompilationDatabase: build/cmake-debug
+  CompilationDatabase: build
   Add:
     - -m32
     - -march=i386
