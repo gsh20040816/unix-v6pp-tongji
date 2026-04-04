@@ -8,72 +8,6 @@
 
 namespace
 {
-	static unsigned int BytesToPageCount(unsigned long size)
-	{
-		if ( size == 0 )
-		{
-			return 0;
-		}
-		return (unsigned int)((size + PageManager::PAGE_SIZE - 1) / PageManager::PAGE_SIZE);
-	}
-
-	static unsigned long AllocContiguousPages(KernelPageManager& pageManager, unsigned int pageCount)
-	{
-		if ( pageCount == 0 )
-		{
-			return 0;
-		}
-
-		unsigned long base = 0;
-		for ( unsigned int i = 0; i < pageCount; ++i )
-		{
-			unsigned long page = pageManager.AllocMemory(PageManager::PAGE_SIZE);
-			if ( page == 0 )
-			{
-				if ( base != 0 )
-				{
-					for ( unsigned int j = 0; j < i; ++j )
-					{
-						pageManager.FreeMemory(PageManager::PAGE_SIZE,
-							base + j * PageManager::PAGE_SIZE);
-					}
-				}
-				return 0;
-			}
-
-			if ( i == 0 )
-			{
-				base = page;
-			}
-			else if ( page != base + i * PageManager::PAGE_SIZE )
-			{
-				pageManager.FreeMemory(PageManager::PAGE_SIZE, page);
-				for ( unsigned int j = 0; j < i; ++j )
-				{
-					pageManager.FreeMemory(PageManager::PAGE_SIZE,
-						base + j * PageManager::PAGE_SIZE);
-				}
-				return 0;
-			}
-		}
-
-		return base;
-	}
-
-	static void FreeContiguousPages(KernelPageManager& pageManager, unsigned long base, unsigned int pageCount)
-	{
-		if ( base == 0 || pageCount == 0 )
-		{
-			return;
-		}
-
-		for ( unsigned int i = 0; i < pageCount; ++i )
-		{
-			pageManager.FreeMemory(PageManager::PAGE_SIZE,
-				base + i * PageManager::PAGE_SIZE);
-		}
-	}
-
 	static bool ReadInPagedChunks(Inode* p_inode,
 		unsigned long fileOffset,
 		unsigned long virtualAddress,
@@ -235,6 +169,8 @@ unsigned int PEParser::Relocate(Inode* p_inode, int sharedText)
 			desAddress,
 			sectionHeader->Misc.VirtualSize) == false )
 		{
+			delete [] this->sectionHeaders;
+			this->sectionHeaders = 0;
 			return cnt;
 		}
 
@@ -258,14 +194,8 @@ unsigned int PEParser::Relocate(Inode* p_inode, int sharedText)
 		X86Assembly::FlushPageDirectory((unsigned long)u.u_procp->p_memory.GetPageDirectoryPointer());
 	}
 
-	KernelPageManager& kpm = Kernel::Instance().GetKernelPageManager();
-	unsigned int sectionHeaderPageCount =
-		BytesToPageCount(section_size * ntHeader.FileHeader.NumberOfSections);
-	FreeContiguousPages(kpm,
-		(unsigned long)this->sectionHeaders - 0xC0000000,
-		sectionHeaderPageCount);
-//	kpm.FreeMemory(section_size * ntHeader.FileHeader.NumberOfSections, (unsigned long)this->sectionHeaders - 0xC0000000 );
-//	delete this->sectionHeaders;
+	delete [] this->sectionHeaders;
+	this->sectionHeaders = 0;
 	return 	cnt;
 }
 
@@ -292,7 +222,6 @@ bool PEParser::HeaderLoad(Inode* p_inode)
 {
     ImageDosHeader dos_header;
     User& u = Kernel::Instance().GetUser();
-    KernelPageManager& kpm = Kernel::Instance().GetKernelPageManager();
 
     /*读取dos header*/
     u.u_IOParam.m_Base = (unsigned char*)&dos_header;
@@ -318,15 +247,18 @@ bool PEParser::HeaderLoad(Inode* p_inode)
      * 希望内核用  new 和 free 函数申请动态数组。但现在的new操作符好像不对。先这么着。
      * sectionHeaders = new ImageSectionHeader;
      * */
-    //sectionHeaders = (ImageSectionHeader*)(kpm.AllocMemory(section_size * ntHeader.FileHeader.NumberOfSections)+0xC0000000);
-	unsigned int sectionHeaderPageCount =
-		BytesToPageCount(section_size * ntHeader.FileHeader.NumberOfSections);
-	unsigned long sectionHeadersPhysical = AllocContiguousPages(kpm, sectionHeaderPageCount);
-	if ( sectionHeadersPhysical == 0 )
+	if ( this->sectionHeaders != 0 )
+	{
+		delete [] this->sectionHeaders;
+		this->sectionHeaders = 0;
+	}
+
+	this->sectionHeaders =
+		new ImageSectionHeader[this->ntHeader.FileHeader.NumberOfSections];
+	if ( this->sectionHeaders == 0 )
 	{
 		return false;
 	}
-    sectionHeaders = (ImageSectionHeader*)(sectionHeadersPhysical + 0xC0000000);
     u.u_IOParam.m_Base = (unsigned char*)sectionHeaders;
     u.u_IOParam.m_Offset = dos_header.e_lfanew + ntHeader_size;
     u.u_IOParam.m_Count = section_size * ntHeader.FileHeader.NumberOfSections;

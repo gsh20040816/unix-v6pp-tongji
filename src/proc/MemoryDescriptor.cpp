@@ -249,24 +249,20 @@ void MemoryDescriptor::Initialize()
 
 	if ( this->m_Regions == NULL )
 	{
-		unsigned long regions = AllocContiguousPages(kernelPageManager,
-			sizeof(Region) * MAX_REGION_COUNT);
-		if ( regions == 0 )
+		this->m_Regions = new Region[MAX_REGION_COUNT];
+		if ( this->m_Regions == NULL )
 		{
 			Utility::Panic("Out of kernel memory for regions");
 		}
-		this->m_Regions = (Region*)(regions + Machine::KERNEL_SPACE_START_ADDRESS);
 	}
 
 	if ( this->m_PageInfos == NULL )
 	{
-		unsigned long pageInfos = AllocContiguousPages(kernelPageManager,
-			sizeof(PageInfo) * USER_PAGE_COUNT);
-		if ( pageInfos == 0 )
+		this->m_PageInfos = new PageInfo[USER_PAGE_COUNT];
+		if ( this->m_PageInfos == NULL )
 		{
 			Utility::Panic("Out of kernel memory for page infos");
 		}
-		this->m_PageInfos = (PageInfo*)(pageInfos + Machine::KERNEL_SPACE_START_ADDRESS);
 	}
 
 	this->Reset();
@@ -306,17 +302,13 @@ void MemoryDescriptor::Release()
 
 	if ( this->m_Regions != NULL )
 	{
-		FreeContiguousPages(kernelPageManager,
-			(unsigned long)this->m_Regions - Machine::KERNEL_SPACE_START_ADDRESS,
-			sizeof(Region) * MAX_REGION_COUNT);
+		delete [] this->m_Regions;
 		this->m_Regions = NULL;
 	}
 
 	if ( this->m_PageInfos != NULL )
 	{
-		FreeContiguousPages(kernelPageManager,
-			(unsigned long)this->m_PageInfos - Machine::KERNEL_SPACE_START_ADDRESS,
-			sizeof(PageInfo) * USER_PAGE_COUNT);
+		delete [] this->m_PageInfos;
 		this->m_PageInfos = NULL;
 	}
 

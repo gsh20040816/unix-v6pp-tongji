@@ -23,63 +23,6 @@ namespace
 		return (unsigned int)((size + PageManager::PAGE_SIZE - 1) / PageManager::PAGE_SIZE);
 	}
 
-	static unsigned long AllocContiguousPages(PageManager& pageManager, unsigned int pageCount)
-	{
-		if ( pageCount == 0 )
-		{
-			return 0;
-		}
-
-		unsigned long base = 0;
-		for ( unsigned int i = 0; i < pageCount; ++i )
-		{
-			unsigned long page = pageManager.AllocMemory(PageManager::PAGE_SIZE);
-			if ( page == 0 )
-			{
-				if ( base != 0 )
-				{
-					for ( unsigned int j = 0; j < i; ++j )
-					{
-						pageManager.FreeMemory(PageManager::PAGE_SIZE,
-							base + j * PageManager::PAGE_SIZE);
-					}
-				}
-				return 0;
-			}
-
-			if ( i == 0 )
-			{
-				base = page;
-			}
-			else if ( page != base + i * PageManager::PAGE_SIZE )
-			{
-				pageManager.FreeMemory(PageManager::PAGE_SIZE, page);
-				for ( unsigned int j = 0; j < i; ++j )
-				{
-					pageManager.FreeMemory(PageManager::PAGE_SIZE,
-						base + j * PageManager::PAGE_SIZE);
-				}
-				return 0;
-			}
-		}
-
-		return base;
-	}
-
-	static void FreeContiguousPages(PageManager& pageManager, unsigned long base, unsigned int pageCount)
-	{
-		if ( base == 0 || pageCount == 0 )
-		{
-			return;
-		}
-
-		for ( unsigned int i = 0; i < pageCount; ++i )
-		{
-			pageManager.FreeMemory(PageManager::PAGE_SIZE,
-				base + i * PageManager::PAGE_SIZE);
-		}
-	}
-
 	static void ClearTextPageArray(Text* text)
 	{
 		if ( text == NULL )
@@ -505,7 +448,6 @@ void ProcessManager::Exec()
 	User& u = Kernel::Instance().GetUser();
 	FileManager& fileMgr = Kernel::Instance().GetFileManager();
 	UserPageManager& userPgMgr = Kernel::Instance().GetUserPageManager();
-	KernelPageManager& kernelPgMgr = Kernel::Instance().GetKernelPageManager();
 
 	Diagnose::Write("Process %d execing\n",u.u_procp->p_pid);
 	pInode = fileMgr.NameI(FileManager::NextChar, FileManager::OPEN);
@@ -547,11 +489,9 @@ void ProcessManager::Exec()
 	 * 分配好新进程图像之后，再将fakeStack中的备份参数拷贝到新进程的用户栈中。
 	 * 注意：这里必须在ConfigureExecutableLayout()之前完成参数备份，否则旧用户栈映射会被清空。
 	 */
-	//unsigned long fakeStack = kernelPgMgr.AllocMemory(parser.StackSize);
 	int allocLength = (parser.StackSize + PageManager::PAGE_SIZE * 2 - 1) >> 13 << 13;
-	unsigned int fakeStackPageCount = BytesToPageCount(allocLength);
-	unsigned long fakeStack = AllocContiguousPages(kernelPgMgr, fakeStackPageCount);
-	if ( fakeStack == 0 )
+	unsigned char* fakeStack = new unsigned char[allocLength];
+	if ( fakeStack == NULL )
 	{
 		fileMgr.m_InodeTable->IPut(pInode);
 		if ( this->ExeCnt >= NEXEC )
@@ -568,8 +508,8 @@ void ProcessManager::Exec()
 
 	/* esp定位到栈底 */
 	unsigned int esp = MemoryDescriptor::USER_SPACE_SIZE;
-	/* 使用核心态页表映射，所以在物理地址上加0xC0000000构成线性地址 */
-	unsigned long desAddress = fakeStack + allocLength + 0xC0000000;
+	/* fakeStack 位于内核堆，直接按线性地址访问。 */
+	unsigned long desAddress = (unsigned long)(fakeStack + allocLength);
 	//unsigned long desAddress = fakeStack + parser.StackSize + 0xC0000000;
 	int length;
 
@@ -638,7 +578,7 @@ void ProcessManager::Exec()
 			parser.DataSize,
 			parser.StackSize) == false )
 	{
-		FreeContiguousPages(kernelPgMgr, fakeStack, fakeStackPageCount);
+		delete [] fakeStack;
 		fileMgr.m_InodeTable->IPut(pInode);
 		if ( this->ExeCnt >= NEXEC )
 		{
@@ -698,7 +638,7 @@ void ProcessManager::Exec()
 			pText->x_daddr = 0;
 			ClearTextPageArray(pText);
 			u.u_procp->p_textp = NULL;
-			FreeContiguousPages(kernelPgMgr, fakeStack, fakeStackPageCount);
+			delete [] fakeStack;
 			fileMgr.m_InodeTable->IPut(pInode);
 			if ( this->ExeCnt >= NEXEC )
 			{
@@ -717,7 +657,7 @@ void ProcessManager::Exec()
 			pText->x_daddr = 0;
 			ClearTextPageArray(pText);
 			u.u_procp->p_textp = NULL;
-			FreeContiguousPages(kernelPgMgr, fakeStack, fakeStackPageCount);
+			delete [] fakeStack;
 			fileMgr.m_InodeTable->IPut(pInode);
 			if ( this->ExeCnt >= NEXEC )
 			{
@@ -768,10 +708,10 @@ void ProcessManager::Exec()
 
 	/* 将fakeStack中备份的用户栈参数复制到新进程图像的用户栈中 */
 	//Utility::MemCopy(fakeStack | 0xC0000000, MemoryDescriptor::USER_SPACE_SIZE - parser.StackSize, parser.StackSize);
-	Utility::MemCopy(fakeStack + allocLength - parser.StackSize | 0xC0000000,
+	Utility::MemCopy((unsigned long)(fakeStack + allocLength - parser.StackSize),
 		MemoryDescriptor::USER_SPACE_SIZE - parser.StackSize, parser.StackSize);
 	/* 释放用于读入exe文件和备份用户栈参数的内存：mapAddress和fakeStack */
-	FreeContiguousPages(kernelPgMgr, fakeStack, fakeStackPageCount);
+	delete [] fakeStack;
 
 	/* 
 	  * 将runtime()、SignalHandler()函数拷贝到进程用户态地址空间0x00000000线性地址处，runtime()
