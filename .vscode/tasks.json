@@ -2,7 +2,7 @@
     "tasks": [
 		{
 			"type": "shell",
-			"label": "OOS cmake configure",
+			"label": "cmake/configure",
 			"command": "cmake",
 			"args": [
 				"-S",
@@ -18,7 +18,7 @@
 		},
 		{
 			"type": "shell",
-			"label": "OOS cmake image",
+			"label": "cmake/build",
 			"command": "cmake",
 			"args": [
 				"--build",
@@ -33,7 +33,7 @@
 			"detail": "在 Linux 本机通过 CMake 构建内核与用户程序并生成 c.img",
 			"dependsOrder": "sequence",
 			"dependsOn": [
-				"OOS cmake configure"
+				"cmake/configure"
 			],
 			"group": {
 				"kind": "build",
@@ -42,7 +42,7 @@
 		},
 		{
 			"type": "shell",
-			"label": "OOS cmake clean",
+			"label": "cmake/clean",
 			"command": "cmake",
 			"args": [
 				"--build",
@@ -56,135 +56,13 @@
 			"detail": "在 Linux 本机通过 CMake 清理构建产物与磁盘镜像",
 			"dependsOrder": "sequence",
 			"dependsOn": [
-				"OOS cmake configure"
+				"cmake/configure"
 			],
 			"problemMatcher": []
 		},
 		{
 			"type": "shell",
-			"label": "OOS cmake prelaunch",
-			"command": "cmake",
-			"args": [
-				"--build",
-				"build",
-				"--target",
-				"image",
-				"-j"
-			],
-			"options": {
-				"cwd": "${workspaceFolder}"
-			},
-			"detail": "在 Linux 本机通过 CMake 执行调试前静默构建",
-			"dependsOrder": "sequence",
-			"dependsOn": [
-				"OOS cmake configure"
-			],
-			"presentation": {
-				"reveal": "never",
-				"panel": "shared",
-				"focus": false,
-				"showReuseMessage": false,
-				"clear": false
-			},
-			"problemMatcher": []
-		},
-		{
-			"label": "OOS cmake debug prep",
-			"detail": "在 Linux 本机串行执行调试前构建与 bochs-gdb 主机启动",
-			"dependsOrder": "sequence",
-			"dependsOn": [
-				"OOS cmake prelaunch",
-				"OOS cmake bochs-gdb host"
-			]
-		},
-		{
-			"label": "OOS cmake qemu debug prep",
-			"detail": "在 Linux 本机串行执行调试前构建与 qemu-gdb 主机启动",
-			"dependsOrder": "sequence",
-			"dependsOn": [
-				"OOS cmake prelaunch",
-				"OOS cmake qemu-gdb host"
-			]
-		},
-		{
-			"type": "shell",
-			"label": "OOS cmake bochs-gdb host",
-			"command": "cmake",
-			"args": [
-				"--build",
-				"build",
-				"--target",
-				"bochs-gdb",
-				"-j"
-			],
-			"options": {
-				"cwd": "${workspaceFolder}"
-			},
-			"detail": "在 Linux 本机通过 CMake 启动 bochs-gdb 并等待 gdbstub 可连接",
-			"dependsOrder": "sequence",
-			"dependsOn": [
-				"OOS cmake configure"
-			],
-			"presentation": {
-				"reveal": "always",
-				"panel": "dedicated",
-				"focus": true,
-				"clear": false
-			},
-			"isBackground": true,
-			"problemMatcher": {
-				"owner": "custom",
-				"pattern": {
-					"regexp": "^(?!)$"
-				},
-				"background": {
-					"activeOnStart": true,
-					"beginsPattern": ".*",
-					"endsPattern": ".*Enabled gdbstub.*"
-				}
-			}
-		},
-		{
-			"type": "shell",
-			"label": "OOS cmake qemu-gdb host",
-			"command": "cmake",
-			"args": [
-				"--build",
-				"build",
-				"--target",
-				"qemu-gdb",
-				"-j"
-			],
-			"options": {
-				"cwd": "${workspaceFolder}"
-			},
-			"detail": "在 Linux 本机通过 QEMU 启动 qemu-gdb（terminal/curses 配置）并等待 gdbstub 可连接",
-			"dependsOrder": "sequence",
-			"dependsOn": [
-				"OOS cmake configure"
-			],
-			"presentation": {
-				"reveal": "always",
-				"panel": "dedicated",
-				"focus": true,
-				"clear": false
-			},
-			"isBackground": true,
-			"problemMatcher": {
-				"owner": "custom",
-				"pattern": {
-					"regexp": "^(?!)$"
-				},
-				"background": {
-					"activeOnStart": true,
-					"beginsPattern": ".*",
-					"endsPattern": ".*Enabled gdbstub.*"
-				}
-			}
-		},
-		{
-			"type": "shell",
-			"label": "OOS cmake bochs run",
+			"label": "bochs/run",
 			"command": "cmake",
 			"args": [
 				"--build",
@@ -199,7 +77,7 @@
 			"detail": "在 Linux 本机通过 CMake 启动 bochs（nodebug 配置）",
 			"dependsOrder": "sequence",
 			"dependsOn": [
-				"OOS cmake configure"
+				"cmake/configure"
 			],
 			"presentation": {
 				"reveal": "always",
@@ -211,7 +89,45 @@
 		},
 		{
 			"type": "shell",
-			"label": "OOS cmake bochs gui",
+			"label": "bochs/debug",
+			"command": "cmake",
+			"args": [
+				"--build",
+				"build",
+				"--target",
+				"bochs-gdb",
+				"-j"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"detail": "在 Linux 本机通过 CMake 启动 bochs-gdb 并等待 gdbstub 可连接",
+			"dependsOrder": "sequence",
+			"dependsOn": [
+				"cmake/configure"
+			],
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"focus": true,
+				"clear": false
+			},
+			"isBackground": true,
+			"problemMatcher": {
+				"owner": "custom",
+				"pattern": {
+					"regexp": "^(?!)$"
+				},
+				"background": {
+					"activeOnStart": true,
+					"beginsPattern": ".*",
+					"endsPattern": ".*Enabled gdbstub.*"
+				}
+			}
+		},
+		{
+			"type": "shell",
+			"label": "bochs/gui",
 			"command": "cmake",
 			"args": [
 				"--build",
@@ -226,7 +142,7 @@
 			"detail": "在 Linux 本机通过 CMake 启动 bochs（gui 配置）",
 			"dependsOrder": "sequence",
 			"dependsOn": [
-				"OOS cmake configure"
+				"cmake/configure"
 			],
 			"presentation": {
 				"reveal": "always",
@@ -238,7 +154,7 @@
 		},
 		{
 			"type": "shell",
-			"label": "OOS cmake qemu run",
+			"label": "qemu/run",
 			"command": "cmake",
 			"args": [
 				"--build",
@@ -253,7 +169,72 @@
 			"detail": "在 Linux 本机通过 QEMU 启动 qemu（terminal/curses 配置）",
 			"dependsOrder": "sequence",
 			"dependsOn": [
-				"OOS cmake configure"
+				"cmake/configure"
+			],
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"focus": true,
+				"clear": false
+			},
+			"problemMatcher": []
+		},
+		{
+			"type": "shell",
+			"label": "qemu/debug",
+			"command": "cmake",
+			"args": [
+				"--build",
+				"build",
+				"--target",
+				"qemu-gdb",
+				"-j"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"detail": "在 Linux 本机通过 QEMU 启动 qemu-gdb（terminal/curses 配置）并等待 gdbstub 可连接",
+			"dependsOrder": "sequence",
+			"dependsOn": [
+				"cmake/configure"
+			],
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"focus": true,
+				"clear": false
+			},
+			"isBackground": true,
+			"problemMatcher": {
+				"owner": "custom",
+				"pattern": {
+					"regexp": "^(?!)$"
+				},
+				"background": {
+					"activeOnStart": true,
+					"beginsPattern": ".*",
+					"endsPattern": ".*Enabled gdbstub.*"
+				}
+			}
+		},
+		{
+			"type": "shell",
+			"label": "qemu/gui",
+			"command": "cmake",
+			"args": [
+				"--build",
+				"build",
+				"--target",
+				"qemu-gui",
+				"-j"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"detail": "在 Linux 本机通过 QEMU 启动 qemu（gui 配置）",
+			"dependsOrder": "sequence",
+			"dependsOn": [
+				"cmake/configure"
 			],
 			"presentation": {
 				"reveal": "always",

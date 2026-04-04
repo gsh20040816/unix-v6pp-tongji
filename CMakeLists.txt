@@ -89,6 +89,16 @@ if(OOS_QEMU_EXECUTABLE)
     VERBATIM
   )
 
+  add_custom_target(qemu-gui
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${OOS_QEMU_DIR}"
+    COMMAND "${CMAKE_COMMAND}" -E env "QEMU_BIN=${OOS_QEMU_EXECUTABLE}"
+            bash "${OOS_QEMU_DIR}/qemu_gui.sh"
+    WORKING_DIRECTORY "${OOS_ROOT_DIR}"
+    DEPENDS image
+    USES_TERMINAL
+    VERBATIM
+  )
+
   add_custom_target(qemu-gdb
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${OOS_QEMU_DIR}"
     COMMAND "${CMAKE_COMMAND}" -E env "QEMU_BIN=${OOS_QEMU_EXECUTABLE}"
@@ -99,5 +109,5 @@ if(OOS_QEMU_EXECUTABLE)
     VERBATIM
   )
 else()
-  message(STATUS "qemu-system-i386 executable not found; targets 'qemu' and 'qemu-gdb' are not generated.")
+  message(STATUS "qemu-system-i386 executable not found; targets 'qemu', 'qemu-gui' and 'qemu-gdb' are not generated.")
 endif()

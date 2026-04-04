@@ -2,10 +2,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Bochs GDB (Linux Local)",
+            "name": "debug/bochs gdb (linux local)",
             "type": "cppdbg",
             "request": "launch",
-            "preLaunchTask": "OOS cmake debug prep",
+            "preLaunchTask": "bochs/debug",
             "program": "${workspaceFolder}/build/objs/kernel",
             "cwd": "${workspaceFolder}",
             "MIMode": "gdb",
@@ -34,10 +34,10 @@
             ]
         },
         {
-            "name": "QEMU GDB (Linux Local)",
+            "name": "debug/qemu gdb (linux local)",
             "type": "cppdbg",
             "request": "launch",
-            "preLaunchTask": "OOS cmake qemu debug prep",
+            "preLaunchTask": "qemu/debug",
             "program": "${workspaceFolder}/build/objs/kernel",
             "cwd": "${workspaceFolder}",
             "MIMode": "gdb",
