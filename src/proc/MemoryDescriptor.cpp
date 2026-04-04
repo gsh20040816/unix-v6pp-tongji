@@ -330,7 +330,7 @@ bool MemoryDescriptor::CloneResidentPagesFrom(const MemoryDescriptor& other)
 			if ( ResolveTextPhysicalAddress(other.m_Owner->p_textp,
 				srcPage.backingOffset,
 				textPhysicalAddress) == false ||
-				this->ShareTextPage(virtualAddress, textPhysicalAddress) == false )
+				this->ShareTextPage(virtualAddress, textPhysicalAddress, false) == false )
 			{
 				return false;
 			}
@@ -512,13 +512,10 @@ bool MemoryDescriptor::MaterializeBootstrapStack()
 
 bool MemoryDescriptor::MaterializeExecutableImage()
 {
-	if ( this->FindRegionByType(REGION_RUNTIME) != NULL )
-	{
-		unsigned int runtimePageIndex = this->AddressToPageIndex(0);
-		this->m_PageInfos[runtimePageIndex].state = PAGE_STATE_RESIDENT;
-		this->m_PageInfos[runtimePageIndex].frameAddress = 0;
-		this->MapPage(0, 0, true);
-	}
+	/*
+	 * Exec 阶段不再提前映射用户低地址 runtime 页。
+	 * 该页保持 RESERVED，由缺页异常路径 EnsurePagePresent() 按需分配零页。
+	 */
 
 	const Region* code = this->FindRegionByType(REGION_CODE);
 	if ( code != NULL )
@@ -526,30 +523,6 @@ bool MemoryDescriptor::MaterializeExecutableImage()
 		if ( this->m_Owner == NULL || this->m_Owner->p_textp == NULL )
 		{
 			return false;
-		}
-
-		for ( unsigned long va = code->start; va < code->end; va += PageManager::PAGE_SIZE )
-		{
-			unsigned long textPhysicalAddress = 0;
-			if ( ResolveTextPhysicalAddress(this->m_Owner->p_textp,
-				va - code->start,
-				textPhysicalAddress) == false ||
-				this->ShareTextPage(va, textPhysicalAddress) == false )
-			{
-				return false;
-			}
-		}
-	}
-
-	const Region* data = this->FindRegionByType(REGION_DATA);
-	if ( data != NULL )
-	{
-		for ( unsigned long va = data->start; va < data->end; va += PageManager::PAGE_SIZE )
-		{
-			if ( this->AllocateZeroedPage(va) == false )
-			{
-				return false;
-			}
 		}
 	}
 
@@ -608,7 +581,19 @@ bool MemoryDescriptor::EnsurePagePresent(unsigned long faultAddress)
 			{
 				return false;
 			}
-			ok = this->ShareTextPage(virtualAddress, textPhysicalAddress);
+
+			bool readWrite = false;
+			unsigned int tableIndex =
+				pageIndex / PageTable::ENTRY_CNT_PER_PAGETABLE;
+			unsigned int entryIndex =
+				pageIndex % PageTable::ENTRY_CNT_PER_PAGETABLE;
+			PageTable* table = this->GetUserPageTableByIndex(tableIndex);
+			if ( table != NULL && table->m_Entrys[entryIndex].m_ReadWriter != 0 )
+			{
+				readWrite = true;
+			}
+
+			ok = this->ShareTextPage(virtualAddress, textPhysicalAddress, readWrite);
 		}
 		break;
 	case BACKING_EXEC_FILE:
@@ -1033,13 +1018,15 @@ bool MemoryDescriptor::AllocateZeroedPage(unsigned long virtualAddress)
 	return true;
 }
 
-bool MemoryDescriptor::ShareTextPage(unsigned long virtualAddress, unsigned long textPhysicalAddress)
+bool MemoryDescriptor::ShareTextPage(unsigned long virtualAddress,
+	unsigned long textPhysicalAddress,
+	bool readWrite)
 {
 	unsigned int pageIndex = this->AddressToPageIndex(virtualAddress);
 	PageInfo& pageInfo = this->m_PageInfos[pageIndex];
 	pageInfo.state = PAGE_STATE_RESIDENT;
 	pageInfo.frameAddress = textPhysicalAddress;
-	this->MapPage(virtualAddress, textPhysicalAddress, false);
+	this->MapPage(virtualAddress, textPhysicalAddress, readWrite);
 	return true;
 }
 

@@ -172,7 +172,9 @@ private:
 				   BackingType backingType);
 	void ReservePagesForRegion(unsigned int regionIndex);
 	bool AllocateZeroedPage(unsigned long virtualAddress);
-	bool ShareTextPage(unsigned long virtualAddress, unsigned long textPhysicalAddress);
+	bool ShareTextPage(unsigned long virtualAddress,
+		unsigned long textPhysicalAddress,
+		bool readWrite);
 	void FreePageInfo(PageInfo& pageInfo, bool releaseSharedText);
 	void RemapResidentPages();
 
