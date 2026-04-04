@@ -61,7 +61,7 @@ SystemCallTableEntry SystemCall::m_SystemEntranceTable[SYSTEM_CALL_NUM] =
 	{ 0, &Sys_Getgid},				/* 47 = getgid	*/
 	{ 2, &Sys_Ssig	},				/* 48 = sig	*/
 	{ 2, &Sys_GetUsrPt},			/* 49 = getusrpt	*/
-	{ 0, &Sys_Nosys	},				/* 50 = nosys	*/
+	{ 0, &Sys_GetUsrMem},			/* 50 = getusrmem	*/
 	{ 0, &Sys_Nosys	},				/* 51 = nosys	*/
 	{ 0, &Sys_Nosys	},				/* 52 = nosys	*/
 	{ 0, &Sys_Nosys	},				/* 53 = nosys	*/
@@ -748,5 +748,27 @@ int SystemCall::Sys_GetUsrPt()
 	u.u_ar0[User::EAX] = md.ExportResidentUserPages(
 		entries,
 		(unsigned int)maxEntries);
+	return 0;	/* GCC likes it ! */
+}
+
+/*	50 = getusrmem	count = 0	*/
+int SystemCall::Sys_GetUsrMem()
+{
+	User& u = Kernel::Instance().GetUser();
+	UserPageManager& userPageManager = Kernel::Instance().GetUserPageManager();
+	unsigned long freePageCount = 0;
+
+	for ( unsigned int i = 0; i < PageManager::MEMORY_MAP_ARRAY_SIZE; ++i )
+	{
+		freePageCount += userPageManager.map[i].m_Size;
+	}
+
+	unsigned long freeBytes = freePageCount * PageManager::PAGE_SIZE;
+	if ( freeBytes > 0x7fffffffUL )
+	{
+		freeBytes = 0x7fffffffUL;
+	}
+
+	u.u_ar0[User::EAX] = (int)freeBytes;
 	return 0;	/* GCC likes it ! */
 }

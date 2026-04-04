@@ -95,6 +95,9 @@ struct user_page_snapshot_entry
 /* 获取当前进程用户态实际驻留页表项，返回总条目数 */
 int getUserPageTable(struct user_page_snapshot_entry* entries, int maxEntries);
 
+/* 获取用户区当前可用物理内存大小(字节) */
+int getUserFreeMemory();
+
 
 
 #endif

@@ -223,7 +223,10 @@ private:
 	/*	49 = getusrpt	count = 2	*/
 	static int Sys_GetUsrPt();
 
-	/*	50 ~ 63 = nosys	count = 0	*/	
+	/*	50 = getusrmem	count = 0	*/
+	static int Sys_GetUsrMem();
+
+	/*	51 ~ 63 = nosys	count = 0	*/	
 
 private:
 	/*系统调用入口表的声明*/
