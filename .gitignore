@@ -5,6 +5,9 @@ targets/UNIXV6++/c.img
 targets/UNIXV6++/c.img.lock
 targets/UNIXV6++/bochsout.txt
 
+# Cmake build outputs.
+build/
+
 # In-tree program/library build outputs.
 src/lib/*.a
 src/lib/objs/

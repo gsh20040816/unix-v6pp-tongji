@@ -2,13 +2,39 @@
     "tasks": [
 		{
 			"type": "shell",
-			"label": "OOS make",
-			"command": "make",
-			"args": [],
+			"label": "OOS cmake configure",
+			"command": "cmake",
+			"args": [
+				"-S",
+				".",
+				"-B",
+				"build/cmake-debug"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"detail": "配置 Linux 本机 CMake 构建目录",
+			"problemMatcher": []
+		},
+		{
+			"type": "shell",
+			"label": "OOS cmake image",
+			"command": "cmake",
+			"args": [
+				"--build",
+				"build/cmake-debug",
+				"--target",
+				"image",
+				"-j"
+			],
 			"options": {
 				"cwd": "${workspaceFolder}"
 			},
 			"detail": "在 Linux 本机构建内核与用户程序，并生成 c.img",
+			"dependsOrder": "sequence",
+			"dependsOn": [
+				"OOS cmake configure"
+			],
 			"group": {
 				"kind": "build",
 				"isDefault": true
@@ -17,25 +43,42 @@
 		{
 			"type": "shell",
 			"label": "OOS clean",
-			"command": "make",
+			"command": "cmake",
 			"args": [
+				"--build",
+				"build/cmake-debug",
+				"--target",
 				"clean"
 			],
 			"options": {
 				"cwd": "${workspaceFolder}"
 			},
 			"detail": "清理 Linux 本机构建产物与磁盘镜像",
+			"dependsOrder": "sequence",
+			"dependsOn": [
+				"OOS cmake configure"
+			],
 			"problemMatcher": []
 		},
 		{
 			"type": "shell",
-			"label": "OOS make prelaunch",
-			"command": "make",
-			"args": [],
+			"label": "OOS cmake prelaunch",
+			"command": "cmake",
+			"args": [
+				"--build",
+				"build/cmake-debug",
+				"--target",
+				"image",
+				"-j"
+			],
 			"options": {
 				"cwd": "${workspaceFolder}"
 			},
 			"detail": "调试前静默构建",
+			"dependsOrder": "sequence",
+			"dependsOn": [
+				"OOS cmake configure"
+			],
 			"presentation": {
 				"reveal": "never",
 				"panel": "shared",
@@ -49,21 +92,29 @@
 			"label": "OOS debug prep",
 			"dependsOrder": "sequence",
 			"dependsOn": [
-				"OOS make prelaunch",
+				"OOS cmake prelaunch",
 				"OOS linux debug host"
 			]
 		},
 		{
 			"type": "shell",
 			"label": "OOS linux debug host",
-			"command": "make",
+			"command": "cmake",
 			"args": [
-				"bochs-gdb"
+				"--build",
+				"build/cmake-debug",
+				"--target",
+				"bochs-gdb",
+				"-j"
 			],
 			"options": {
 				"cwd": "${workspaceFolder}"
 			},
 			"detail": "在 Linux 本机启动 bochs-gdb，并等待 gdbstub 可连接",
+			"dependsOrder": "sequence",
+			"dependsOn": [
+				"OOS cmake configure"
+			],
 			"presentation": {
 				"reveal": "always",
 				"panel": "dedicated",
@@ -78,7 +129,7 @@
 				},
 				"background": {
 					"activeOnStart": true,
-					"beginsPattern": ".*Starting bochs-gdb in .*",
+					"beginsPattern": ".*",
 					"endsPattern": ".*Enabled gdbstub.*"
 				}
 			}
@@ -86,16 +137,22 @@
 		{
 			"type": "shell",
 			"label": "OOS run bochs",
-			"command": "bochs-gdb",
+			"command": "cmake",
 			"args": [
-				"-q",
-				"-f",
-				"bochsrc_nodebug.bxrc"
+				"--build",
+				"build/cmake-debug",
+				"--target",
+				"bochs",
+				"-j"
 			],
 			"options": {
-				"cwd": "${workspaceFolder}/targets/UNIXV6++"
+				"cwd": "${workspaceFolder}"
 			},
 			"detail": "在 Linux 本机启动 bochs，不调试",
+			"dependsOrder": "sequence",
+			"dependsOn": [
+				"OOS cmake configure"
+			],
 			"presentation": {
 				"reveal": "always",
 				"panel": "dedicated",
