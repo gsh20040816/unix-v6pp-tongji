@@ -27,8 +27,8 @@ SHELL_OBJS =$(TARGET)/commandtree.o	\
 			$(TARGET)/preexecute.o	\
 			$(TARGET)/main.o
 
-SHELL_EXE = $(TARGET)/Shell.exe
-WORKSPACE_SHELL = $(MAKEIMAGEPATH)/Shell.exe
+SHELL_BIN = $(TARGET)/Shell
+WORKSPACE_SHELL = $(MAKEIMAGEPATH)/Shell
 			
 all	:	$(WORKSPACE_SHELL)
 
@@ -38,11 +38,11 @@ $(TARGET):
 $(MAKEIMAGEPATH):
 	mkdir -p $@
 
-$(SHELL_EXE)	:	$(SHELL_OBJS) $(V6++LIB_DEP) $(USER_LD) | $(TARGET)
+$(SHELL_BIN)	:	$(SHELL_OBJS) $(V6++LIB_DEP) $(USER_LD) | $(TARGET)
 	$(CC) $(CFLAGS) -no-pie $(SHELL_OBJS) $(V6++LIB) $(LDFLAGS) -o $@
 
 
-$(WORKSPACE_SHELL)	:	$(SHELL_EXE) | $(MAKEIMAGEPATH)
+$(WORKSPACE_SHELL)	:	$(SHELL_BIN) | $(MAKEIMAGEPATH)
 	cp $< $@
 	
 $(TARGET)/commandtree.o :	CommandTree.c $(INCLUDE)/CommandTree.h | $(TARGET)
@@ -59,4 +59,5 @@ $(TARGET)/main.o :	main.c | $(TARGET)
 
 	
 clean:
-	rm -f $(TARGET)/*.o $(TARGET)/*.exe
+	rm -f $(TARGET)/*.o $(SHELL_BIN) $(TARGET)/*.exe
+	rm -f $(WORKSPACE_SHELL) $(MAKEIMAGEPATH)/Shell.exe

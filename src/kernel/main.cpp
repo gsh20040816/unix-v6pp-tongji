@@ -114,24 +114,13 @@ extern "C" void runtime()
 
 /*
   * 1#进程在执行完MoveToUserStack()从ring0退出到ring3优先级后，会调用ExecShell()，此函数通过"int $0x80"
-  * (EAX=execv系统调用号)加载“/Shell.exe”程序，其功能相当于在用户程序中执行系统调用execv(char* pathname, char* argv[])。
+  * (EAX=execv系统调用号)加载“/Shell”程序，其功能相当于在用户程序中执行系统调用execv(char* pathname, char* argv[])。
   */
 extern "C" void ExecShell()
 {
 	int argc = 0;
 	char* argv = NULL;
-	char pathname[11];
-	pathname[0] = '/';
-	pathname[1] = 'S';
-	pathname[2] = 'h';
-	pathname[3] = 'e';
-	pathname[4] = 'l';
-	pathname[5] = 'l';
-	pathname[6] = '.';
-	pathname[7] = 'e';
-	pathname[8] = 'x';
-	pathname[9] = 'e';
-	pathname[10] = '\0';
+	char pathname[] = "/Shell";
 	__asm__ __volatile__ ("int $0x80"::"a"(11/* execv */),"b"(pathname),"c"(argc),"d"(argv));
 	return;
 }
@@ -256,7 +245,7 @@ extern "C" void next()
 		us.u_procp->p_ttyp = NULL;
 		Kernel::Instance().GetProcessManager().Sched();
 	}
-		else               /* 1#进程执行应用程序shell.exe,是普通进程  */
+		else               /* 1#进程执行应用程序Shell,是普通进程  */
 		{
 			Diagnose::Write("boot: init shell path\n");
 

@@ -67,10 +67,10 @@ $(MAKEIMAGEPATH)/$(BIN):
 	mkdir -p $@
 
 define BUILD_PROGRAM
-$(TARGET)/$(1).exe : $(2) $(V6++LIB_DEP) $(USER_LD) | $(TARGET)
+$(TARGET)/$(1) : $(2) $(V6++LIB_DEP) $(USER_LD) | $(TARGET)
 	$(CC) $(CFLAGS) -no-pie -I"$(INCLUDE)" -I"$(LIB_INCLUDE)" $$(filter %.c,$$^) $(V6++LIB) $(LDFLAGS) -o $$@
 
-$(MAKEIMAGEPATH)/$(BIN)/$(1) : $(TARGET)/$(1).exe | $(MAKEIMAGEPATH)/$(BIN)
+$(MAKEIMAGEPATH)/$(BIN)/$(1) : $(TARGET)/$(1) | $(MAKEIMAGEPATH)/$(BIN)
 	cp $$< $$@
 endef
 
@@ -102,5 +102,5 @@ $(eval $(call BUILD_PROGRAM,top,top.c))
 $(eval $(call BUILD_PROGRAM,argvdump,argvdump.c))
 $(eval $(call BUILD_PROGRAM,zeropage,zeropage.c))
 clean:
-	rm -f $(TARGET)/*.exe
+	rm -f $(TARGET)/* $(TARGET)/*.exe
 	rm -f $(MAKEIMAGEPATH)/$(BIN)/*

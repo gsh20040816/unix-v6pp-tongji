@@ -275,7 +275,7 @@ bool ExecTest()
 	argv[1] = arr;
 	argv[2] = NULL;
 
-	lib_execv("/Shell.exe", argv);
+	lib_execv("/Shell", argv);
 	return true;
 }
 
@@ -337,8 +337,8 @@ void PrepareExeFile()
 	Buf* pBuf;
 	BufferManager& bufMgr = Kernel::Instance().GetBufferManager();
 	User& u = Kernel::Instance().GetUser();
-	//char* exeName[10] = {"/shell.exe", "/peProgram.exe", "/cat", "/cp", "/ls", "/mkdir", "/rm"};
-	char* exeName[10] = {"/peProgram.exe", "/Shell.exe"};
+	//char* exeName[10] = {"/shell", "/peProgram", "/cat", "/cp", "/ls", "/mkdir", "/rm"};
+	char* exeName[10] = {"/peProgram", "/Shell"};
 
 	pBuf = bufMgr.Bread(DeviceManager::ROOTDEV, exeBlkno);
 	

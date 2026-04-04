@@ -9,7 +9,7 @@ BOOT_DIR := $(SRC_DIR)/boot
 TARGET_DIR := targets/objs
 UNIXV6PP_DIR := targets/UNIXV6++
 
-KERNEL_EXE := $(TARGET_DIR)/kernel.exe
+KERNEL_ELF := $(TARGET_DIR)/kernel
 KERNEL_BIN := $(TARGET_DIR)/kernel.bin
 BOOT_BIN := $(TARGET_DIR)/boot.bin
 KERNEL_SIZE_INC := $(BOOT_DIR)/kernel_size.inc
@@ -40,8 +40,8 @@ $(FILESCANNER) $(FSEDIT):
 fs-tools: $(FILESCANNER) $(FSEDIT)
 
 image: build fs-tools
-	@echo "Exporting kernel.bin from latest kernel.exe"
-	objcopy -O binary $(KERNEL_EXE) $(KERNEL_BIN)
+	@echo "Exporting kernel.bin from latest kernel"
+	objcopy -O binary $(KERNEL_ELF) $(KERNEL_BIN)
 	@kernel_size="$$(stat -c '%s' $(KERNEL_BIN))"; \
 	kernel_sectors="$$(( (kernel_size + 511) / 512 ))"; \
 	kernel_size_line="KERNEL_SIZE equ $$kernel_sectors"; \
@@ -57,6 +57,9 @@ image: build fs-tools
 	mkdir -p $(FS_WORKSPACE)
 	cp $(BOOT_BIN) $(FS_WORKSPACE)/boot.bin
 	cp $(KERNEL_BIN) $(FS_WORKSPACE)/kernel.bin
+	@if [[ -d $(FS_WORKSPACE)/programs ]]; then \
+		find $(FS_WORKSPACE)/programs -type f -name '*.exe' -delete; \
+	fi
 	@echo "Generating disk image on Linux with v6pp-fs-edit-2022"
 	cd $(FS_WORKSPACE) && ./linux-bin/filescanner | ./linux-bin/fsedit c.img c
 	mkdir -p $(UNIXV6PP_DIR)

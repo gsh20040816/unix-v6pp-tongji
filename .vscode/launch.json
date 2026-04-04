@@ -6,7 +6,7 @@
             "type": "cppdbg",
             "request": "launch",
             "preLaunchTask": "OOS debug prep",
-            "program": "${workspaceFolder}/targets/objs/kernel.exe",
+            "program": "${workspaceFolder}/targets/objs/kernel",
             "cwd": "${workspaceFolder}",
             "MIMode": "gdb",
             "miDebuggerPath": "/usr/bin/gdb",

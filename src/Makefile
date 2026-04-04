@@ -2,7 +2,7 @@ include Makefile.inc
 
 .PHONY : all build deploy run clean prepare_dirs $(DIRS)
 
-KERNEL_EXE = $(TARGET)/kernel.exe
+KERNEL_ELF = $(TARGET)/kernel
 KERNEL_BIN = $(TARGET)/kernel.bin
 KERNEL_SYM = $(TARGET)/kernel.sym
 KERNEL_ASM = $(TARGET)/kernel.asm
@@ -27,19 +27,19 @@ build	: prepare_dirs $(DIRS) $(KERNEL_ASM)
 
 deploy	: build $(IMG_BOOT) $(IMG_KERNEL_BIN) $(IMG_KERNEL_SYM) $(IMG_KERNEL_ASM) $(WORKSPACE_BOOT) $(WORKSPACE_KERNEL)
 
-$(KERNEL_EXE)	: $(OBJS)
+$(KERNEL_ELF)	: $(OBJS)
 	$(LD) $(LDFLAGS) $(OBJS) -o $@
 
 # Parallel safety: link must wait until all per-directory sub-makes finish.
-$(KERNEL_EXE)	: $(DIRS)
+$(KERNEL_ELF)	: $(DIRS)
 
-$(KERNEL_BIN)	: $(KERNEL_EXE)
+$(KERNEL_BIN)	: $(KERNEL_ELF)
 	$(OBJCOPY) -O binary $< $@
 
-$(KERNEL_SYM)	: $(KERNEL_EXE)
+$(KERNEL_SYM)	: $(KERNEL_ELF)
 	$(NM) $< > $@
 
-$(KERNEL_ASM)	: $(KERNEL_EXE)
+$(KERNEL_ASM)	: $(KERNEL_ELF)
 	$(OBJDUMP) -d $< > $@
 
 $(TARGET)/$(SECTOR2_OBJ) :
@@ -72,6 +72,6 @@ clean	:
 	-$(MAKE) --directory=lib clean
 	-$(MAKE) --directory=shell clean
 	-$(MAKE) --directory=program clean
-	rm -f $(TARGET)/*.o $(TARGET)/*.exe $(TARGET)/*.bin $(TARGET)/*.sym $(TARGET)/*.asm
+	rm -f $(TARGET)/*.o $(TARGET)/*.bin $(TARGET)/*.sym $(TARGET)/*.asm $(KERNEL_ELF) $(TARGET)/*.exe
 	rm -f $(IMGTARGET)/*.bin $(IMGTARGET)/*.sym $(IMGTARGET)/*.asm
 	rm -f $(UNIXV6PPTARGET)/$(IMG)
