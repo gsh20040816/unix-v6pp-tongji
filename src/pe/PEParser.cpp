@@ -34,6 +34,112 @@ namespace
 		}
 	}
 
+	static unsigned long AlignDownToPage(unsigned long value)
+	{
+		return value & ~(PageManager::PAGE_SIZE - 1);
+	}
+
+	static unsigned long AlignUpToPage(unsigned long value)
+	{
+		return (value + PageManager::PAGE_SIZE - 1) & ~(PageManager::PAGE_SIZE - 1);
+	}
+
+	static void ComputeSharedRodataRange(unsigned long dataAddress,
+		unsigned long dataSize,
+		unsigned long rodataAddress,
+		unsigned long rodataSize,
+		unsigned long& sharedStart,
+		unsigned long& sharedSize)
+	{
+		sharedStart = 0;
+		sharedSize = 0;
+
+		if ( rodataSize == 0 )
+		{
+			return;
+		}
+
+		unsigned long dataStart = dataAddress;
+		unsigned long dataEnd = AlignUpToPage(dataAddress + dataSize);
+		unsigned long candidateStart = AlignUpToPage(rodataAddress);
+		unsigned long candidateEnd = AlignDownToPage(rodataAddress + rodataSize);
+
+		if ( candidateStart < dataStart )
+		{
+			candidateStart = dataStart;
+		}
+		if ( candidateEnd > dataEnd )
+		{
+			candidateEnd = dataEnd;
+		}
+
+		if ( candidateStart < candidateEnd )
+		{
+			sharedStart = candidateStart;
+			sharedSize = candidateEnd - candidateStart;
+		}
+	}
+
+	static unsigned long ComputeSectionMappedSize(const ImageNTHeader& ntHeader,
+		const ImageSectionHeader* sectionHeaders,
+		unsigned int sectionCount,
+		unsigned int sectionIndex)
+	{
+		if ( sectionHeaders == NULL || sectionIndex >= sectionCount )
+		{
+			return 0;
+		}
+
+		const ImageSectionHeader& section = sectionHeaders[sectionIndex];
+		unsigned long usedSize = section.Misc.VirtualSize;
+		if ( usedSize < section.SizeOfRawData )
+		{
+			usedSize = section.SizeOfRawData;
+		}
+
+		if ( usedSize == 0 )
+		{
+			return 0;
+		}
+
+		unsigned long start = section.VirtualAddress + ntHeader.OptionalHeader.ImageBase;
+		unsigned long boundary = AlignUpToPage(start + usedSize);
+		unsigned long sectionVirtualAddress = section.VirtualAddress;
+		unsigned long nextStart = 0xffffffffUL;
+
+		for ( unsigned int i = 0; i < sectionCount; ++i )
+		{
+			if ( i == sectionIndex )
+			{
+				continue;
+			}
+
+			unsigned long candidateVirtualAddress = sectionHeaders[i].VirtualAddress;
+			if ( candidateVirtualAddress <= sectionVirtualAddress )
+			{
+				continue;
+			}
+
+			unsigned long candidateStart = candidateVirtualAddress + ntHeader.OptionalHeader.ImageBase;
+			if ( candidateStart < nextStart )
+			{
+				nextStart = candidateStart;
+			}
+		}
+
+		if ( nextStart != 0xffffffffUL && boundary > nextStart )
+		{
+			boundary = nextStart;
+		}
+
+		if ( boundary <= start )
+		{
+			return 0;
+		}
+
+		return boundary - start;
+	}
+
 	static bool ReadInPagedChunks(Inode* p_inode,
 		unsigned long fileOffset,
 		unsigned long virtualAddress,
@@ -345,6 +451,16 @@ bool PEParser::HeaderLoad(Inode* p_inode)
 		}
 	}
 
+	unsigned long mappedRodataSize = this->RodataSize;
+	if ( ntHeader.FileHeader.NumberOfSections > this->RDATA_SECTION_IDX )
+	{
+		mappedRodataSize = ComputeSectionMappedSize(
+			this->ntHeader,
+			this->sectionHeaders,
+			this->ntHeader.FileHeader.NumberOfSections,
+			this->RDATA_SECTION_IDX);
+	}
+
 	this->BssAddress = 0;
 	this->BssSize = 0;
 	unsigned long dataEnd = dataRawEnd;
@@ -383,6 +499,14 @@ bool PEParser::HeaderLoad(Inode* p_inode)
 		}
 	}
 	this->DataSize = dataEnd - ntHeader.OptionalHeader.BaseOfData;
+
+	ComputeSharedRodataRange(
+		this->DataAddress,
+		this->DataSize,
+		this->RodataAddress,
+		mappedRodataSize,
+		this->RodataAddress,
+		this->RodataSize);
 
     StackSize = ntHeader.OptionalHeader.SizeOfStackCommit;
     HeapSize = ntHeader.OptionalHeader.SizeOfHeapCommit;

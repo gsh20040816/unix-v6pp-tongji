@@ -91,9 +91,9 @@ int main1(int argc, char* argv[])
 		exit(0);
 	}
 
+	wait(&status);
 	printf("In parent, pid=%d child=%d\n", getpid(), childPid);
 	DumpCurrentProcessPageTable("parent-after-fork");
-	wait(&status);
 	printf("Parent wait done, child status=%d\n", status);
 
 	exit(0);

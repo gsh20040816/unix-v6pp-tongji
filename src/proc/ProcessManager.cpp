@@ -23,40 +23,6 @@ namespace
 		return (unsigned int)((size + PageManager::PAGE_SIZE - 1) / PageManager::PAGE_SIZE);
 	}
 
-	static unsigned long AlignDownToPage(unsigned long value)
-	{
-		return value & ~(PageManager::PAGE_SIZE - 1);
-	}
-
-	static unsigned long AlignUpToPage(unsigned long value)
-	{
-		return (value + PageManager::PAGE_SIZE - 1) & ~(PageManager::PAGE_SIZE - 1);
-	}
-
-	static unsigned long ComputeShareableRodataSize(const PEParser& parser)
-	{
-		if ( parser.RodataSize == 0 )
-		{
-			return 0;
-		}
-
-		unsigned long dataStart = parser.DataAddress;
-		unsigned long dataEnd = AlignUpToPage(parser.DataAddress + parser.DataSize);
-		unsigned long roStart = AlignUpToPage(parser.RodataAddress);
-		unsigned long roEnd = AlignDownToPage(parser.RodataAddress + parser.RodataSize);
-
-		if ( roStart < dataStart )
-		{
-			roStart = dataStart;
-		}
-		if ( roEnd > dataEnd )
-		{
-			roEnd = dataEnd;
-		}
-
-		return roStart < roEnd ? (roEnd - roStart) : 0;
-	}
-
 	static void ClearPageArray(unsigned long pages[], unsigned int maxPageCount)
 	{
 		for ( unsigned int i = 0; i < maxPageCount; ++i )
@@ -692,7 +658,7 @@ void ProcessManager::Exec()
 		pText->x_ccount = 1;
 		pText->x_count = 1;
 		pText->x_size = u.u_procp->p_memory.GetCodeSize();
-		pText->x_rosize = ComputeShareableRodataSize(parser);
+		pText->x_rosize = parser.RodataSize;
 		/* 为正文段分配内存，而具体正文段内容的读入需要等到建立页表映射之后，再从mapAddress地址起始的exe文件中读入 */
 		unsigned int textPageCount = BytesToPageCount(pText->x_size);
 		unsigned int rodataPageCount = BytesToPageCount(pText->x_rosize);
