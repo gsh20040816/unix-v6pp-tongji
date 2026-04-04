@@ -1,0 +1,5 @@
+set confirm off
+
+define hook-quit
+  monitor quit
+end

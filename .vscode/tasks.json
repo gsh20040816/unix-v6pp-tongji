@@ -3,11 +3,8 @@
 		{
 			"type": "shell",
 			"label": "OOS make",
-			"command": "bash",
-			"args": [
-				"-lc",
-				"bash ./build.sh"
-			],
+			"command": "make",
+			"args": [],
 			"options": {
 				"cwd": "${workspaceFolder}"
 			},
@@ -20,10 +17,9 @@
 		{
 			"type": "shell",
 			"label": "OOS clean",
-			"command": "bash",
+			"command": "make",
 			"args": [
-				"-lc",
-				"bash ./build.sh clean"
+				"clean"
 			],
 			"options": {
 				"cwd": "${workspaceFolder}"
@@ -32,20 +28,37 @@
 			"problemMatcher": []
 		},
 		{
+			"type": "shell",
+			"label": "OOS make prelaunch",
+			"command": "make",
+			"args": [],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"detail": "调试前静默构建",
+			"presentation": {
+				"reveal": "never",
+				"panel": "shared",
+				"focus": false,
+				"showReuseMessage": false,
+				"clear": false
+			},
+			"problemMatcher": []
+		},
+		{
 			"label": "OOS debug prep",
 			"dependsOrder": "sequence",
 			"dependsOn": [
-				"OOS make",
+				"OOS make prelaunch",
 				"OOS linux debug host"
 			]
 		},
 		{
 			"type": "shell",
 			"label": "OOS linux debug host",
-			"command": "bash",
+			"command": "make",
 			"args": [
-				"-lc",
-				"bash ./debug.sh"
+				"bochs-gdb"
 			],
 			"options": {
 				"cwd": "${workspaceFolder}"
@@ -54,7 +67,7 @@
 			"presentation": {
 				"reveal": "always",
 				"panel": "dedicated",
-				"focus": false,
+				"focus": true,
 				"clear": false
 			},
 			"isBackground": true,
@@ -73,14 +86,12 @@
 		{
 			"type": "shell",
 			"label": "OOS run bochs",
-			"command": "bochs-gdb",
+			"command": "make",
 			"args": [
-				"-q",
-				"-f",
-				"bochsrc_nodebug.bxrc"
+				"bochs"
 			],
 			"options": {
-				"cwd": "${workspaceFolder}/targets/UNIXV6++"
+				"cwd": "${workspaceFolder}"
 			},
 			"detail": "在 Linux 本机启动 bochs，不调试",
 			"presentation": {

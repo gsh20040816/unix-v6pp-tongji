@@ -1,1 +1,0 @@
-@cd /d "%oos_path%\src"
