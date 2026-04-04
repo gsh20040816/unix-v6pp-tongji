@@ -545,11 +545,12 @@ bool MemoryDescriptor::ConfigureExecutableLayout(unsigned long entryPoint,
 	if ( rodataSize != 0 )
 	{
 		/*
-		 * 页保护粒度是 4KB。仅将完整落在 rodata 内的页设为只读，
-		 * 避免误伤与可写数据共享同一页的边界字节。
+		 * 规则：段边界先按页对齐再标记。
+		 * rodata 区域采用 [AlignDown(start), AlignUp(end))，
+		 * 再裁剪到 data 区间内。
 		 */
-		unsigned long candidateStart = AlignUp(rodataStart);
-		unsigned long candidateEnd = AlignDown(rodataStart + rodataSize);
+		unsigned long candidateStart = AlignDown(rodataStart);
+		unsigned long candidateEnd = AlignUp(rodataStart + rodataSize);
 		if ( candidateStart < dataStart )
 		{
 			candidateStart = dataStart;
@@ -568,11 +569,12 @@ bool MemoryDescriptor::ConfigureExecutableLayout(unsigned long entryPoint,
 	if ( bssSize != 0 )
 	{
 		/*
-		 * bss 也按页粒度拆分：仅完整落在 bss 的页标记为 BACKING_ZERO。
-		 * 与已初始化数据混合的边界页仍保留在 BACKING_EXEC_FILE 区域。
+		 * 规则：段边界先按页对齐再标记。
+		 * bss 区域采用 [AlignDown(start), AlignUp(end))，
+		 * 再裁剪到 data 区间内。
 		 */
-		unsigned long candidateStart = AlignUp(bssStart);
-		unsigned long candidateEnd = AlignDown(bssStart + bssSize);
+		unsigned long candidateStart = AlignDown(bssStart);
+		unsigned long candidateEnd = AlignUp(bssStart + bssSize);
 		if ( candidateStart < dataStart )
 		{
 			candidateStart = dataStart;

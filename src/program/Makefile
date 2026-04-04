@@ -51,7 +51,8 @@ PROGRAM_WORKSPACE_TARGETS = \
 	$(MAKEIMAGEPATH)\$(BIN)\testfork \
 	$(MAKEIMAGEPATH)\$(BIN)\stackpt \
 	$(MAKEIMAGEPATH)\$(BIN)\top \
-	$(MAKEIMAGEPATH)\$(BIN)\argvdump
+	$(MAKEIMAGEPATH)\$(BIN)\argvdump \
+	$(MAKEIMAGEPATH)\$(BIN)\zeropage
 
 all	:	$(PROGRAM_WORKSPACE_TARGETS)
 
@@ -91,6 +92,7 @@ $(eval $(call BUILD_PROGRAM,testfork,testfork.c))
 $(eval $(call BUILD_PROGRAM,stackpt,stackpt.c))
 $(eval $(call BUILD_PROGRAM,top,top.c))
 $(eval $(call BUILD_PROGRAM,argvdump,argvdump.c))
+$(eval $(call BUILD_PROGRAM,zeropage,zeropage.c))
 clean:
 	del $(TARGET)\*.exe
 	del /Q $(MAKEIMAGEPATH)\$(BIN)\*
