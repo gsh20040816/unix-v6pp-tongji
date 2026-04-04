@@ -1,39 +1,11 @@
 #include "PEParser.h"
 #include "Utility.h"
 #include "PageManager.h"
-#include "MemoryDescriptor.h"
 #include "User.h"
 #include "Kernel.h"
-#include "Video.h"
 
 namespace
 {
-	static void SetRangeReadWrite(MemoryDescriptor& memory,
-		unsigned long start,
-		unsigned long size,
-		bool readWrite)
-	{
-		if ( size == 0 )
-		{
-			return;
-		}
-
-		unsigned long begin = start >> 12;
-		unsigned long end = (start + size + PageManager::PAGE_SIZE - 1) >> 12;
-		for ( unsigned long page = begin; page < end; ++page )
-		{
-			unsigned int tableIndex = (unsigned int)(page / PageTable::ENTRY_CNT_PER_PAGETABLE);
-			unsigned int entryIndex = (unsigned int)(page % PageTable::ENTRY_CNT_PER_PAGETABLE);
-			PageTable* pageTable = memory.GetUserPageTableByIndex(tableIndex);
-			if ( pageTable == NULL )
-			{
-				continue;
-			}
-
-			pageTable->m_Entrys[entryIndex].m_ReadWriter = readWrite ? 1 : 0;
-		}
-	}
-
 	static unsigned long AlignDownToPage(unsigned long value)
 	{
 		return value & ~(PageManager::PAGE_SIZE - 1);
@@ -140,46 +112,6 @@ namespace
 		return boundary - start;
 	}
 
-	static bool ReadInPagedChunks(Inode* p_inode,
-		unsigned long fileOffset,
-		unsigned long virtualAddress,
-		unsigned long size)
-	{
-		User& u = Kernel::Instance().GetUser();
-		unsigned long remaining = size;
-
-		while ( remaining != 0 )
-		{
-			unsigned long pageRemain =
-				PageManager::PAGE_SIZE - (virtualAddress & (PageManager::PAGE_SIZE - 1));
-			unsigned long chunk = remaining;
-			if ( chunk > pageRemain )
-			{
-				chunk = pageRemain;
-			}
-
-			u.u_IOParam.m_Base = (unsigned char*)virtualAddress;
-			u.u_IOParam.m_Offset = fileOffset;
-			u.u_IOParam.m_Count = chunk;
-			p_inode->ReadI();
-
-			if ( u.u_error != User::NOERROR || u.u_IOParam.m_Count != 0 )
-			{
-				if ( u.u_error == User::NOERROR )
-				{
-					u.u_error = User::ENOEXEC;
-				}
-				return false;
-			}
-
-			fileOffset += chunk;
-			virtualAddress += chunk;
-			remaining -= chunk;
-		}
-
-		return true;
-	}
-
 	static void CopyInPagedChunks(unsigned long srcAddress,
 		unsigned long desAddress,
 		unsigned long size)
@@ -209,10 +141,16 @@ PEParser::PEParser()
     this->EntryPointAddress = 0;
 	this->TextAddress = 0;
 	this->TextSize = 0;
+	this->TextFileOffset = 0;
+	this->TextFileSize = 0;
 	this->DataAddress = 0;
 	this->DataSize = 0;
+	this->DataFileOffset = 0;
+	this->DataFileSize = 0;
 	this->RodataAddress = 0;
 	this->RodataSize = 0;
+	this->RodataFileOffset = 0;
+	this->RodataFileSize = 0;
 	this->BssAddress = 0;
 	this->BssSize = 0;
 	this->StackSize = 0;
@@ -227,10 +165,16 @@ PEParser::PEParser(unsigned long peAddress)
 	this->EntryPointAddress = 0;
 	this->TextAddress = 0;
 	this->TextSize = 0;
+	this->TextFileOffset = 0;
+	this->TextFileSize = 0;
 	this->DataAddress = 0;
 	this->DataSize = 0;
+	this->DataFileOffset = 0;
+	this->DataFileSize = 0;
 	this->RodataAddress = 0;
 	this->RodataSize = 0;
+	this->RodataFileOffset = 0;
+	this->RodataFileSize = 0;
 	this->BssAddress = 0;
 	this->BssSize = 0;
 	this->StackSize = 0;
@@ -240,105 +184,13 @@ PEParser::PEParser(unsigned long peAddress)
 
 unsigned int PEParser::Relocate(Inode* p_inode, int sharedText)
 {
-	User& u = Kernel::Instance().GetUser();
-	unsigned long srcAddress, desAddress;
-	unsigned cnt = 0;
-	unsigned int i = 0;
-	unsigned int lastDataSectionIdx = this->BSS_SECTION_IDX;
-
-	if ( this->ntHeader.FileHeader.NumberOfSections > this->IDATA_SECTION_IDX )
-	{
-		lastDataSectionIdx = this->IDATA_SECTION_IDX;
-	}
-
-	/* 如果可以和其它进程共享正文段，无需文件中读入正文段 */
-	MemoryDescriptor& memory = u.u_procp->p_memory;
-
-	/*如果与其它进程共享正文段，共享正文段切不可清0*/
-	if(sharedText == 1)
-		i = 1;      // i是段头索引
-	else
-	{
-		i = 0;
-	}
-
-	/* 装载阶段临时放开写保护：正文（非共享时）+ rodata。 */
-	if ( sharedText == 0 )
-	{
-		SetRangeReadWrite(memory, this->TextAddress, this->TextSize, true);
-	}
-	SetRangeReadWrite(memory, this->RodataAddress, this->RodataSize, true);
-	X86Assembly::FlushPageDirectory((unsigned long)memory.GetPageDirectoryPointer());
-
-    /* 对所有页面执行清0操作，这样bss变量的初值就是0 */
-	for (; i <= lastDataSectionIdx; i++ )
-	{
-		if ( i == this->BSS_SECTION_IDX )
-		{
-			continue;
-		}
-
-		ImageSectionHeader* sectionHeader = &(this->sectionHeaders[i]);
-		unsigned long beginVM =
-			sectionHeader->VirtualAddress + ntHeader.OptionalHeader.ImageBase;
-		unsigned long size =
-			((sectionHeader->Misc.VirtualSize + PageManager::PAGE_SIZE - 1) >> 12) << 12;
-
-		for (unsigned long j = 0; j < size; ++j)
-		{
-			unsigned char* b = (unsigned char*)(beginVM + j);
-			*b = 0;
-		}
-	}
-
-	Diagnose::Write("Section initialize finished. i=%d\n",i);
-
-	/* 读正文段（optional）；读文件，得全局变量的初值  */
-	if ( sharedText == 1 )
-	{
-		i = 1;      // i是段头索引
-	}
-	else
-	{
-		// 修改正文段的读写标志，为内核写代码段做准备
-		i = 0;
-	}
-
-	for ( ; i <= lastDataSectionIdx; i++ )
-	{
-		if ( i == this->BSS_SECTION_IDX )
-		{
-			continue;
-		}
-
-		ImageSectionHeader* sectionHeader = &(this->sectionHeaders[i]);
-		srcAddress = sectionHeader->PointerToRawData;
-		desAddress =
-			this->ntHeader.OptionalHeader.ImageBase + sectionHeader->VirtualAddress;
-		if ( ReadInPagedChunks(p_inode,
-			srcAddress,
-			desAddress,
-			sectionHeader->Misc.VirtualSize) == false )
-		{
-			delete [] this->sectionHeaders;
-			this->sectionHeaders = 0;
-			return cnt;
-		}
-
-		cnt += sectionHeader->Misc.VirtualSize;
-	}
-
-	/* 装载完成后恢复只读属性。 */
-	if(sharedText == 0)
-	{
-		SetRangeReadWrite(memory, this->TextAddress, this->TextSize, false);
-	}
-	SetRangeReadWrite(memory, this->RodataAddress, this->RodataSize, false);
-	X86Assembly::FlushPageDirectory((unsigned long)memory.GetPageDirectoryPointer());
+	/* 用户镜像改为按需缺页加载：Relocate 仅保留兼容入口，不再提前触碰用户页。 */
+	(void)p_inode;
+	(void)sharedText;
 
 	delete [] this->sectionHeaders;
 	this->sectionHeaders = 0;
-	return 	cnt;
+	return 0;
 }
 
 /* 原来V6++使用的代码，现废弃不用了 */
@@ -421,8 +273,38 @@ bool PEParser::HeaderLoad(Inode* p_inode)
 		this->TextSize = this->sectionHeaders[this->TEXT_SECTION_IDX].SizeOfRawData;
 	}
 
+	unsigned long mappedTextSize = ComputeSectionMappedSize(
+		this->ntHeader,
+		this->sectionHeaders,
+		this->ntHeader.FileHeader.NumberOfSections,
+		this->TEXT_SECTION_IDX);
+	if ( mappedTextSize != 0 )
+	{
+		this->TextSize = mappedTextSize;
+	}
+
+	this->TextFileOffset = this->sectionHeaders[this->TEXT_SECTION_IDX].PointerToRawData;
+	this->TextFileSize = this->sectionHeaders[this->TEXT_SECTION_IDX].SizeOfRawData;
+	if ( this->TextFileSize > this->TextSize )
+	{
+		this->TextFileSize = this->TextSize;
+	}
+
 	this->DataAddress =
 		ntHeader.OptionalHeader.BaseOfData + ntHeader.OptionalHeader.ImageBase;
+	this->DataFileOffset =
+		this->sectionHeaders[this->DATA_SECTION_IDX].PointerToRawData;
+	this->DataFileSize =
+		this->sectionHeaders[this->DATA_SECTION_IDX].SizeOfRawData;
+	unsigned long mappedDataSize = ComputeSectionMappedSize(
+		this->ntHeader,
+		this->sectionHeaders,
+		this->ntHeader.FileHeader.NumberOfSections,
+		this->DATA_SECTION_IDX);
+	if ( mappedDataSize != 0 && this->DataFileSize > mappedDataSize )
+	{
+		this->DataFileSize = mappedDataSize;
+	}
 
 	unsigned long dataRawEnd =
 		this->sectionHeaders[this->DATA_SECTION_IDX].VirtualAddress +
@@ -438,11 +320,19 @@ bool PEParser::HeaderLoad(Inode* p_inode)
 
 	this->RodataAddress = 0;
 	this->RodataSize = 0;
+	this->RodataFileOffset = 0;
+	this->RodataFileSize = 0;
+	unsigned long rodataSectionStart = 0;
+	unsigned long rodataRawOffset = 0;
+	unsigned long rodataRawSize = 0;
 	if ( ntHeader.FileHeader.NumberOfSections > this->RDATA_SECTION_IDX )
 	{
 		this->RodataAddress =
 			this->sectionHeaders[this->RDATA_SECTION_IDX].VirtualAddress +
 			ntHeader.OptionalHeader.ImageBase;
+		rodataSectionStart = this->RodataAddress;
+		rodataRawOffset = this->sectionHeaders[this->RDATA_SECTION_IDX].PointerToRawData;
+		rodataRawSize = this->sectionHeaders[this->RDATA_SECTION_IDX].SizeOfRawData;
 		this->RodataSize =
 			this->sectionHeaders[this->RDATA_SECTION_IDX].Misc.VirtualSize;
 		if ( this->RodataSize < this->sectionHeaders[this->RDATA_SECTION_IDX].SizeOfRawData )
@@ -507,6 +397,24 @@ bool PEParser::HeaderLoad(Inode* p_inode)
 		mappedRodataSize,
 		this->RodataAddress,
 		this->RodataSize);
+
+	if ( this->RodataSize != 0 &&
+		rodataRawSize != 0 &&
+		this->RodataAddress >= rodataSectionStart )
+	{
+		unsigned long offsetInRodataSection =
+			this->RodataAddress - rodataSectionStart;
+		if ( offsetInRodataSection < rodataRawSize )
+		{
+			this->RodataFileOffset = rodataRawOffset + offsetInRodataSection;
+			unsigned long readable = rodataRawSize - offsetInRodataSection;
+			this->RodataFileSize = this->RodataSize;
+			if ( this->RodataFileSize > readable )
+			{
+				this->RodataFileSize = readable;
+			}
+		}
+	}
 
     StackSize = ntHeader.OptionalHeader.SizeOfStackCommit;
     HeapSize = ntHeader.OptionalHeader.SizeOfHeapCommit;

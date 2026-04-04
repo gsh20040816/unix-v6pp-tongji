@@ -94,6 +94,7 @@ struct user_page_snapshot_entry
 #define USER_PAGE_SNAPSHOT_PRESENT 0x1
 #define USER_PAGE_SNAPSHOT_RW 0x2
 #define USER_PAGE_SNAPSHOT_USER 0x4
+#define USER_PAGE_SNAPSHOT_EXEC 0x8
 
 /* 获取当前进程用户态实际驻留页表项，返回总条目数 */
 int getUserPageTable(struct user_page_snapshot_entry* entries, int maxEntries);

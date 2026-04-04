@@ -8,6 +8,39 @@
 
 namespace
 {
+	static bool ResolveTextStorage(const Text* text,
+		MemoryDescriptor::RegionType regionType,
+		const unsigned long*& pageArray,
+		unsigned int& maxPageCount,
+		unsigned long& fileOffset,
+		unsigned long& fileSize)
+	{
+		if ( text == NULL )
+		{
+			return false;
+		}
+
+		if ( regionType == MemoryDescriptor::REGION_CODE )
+		{
+			pageArray = text->x_addr;
+			maxPageCount = Text::MAX_TEXT_PAGE_COUNT;
+			fileOffset = text->x_fileoff;
+			fileSize = text->x_filesz;
+			return true;
+		}
+
+		if ( regionType == MemoryDescriptor::REGION_RODATA )
+		{
+			pageArray = text->x_roaddr;
+			maxPageCount = Text::MAX_RODATA_PAGE_COUNT;
+			fileOffset = text->x_rofileoff;
+			fileSize = text->x_rofilesz;
+			return true;
+		}
+
+		return false;
+	}
+
 	/*
 	 * 将 Text 后备偏移解析为物理地址。
 	 * 注意：Text 物理页地址改为 x_addr[] 离散存放，不能再按单基址连续计算。
@@ -27,17 +60,14 @@ namespace
 
 		const unsigned long* pageArray = NULL;
 		unsigned int maxPageCount = 0;
-		if ( regionType == MemoryDescriptor::REGION_CODE )
-		{
-			pageArray = text->x_addr;
-			maxPageCount = Text::MAX_TEXT_PAGE_COUNT;
-		}
-		else if ( regionType == MemoryDescriptor::REGION_RODATA )
-		{
-			pageArray = text->x_roaddr;
-			maxPageCount = Text::MAX_RODATA_PAGE_COUNT;
-		}
-		else
+		unsigned long ignoredFileOffset = 0;
+		unsigned long ignoredFileSize = 0;
+		if ( ResolveTextStorage(text,
+				regionType,
+				pageArray,
+				maxPageCount,
+				ignoredFileOffset,
+				ignoredFileSize) == false )
 		{
 			return false;
 		}
@@ -54,6 +84,45 @@ namespace
 
 		textPhysicalAddress =
 			pageArray[pageIndex] + (backingOffset % PageManager::PAGE_SIZE);
+		return true;
+	}
+
+	static bool ReadFileBackedPage(Inode* inode,
+		unsigned long virtualAddress,
+		unsigned long fileOffsetBase,
+		unsigned long backingOffset,
+		unsigned long fileSize)
+	{
+		if ( backingOffset >= fileSize )
+		{
+			return true;
+		}
+
+		if ( inode == NULL )
+		{
+			return false;
+		}
+
+		unsigned long readSize = fileSize - backingOffset;
+		if ( readSize > PageManager::PAGE_SIZE )
+		{
+			readSize = PageManager::PAGE_SIZE;
+		}
+
+		User& u = Kernel::Instance().GetUser();
+		u.u_IOParam.m_Base = (unsigned char*)virtualAddress;
+		u.u_IOParam.m_Offset = fileOffsetBase + backingOffset;
+		u.u_IOParam.m_Count = readSize;
+		inode->ReadI();
+		if ( u.u_error != User::NOERROR || u.u_IOParam.m_Count != 0 )
+		{
+			if ( u.u_error == User::NOERROR )
+			{
+				u.u_error = User::ENOEXEC;
+			}
+			return false;
+		}
+
 		return true;
 	}
 }
@@ -351,21 +420,12 @@ bool MemoryDescriptor::CloneResidentPagesFrom(const MemoryDescriptor& other)
 			continue;
 		}
 
-		if ( region.backing.type == BACKING_SHARED_TEXT && other.m_Owner != NULL &&
-			other.m_Owner->p_textp != NULL )
+		if ( region.backing.type == BACKING_SHARED_TEXT ||
+			(region.prot & PROT_WRITE) == 0 )
 		{
-			/* Text 页共享：新进程直接映射同一物理页，不做复制。 */
-			unsigned long textPhysicalAddress = 0;
-			if ( ResolveTextPhysicalAddress(other.m_Owner->p_textp,
-				region.type,
-				srcPage.backingOffset,
-				textPhysicalAddress) == false ||
-				this->ShareTextPage(virtualAddress, textPhysicalAddress, false) == false )
-			{
-				return false;
-			}
-			dstPage.state = PAGE_STATE_RESIDENT;
-			dstPage.frameAddress = textPhysicalAddress;
+			/* fork 仅复制可写页；共享正文与其余只读页统一保留为 RESERVED。 */
+			dstPage.state = PAGE_STATE_RESERVED;
+			dstPage.frameAddress = 0;
 			continue;
 		}
 
@@ -383,6 +443,51 @@ bool MemoryDescriptor::CloneResidentPagesFrom(const MemoryDescriptor& other)
 	}
 
 	return true;
+}
+
+void MemoryDescriptor::ConfigureExecFileBacking(unsigned long virtualBase,
+	unsigned long fileOffset,
+	unsigned long fileSize,
+	Inode* inode)
+{
+	if ( this->m_Regions == NULL || this->m_PageInfos == NULL )
+	{
+		return;
+	}
+
+	for ( unsigned int i = 0; i < this->m_RegionCount; ++i )
+	{
+		Region& region = this->m_Regions[i];
+		if ( region.backing.type != BACKING_EXEC_FILE )
+		{
+			continue;
+		}
+
+		region.backing.inode = inode;
+		region.backing.fileOffset = fileOffset;
+		region.backing.validBytes = fileSize;
+
+		if ( region.start == region.end )
+		{
+			continue;
+		}
+
+		unsigned int startPage = this->AddressToPageIndex(region.start);
+		unsigned int endPage = this->AddressToPageIndex(region.end - 1);
+		for ( unsigned int pageIndex = startPage; pageIndex <= endPage; ++pageIndex )
+		{
+			unsigned long pageStart =
+				USER_SPACE_START + pageIndex * PageManager::PAGE_SIZE;
+			if ( pageStart < virtualBase )
+			{
+				this->m_PageInfos[pageIndex].backingOffset = 0;
+			}
+			else
+			{
+				this->m_PageInfos[pageIndex].backingOffset = pageStart - virtualBase;
+			}
+		}
+	}
 }
 
 bool MemoryDescriptor::ConfigureExecutableLayout(unsigned long entryPoint,
@@ -777,41 +882,126 @@ bool MemoryDescriptor::EnsurePagePresent(unsigned long faultAddress)
 		ok = this->AllocateZeroedPage(virtualAddress);
 		break;
 	case BACKING_SHARED_TEXT:
-		if ( this->m_Owner == NULL || this->m_Owner->p_textp == NULL )
+	case BACKING_EXEC_FILE:
 		{
-			return false;
-		}
-		{
-			unsigned long textPhysicalAddress = 0;
-			if ( ResolveTextPhysicalAddress(this->m_Owner->p_textp,
-				region.type,
-				pageInfo.backingOffset,
-				textPhysicalAddress) == false )
-			{
-				return false;
-			}
-
-			/*
-			 * Text 缺页时继承当前页表项 RW 位，兼容 Relocate 期间代码页临时可写。
-			 * Relocate 完成后再按既有流程恢复只读。
-			 */
-			bool readWrite = false;
+			bool useSharedText = (region.backing.type == BACKING_SHARED_TEXT);
 			unsigned int tableIndex =
 				pageIndex / PageTable::ENTRY_CNT_PER_PAGETABLE;
 			unsigned int entryIndex =
 				pageIndex % PageTable::ENTRY_CNT_PER_PAGETABLE;
 			PageTable* table = this->GetUserPageTableByIndex(tableIndex);
-			if ( table != NULL && table->m_Entrys[entryIndex].m_ReadWriter != 0 )
+			if ( table == NULL )
 			{
+				return false;
+			}
+
+			bool readWrite = (region.prot & PROT_WRITE) != 0;
+			if ( readWrite == false &&
+				table->m_Entrys[entryIndex].m_ReadWriter != 0 )
+			{
+				/* 兼容 Relocate 期间对只读段临时开启 RW 的场景。 */
 				readWrite = true;
 			}
 
-			ok = this->ShareTextPage(virtualAddress, textPhysicalAddress, readWrite);
+			unsigned long fileOffsetBase = 0;
+			unsigned long fileSize = 0;
+			Inode* inode = NULL;
+
+			const unsigned long* sharedPageArrayConst = NULL;
+			unsigned int maxPageCount = 0;
+			unsigned int sharedPageIndex = 0;
+			unsigned long textPhysicalAddress = 0;
+			bool hasSharedResident = false;
+
+			if ( useSharedText )
+			{
+				if ( this->m_Owner == NULL || this->m_Owner->p_textp == NULL )
+				{
+					return false;
+				}
+
+				Text* text = this->m_Owner->p_textp;
+				inode = text->x_iptr;
+				if ( ResolveTextStorage(text,
+						region.type,
+						sharedPageArrayConst,
+						maxPageCount,
+						fileOffsetBase,
+						fileSize) == false )
+				{
+					return false;
+				}
+
+				sharedPageIndex =
+					(unsigned int)(pageInfo.backingOffset / PageManager::PAGE_SIZE);
+				if ( sharedPageIndex >= maxPageCount )
+				{
+					return false;
+				}
+
+				hasSharedResident = ResolveTextPhysicalAddress(text,
+					region.type,
+					pageInfo.backingOffset,
+					textPhysicalAddress);
+				if ( hasSharedResident )
+				{
+					ok = this->ShareTextPage(virtualAddress, textPhysicalAddress, readWrite);
+					break;
+				}
+			}
+			else
+			{
+				fileOffsetBase = region.backing.fileOffset;
+				fileSize = region.backing.validBytes;
+				inode = region.backing.inode;
+				if ( inode == NULL && this->m_Owner != NULL &&
+					this->m_Owner->p_textp != NULL )
+				{
+					inode = this->m_Owner->p_textp->x_iptr;
+				}
+			}
+
+			unsigned long newPage =
+				Kernel::Instance().GetUserPageManager().AllocatePage();
+			if ( newPage == 0 )
+			{
+				return false;
+			}
+
+			Utility::ZeroPage(newPage);
+
+			/* 先临时映射可写，便于回填文件内容，随后 remap 为目标权限。 */
+			this->MapPage(virtualAddress, newPage, true);
+			if ( ReadFileBackedPage(inode,
+					virtualAddress,
+					fileOffsetBase,
+					pageInfo.backingOffset,
+					fileSize) == false )
+			{
+				table->m_Entrys[entryIndex].m_Present = 0;
+				table->m_Entrys[entryIndex].m_ReadWriter = 0;
+				table->m_Entrys[entryIndex].m_UserSupervisor = 1;
+				table->m_Entrys[entryIndex].m_PageBaseAddress = 0;
+				Kernel::Instance().GetUserPageManager().FreePage(newPage);
+				pageInfo.state = PAGE_STATE_RESERVED;
+				pageInfo.frameAddress = 0;
+				return false;
+			}
+
+			if ( useSharedText )
+			{
+				unsigned long* sharedPageArray = (unsigned long*)sharedPageArrayConst;
+				sharedPageArray[sharedPageIndex] = newPage;
+				ok = this->ShareTextPage(virtualAddress, newPage, readWrite);
+			}
+			else
+			{
+				pageInfo.state = PAGE_STATE_RESIDENT;
+				pageInfo.frameAddress = newPage;
+				this->MapPage(virtualAddress, newPage, readWrite);
+				ok = true;
+			}
 		}
-		break;
-	case BACKING_EXEC_FILE:
-		/* TODO: 后续可在此实现按 backingOffset 从可执行文件回填单页。 */
-		ok = this->AllocateZeroedPage(virtualAddress);
 		break;
 	default:
 		return false;
@@ -919,11 +1109,23 @@ unsigned int MemoryDescriptor::ExportResidentUserPages(
 
 		if ( entries != NULL && written < maxEntries )
 		{
+			unsigned short execFlag = 0;
+			if ( this->m_PageInfos[pageIndex].regionIndex != 0xffff )
+			{
+				const Region& region =
+					this->m_Regions[this->m_PageInfos[pageIndex].regionIndex];
+				if ( (region.prot & PROT_EXEC) != 0 )
+				{
+					execFlag = 0x8;
+				}
+			}
+
 			entries[written].pageIndex = (unsigned short)pageIndex;
 			entries[written].flags =
 				(table->m_Entrys[entryIndex].m_Present ? 0x1 : 0) |
 				(table->m_Entrys[entryIndex].m_ReadWriter ? 0x2 : 0) |
-				(table->m_Entrys[entryIndex].m_UserSupervisor ? 0x4 : 0);
+				(table->m_Entrys[entryIndex].m_UserSupervisor ? 0x4 : 0) |
+				execFlag;
 			entries[written].pageBaseAddress =
 				table->m_Entrys[entryIndex].m_PageBaseAddress;
 			++written;

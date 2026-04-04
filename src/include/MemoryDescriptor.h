@@ -62,7 +62,7 @@ public:
 		BACKING_NONE = 0,
 		/* 以全零页作为后备。 */
 		BACKING_ZERO,
-		/* 来自可执行文件内容（当前实现阶段仍可退化为零页）。 */
+		/* 来自可执行文件内容（按需缺页回填）。 */
 		BACKING_EXEC_FILE,
 		/* 共享 Text 物理页。 */
 		BACKING_SHARED_TEXT,
@@ -150,7 +150,7 @@ public:
 		unsigned short regionIndex;
 		/* 当前映射的物理页帧地址（RESIDENT 时有效）。 */
 		unsigned long frameAddress;
-		/* 相对区域起点的后备偏移，用于按需回填。 */
+		/* 相对后备窗口起点的偏移，用于按需回填。 */
 		unsigned long backingOffset;
 	};
 
@@ -159,7 +159,7 @@ public:
 	{
 		/* 页索引（相对 USER_SPACE_START）。 */
 		unsigned short pageIndex;
-		/* 页表位快照（present/rw/us）。 */
+		/* 页表位快照（present/rw/us/exec）。 */
 		unsigned short flags;
 		/* 页帧号（页基址）。 */
 		unsigned int pageBaseAddress;
@@ -198,6 +198,11 @@ public:
 								   unsigned long bssStart,
 								   unsigned long bssSize,
 								   unsigned long stackSize);
+	/* 为 BACKING_EXEC_FILE 区域配置文件后备窗口（exec 后调用一次）。 */
+	void ConfigureExecFileBacking(unsigned long virtualBase,
+		unsigned long fileOffset,
+		unsigned long fileSize,
+		Inode* inode);
 
 	/* 校验区域边界和相互重叠关系是否合法。 */
 	bool CheckUserSpace() const;

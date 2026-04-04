@@ -42,48 +42,6 @@ namespace
 		ClearPageArray(text->x_roaddr, Text::MAX_RODATA_PAGE_COUNT);
 	}
 
-	static void ReleaseSharedPages(PageManager& pageManager,
-		unsigned long pages[],
-		unsigned int maxPageCount)
-	{
-		for ( unsigned int i = 0; i < maxPageCount; ++i )
-		{
-			if ( pages[i] == 0 )
-			{
-				continue;
-			}
-
-			pageManager.FreePage(pages[i]);
-			pages[i] = 0;
-		}
-	}
-
-	static bool AllocateSharedPages(PageManager& pageManager,
-		unsigned long pages[],
-		unsigned int maxPageCount,
-		unsigned int pageCount)
-	{
-		if ( pageCount > maxPageCount )
-		{
-			return false;
-		}
-
-		ClearPageArray(pages, maxPageCount);
-		for ( unsigned int i = 0; i < pageCount; ++i )
-		{
-			unsigned long page = pageManager.AllocatePage();
-			if ( page == 0 )
-			{
-				ReleaseSharedPages(pageManager, pages, maxPageCount);
-				return false;
-			}
-
-			pages[i] = page;
-		}
-
-		return true;
-	}
-
 	static void DumpProcBrief(const char* tag, Process* p)
 	{
 		if ( p == NULL )
@@ -464,7 +422,6 @@ void ProcessManager::Exec()
 	Text* pText;
 	User& u = Kernel::Instance().GetUser();
 	FileManager& fileMgr = Kernel::Instance().GetFileManager();
-	UserPageManager& userPgMgr = Kernel::Instance().GetUserPageManager();
 
 	Diagnose::Write("Process %d execing\n",u.u_procp->p_pid);
 	pInode = fileMgr.NameI(FileManager::NextChar, FileManager::OPEN);
@@ -659,7 +616,11 @@ void ProcessManager::Exec()
 		pText->x_count = 1;
 		pText->x_size = u.u_procp->p_memory.GetCodeSize();
 		pText->x_rosize = parser.RodataSize;
-		/* 为正文段分配内存，而具体正文段内容的读入需要等到建立页表映射之后，再从mapAddress地址起始的exe文件中读入 */
+		pText->x_fileoff = parser.TextFileOffset;
+		pText->x_filesz = parser.TextFileSize;
+		pText->x_rofileoff = parser.RodataFileOffset;
+		pText->x_rofilesz = parser.RodataFileSize;
+		/* text/rodata 仅登记共享页槽位与文件元数据，物理页在缺页时按需分配并回填。 */
 		unsigned int textPageCount = BytesToPageCount(pText->x_size);
 		unsigned int rodataPageCount = BytesToPageCount(pText->x_rosize);
 		if ( textPageCount > Text::MAX_TEXT_PAGE_COUNT ||
@@ -672,6 +633,10 @@ void ProcessManager::Exec()
 			pText->x_count = 0;
 			pText->x_size = 0;
 			pText->x_rosize = 0;
+			pText->x_fileoff = 0;
+			pText->x_filesz = 0;
+			pText->x_rofileoff = 0;
+			pText->x_rofilesz = 0;
 			pText->x_daddr = 0;
 			ClearTextPageArray(pText);
 			u.u_procp->p_textp = NULL;
@@ -686,52 +651,7 @@ void ProcessManager::Exec()
 			return;
 		}
 
-		if ( AllocateSharedPages(userPgMgr,
-				pText->x_addr,
-				Text::MAX_TEXT_PAGE_COUNT,
-				textPageCount) == false )
-		{
-			pText->x_ccount = 0;
-			pText->x_count = 0;
-			pText->x_size = 0;
-			pText->x_rosize = 0;
-			pText->x_daddr = 0;
-			ClearTextPageArray(pText);
-			u.u_procp->p_textp = NULL;
-			delete [] fakeStack;
-			fileMgr.m_InodeTable->IPut(pInode);
-			if ( this->ExeCnt >= NEXEC )
-			{
-				WakeUpAll((unsigned long)&ExeCnt);
-			}
-			this->ExeCnt--;
-			u.u_error = User::ENOMEM;
-			return;
-		}
-
-		if ( AllocateSharedPages(userPgMgr,
-				pText->x_roaddr,
-				Text::MAX_RODATA_PAGE_COUNT,
-				rodataPageCount) == false )
-		{
-			ReleaseSharedPages(userPgMgr, pText->x_addr, Text::MAX_TEXT_PAGE_COUNT);
-			pText->x_ccount = 0;
-			pText->x_count = 0;
-			pText->x_size = 0;
-			pText->x_rosize = 0;
-			pText->x_daddr = 0;
-			ClearTextPageArray(pText);
-			u.u_procp->p_textp = NULL;
-			delete [] fakeStack;
-			fileMgr.m_InodeTable->IPut(pInode);
-			if ( this->ExeCnt >= NEXEC )
-			{
-				WakeUpAll((unsigned long)&ExeCnt);
-			}
-			this->ExeCnt--;
-			u.u_error = User::ENOMEM;
-			return;
-		}
+		ClearTextPageArray(pText);
 
 		pInode->i_count++;
 		pText->x_iptr = pInode;
@@ -744,6 +664,12 @@ void ProcessManager::Exec()
 		pText = u.u_procp->p_textp;
 		sharedText = 1;
 	}
+
+	u.u_procp->p_memory.ConfigureExecFileBacking(
+		parser.DataAddress,
+		parser.DataFileOffset,
+		parser.DataFileSize,
+		u.u_procp->p_textp == NULL ? NULL : u.u_procp->p_textp->x_iptr);
 
 	unsigned int newSize = ProcessManager::USIZE + u.u_procp->p_memory.GetWritableSize();
 	if ( false == u.u_procp->p_memory.CheckUserSpace() )

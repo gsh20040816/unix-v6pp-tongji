@@ -8,6 +8,10 @@ Text::Text()
 	this->x_daddr = 0;
 	this->x_size = 0;
 	this->x_rosize = 0;
+	this->x_fileoff = 0;
+	this->x_filesz = 0;
+	this->x_rofileoff = 0;
+	this->x_rofilesz = 0;
 	this->x_iptr = NULL;
 	this->x_count = 0;
 	this->x_ccount = 0;
@@ -88,6 +92,10 @@ void Text::XFree()
 		this->x_iptr = NULL;
 		this->x_size = 0;
 		this->x_rosize = 0;
+		this->x_fileoff = 0;
+		this->x_filesz = 0;
+		this->x_rofileoff = 0;
+		this->x_rofilesz = 0;
 		this->x_daddr = 0;
 		for ( unsigned int i = 0; i < Text::MAX_TEXT_PAGE_COUNT; ++i )
 		{

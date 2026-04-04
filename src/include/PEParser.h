@@ -144,12 +144,18 @@ public:
 
 	unsigned long TextAddress;
 	unsigned long TextSize;
+    unsigned long TextFileOffset;
+    unsigned long TextFileSize;
 	
 	unsigned long DataAddress;
 	unsigned long DataSize;
+    unsigned long DataFileOffset;
+    unsigned long DataFileSize;
 
     unsigned long RodataAddress;
     unsigned long RodataSize;
+    unsigned long RodataFileOffset;
+    unsigned long RodataFileSize;
 
     unsigned long BssAddress;
     unsigned long BssSize;

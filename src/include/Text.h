@@ -35,6 +35,10 @@ public:
 	unsigned long	x_roaddr[MAX_RODATA_PAGE_COUNT];	/* 只读数据段共享页物理地址，以字节为单位 */
 	unsigned int	x_size;		/* 代码段长度，以字节为单位 */
 	unsigned int	x_rosize;	/* 可共享只读数据段长度，以字节为单位 */
+	unsigned long	x_fileoff;	/* 代码段在可执行文件中的起始偏移 */
+	unsigned long	x_filesz;	/* 代码段可从文件回填的有效字节数 */
+	unsigned long	x_rofileoff;	/* 只读段在可执行文件中的起始偏移 */
+	unsigned long	x_rofilesz;	/* 只读段可从文件回填的有效字节数 */
 	Inode*			x_iptr;		/* 内存inode地址 */
 	unsigned short	x_count;	/* 共享正文段的进程数 */
 	unsigned short	x_ccount;	/* 共享该正文段且图像在内存的进程数 */	

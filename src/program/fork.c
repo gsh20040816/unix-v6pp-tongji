@@ -19,8 +19,15 @@ static void PrintPteFlags(unsigned short flags)
 	{
 		printf(" USR");
 	}
+	if ( (flags & USER_PAGE_SNAPSHOT_EXEC) != 0 )
+	{
+		printf(" X");
+	}
 
-	if ( (flags & (USER_PAGE_SNAPSHOT_PRESENT | USER_PAGE_SNAPSHOT_RW | USER_PAGE_SNAPSHOT_USER)) == 0 )
+	if ( (flags & (USER_PAGE_SNAPSHOT_PRESENT |
+		USER_PAGE_SNAPSHOT_RW |
+		USER_PAGE_SNAPSHOT_USER |
+		USER_PAGE_SNAPSHOT_EXEC)) == 0 )
 	{
 		printf("none");
 	}
