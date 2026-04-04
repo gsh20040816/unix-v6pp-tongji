@@ -12,6 +12,7 @@ set(OOS_SRC_DIR "${OOS_ROOT_DIR}/src")
 set(OOS_INCLUDE_DIR "${OOS_SRC_DIR}/include")
 set(OOS_TARGET_OBJ_DIR "${CMAKE_BINARY_DIR}/objs")
 set(OOS_BOCHS_DIR "${OOS_ROOT_DIR}/bochs")
+set(OOS_BOCHS_LOCK_FILE "${OOS_BOCHS_DIR}/c.img.lock")
 set(OOS_FS_ROOT "${OOS_ROOT_DIR}/tools/v6pp-fs-edit-2022")
 set(OOS_FS_WORKSPACE "${OOS_FS_ROOT}/workspace")
 set(OOS_FS_PROGRAMS_DIR "${OOS_FS_WORKSPACE}/programs")
@@ -31,6 +32,7 @@ add_subdirectory(src)
 if(OOS_BOCHS_GDB_EXECUTABLE)
   add_custom_target(bochs
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${OOS_BOCHS_DIR}"
+    COMMAND "${CMAKE_COMMAND}" -E rm -f "${OOS_BOCHS_LOCK_FILE}"
     COMMAND "${CMAKE_COMMAND}" -E env "BXSHARE=${OOS_BOCHS_BXSHARE}"
             "${OOS_BOCHS_GDB_EXECUTABLE}" -q -f bochsrc_nodebug.bxrc
     WORKING_DIRECTORY "${OOS_BOCHS_DIR}"
@@ -45,6 +47,7 @@ endif()
 if(OOS_BOCHS_GDB_EXECUTABLE)
   add_custom_target(bochs-gdb
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${OOS_BOCHS_DIR}"
+    COMMAND "${CMAKE_COMMAND}" -E rm -f "${OOS_BOCHS_LOCK_FILE}"
     COMMAND "${CMAKE_COMMAND}" -E env "BXSHARE=${OOS_BOCHS_BXSHARE}"
             "${OOS_BOCHS_GDB_EXECUTABLE}" -q -f bochsrc.bxrc
     WORKING_DIRECTORY "${OOS_BOCHS_DIR}"
@@ -59,6 +62,7 @@ endif()
 if(OOS_BOCHS_GDB_EXECUTABLE)
   add_custom_target(bochsrc_gui
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${OOS_BOCHS_DIR}"
+    COMMAND "${CMAKE_COMMAND}" -E rm -f "${OOS_BOCHS_LOCK_FILE}"
     COMMAND "${CMAKE_COMMAND}" -E env "BXSHARE=${OOS_BOCHS_BXSHARE}"
             "${OOS_BOCHS_GDB_EXECUTABLE}" -q -f bochsrc_gui.bxrc
     WORKING_DIRECTORY "${OOS_BOCHS_DIR}"
