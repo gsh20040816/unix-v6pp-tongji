@@ -6,7 +6,7 @@
             "type": "cppdbg",
             "request": "launch",
             "preLaunchTask": "OOS debug prep",
-            "program": "${workspaceFolder}/targets/objs/kernel",
+            "program": "${workspaceFolder}/build/cmake-debug/objs/kernel",
             "cwd": "${workspaceFolder}",
             "MIMode": "gdb",
             "miDebuggerPath": "/usr/bin/gdb",

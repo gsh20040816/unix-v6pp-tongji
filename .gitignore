@@ -1,12 +1,10 @@
-# Kernel/user build outputs. Keep runtime configs under targets/UNIXV6++.
-targets/img/
-targets/objs/
-targets/UNIXV6++/c.img
-targets/UNIXV6++/c.img.lock
-targets/UNIXV6++/bochsout.txt
-
-# Cmake build outputs.
+# Kernel/user build outputs.
 build/
+
+# Bochs runtime outputs.
+bochs/c.img
+bochs/c.img.lock
+bochs/bochsout.txt
 
 # In-tree program/library build outputs.
 src/lib/*.a

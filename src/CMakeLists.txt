@@ -161,7 +161,7 @@ add_custom_target(oos_user_payload DEPENDS ${OOS_USER_PAYLOAD_TARGETS})
 add_custom_target(oos_fs_tools DEPENDS filescanner fsedit)
 
 set(OOS_WORKSPACE_IMG "${OOS_FS_WORKSPACE}/c.img")
-set(OOS_FINAL_IMG "${OOS_UNIXV6PP_DIR}/c.img")
+set(OOS_FINAL_IMG "${OOS_BOCHS_DIR}/c.img")
 
 add_custom_command(
   OUTPUT "${OOS_FINAL_IMG}"

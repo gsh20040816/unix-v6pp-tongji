@@ -10,8 +10,8 @@ set(OOS_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(OOS_CMAKE_DIR "${OOS_ROOT_DIR}/cmake")
 set(OOS_SRC_DIR "${OOS_ROOT_DIR}/src")
 set(OOS_INCLUDE_DIR "${OOS_SRC_DIR}/include")
-set(OOS_TARGET_OBJ_DIR "${OOS_ROOT_DIR}/targets/objs")
-set(OOS_UNIXV6PP_DIR "${OOS_ROOT_DIR}/targets/UNIXV6++")
+set(OOS_TARGET_OBJ_DIR "${CMAKE_BINARY_DIR}/objs")
+set(OOS_BOCHS_DIR "${OOS_ROOT_DIR}/bochs")
 set(OOS_FS_ROOT "${OOS_ROOT_DIR}/tools/v6pp-fs-edit-2022")
 set(OOS_FS_WORKSPACE "${OOS_FS_ROOT}/workspace")
 set(OOS_FS_PROGRAMS_DIR "${OOS_FS_WORKSPACE}/programs")
@@ -30,9 +30,10 @@ add_subdirectory(src)
 
 if(OOS_BOCHS_GDB_EXECUTABLE)
   add_custom_target(bochs
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${OOS_BOCHS_DIR}"
     COMMAND "${CMAKE_COMMAND}" -E env "BXSHARE=${OOS_BOCHS_BXSHARE}"
             "${OOS_BOCHS_GDB_EXECUTABLE}" -q -f bochsrc_nodebug.bxrc
-    WORKING_DIRECTORY "${OOS_UNIXV6PP_DIR}"
+    WORKING_DIRECTORY "${OOS_BOCHS_DIR}"
     DEPENDS image
     USES_TERMINAL
     VERBATIM
@@ -43,9 +44,10 @@ endif()
 
 if(OOS_BOCHS_GDB_EXECUTABLE)
   add_custom_target(bochs-gdb
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${OOS_BOCHS_DIR}"
     COMMAND "${CMAKE_COMMAND}" -E env "BXSHARE=${OOS_BOCHS_BXSHARE}"
             "${OOS_BOCHS_GDB_EXECUTABLE}" -q -f bochsrc.bxrc
-    WORKING_DIRECTORY "${OOS_UNIXV6PP_DIR}"
+    WORKING_DIRECTORY "${OOS_BOCHS_DIR}"
     DEPENDS image
     USES_TERMINAL
     VERBATIM
