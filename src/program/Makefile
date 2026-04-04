@@ -11,7 +11,7 @@ LD = ld
 OBJDUMP = objdump
 
 #参数定义-nostartfiles
-CFLAGS = -w -O0 -g -std=gnu89 -m32 -nostdlib -nostartfiles -nostdinc -fno-builtin -fcommon -fno-pic -fno-PIE -fno-stack-protector
+CFLAGS = -w -O0 -g -std=gnu89 -m32 -march=i386 -mtune=i386 -mno-mmx -mno-sse -mno-sse2 -nostdlib -nostartfiles -nostdinc -fno-builtin -fcommon -fno-pic -fno-PIE -fno-stack-protector
 LDFLAGS = -Wl,-m,elf_i386,-T,../lib/User.ld,-e,main1
 
 #目录定义

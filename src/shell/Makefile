@@ -7,7 +7,7 @@ CC = gcc
 LD = ld
 
 #参数定义
-CFLAGS = -W -O0 -g -std=gnu89 -m32 -nostdlib -nostdinc -nostartfiles -fno-builtin -fcommon -fno-pic -fno-PIE -fno-stack-protector
+CFLAGS = -W -O0 -g -std=gnu89 -m32 -march=i386 -mtune=i386 -mno-mmx -mno-sse -mno-sse2 -nostdlib -nostdinc -nostartfiles -fno-builtin -fcommon -fno-pic -fno-PIE -fno-stack-protector
 LDFLAGS = -Wl,-m,elf_i386,-T,../lib/User.ld,-e,main1
 
 #目录定义

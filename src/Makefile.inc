@@ -9,7 +9,7 @@ MAKE = make
 
 #参数定义
 #g++参数
-COMMON_FLAGS = -m32 -nostartfiles -nostdlib -fno-builtin -fno-rtti -fno-exceptions -nostdinc \
+COMMON_FLAGS = -m32 -march=i386 -mtune=i386 -mno-mmx -mno-sse -mno-sse2 -nostartfiles -nostdlib -fno-builtin -fno-rtti -fno-exceptions -nostdinc \
 	-fno-pic -fno-PIE -fno-stack-protector -fno-use-cxa-atexit -fno-sized-deallocation
 CFLAGS = -Wall -O0 -g3 -gdwarf-2 -std=gnu++98 $(COMMON_FLAGS)
 #ld参数

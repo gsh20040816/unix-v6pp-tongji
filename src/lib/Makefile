@@ -8,7 +8,7 @@ LD = ld
 AR = ar
 
 #参数定义
-CFLAGS = -w -O0 -g -std=gnu89 -m32 -nostdlib -nostdinc -nostartfiles -fno-builtin -fcommon -fno-pic -fno-PIE -fno-stack-protector -I"$(SRC)"
+CFLAGS = -w -O0 -g -std=gnu89 -m32 -march=i386 -mtune=i386 -mno-mmx -mno-sse -mno-sse2 -nostdlib -nostdinc -nostartfiles -fno-builtin -fcommon -fno-pic -fno-PIE -fno-stack-protector -I"$(SRC)"
 
 #目录定义
 TARGET = ./objs
