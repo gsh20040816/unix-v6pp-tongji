@@ -1,6 +1,3 @@
-# Legacy VCS metadata from the old SVN layout.
-.svn/
-
 # Kernel/user build outputs. Keep runtime configs under targets/UNIXV6++.
 targets/img/
 targets/objs/
@@ -13,7 +10,6 @@ src/lib/*.a
 src/lib/objs/
 src/program/objs/
 src/shell/OBJS/
-src/program/*.lnk
 
 # Shared VS Code workflow files can stay tracked.
 # Ignore only generated indexes, logs, and machine-local compiler settings.
@@ -25,20 +21,9 @@ src/program/*.lnk
 .vscode/targets.log
 .vscode/c_cpp_properties.json
 
-# Eclipse/CDT local state. Keep .project and .cproject if we still use them.
-.settings/
-.csettings/
-
 # Tool-side generated outputs and temporary workspaces.
-.build-cache/
-tools/MakeImage/bin/
-tools/MakeImage/obj/
-tools/MakeImage/*.suo
-tools/bochs/bochsout.txt
 tools/v6pp-fs-edit-2022/workspace/
 tools/v6pp-fs-edit-2022/src/**/objs/
-tools/*.lnk
 
 # OS noise.
-Thumbs.db
 .DS_Store
