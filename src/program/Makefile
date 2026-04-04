@@ -18,6 +18,7 @@ LDFLAGS = -Wl,-m,elf_i386,-T,../lib/User.ld,-e,main1
 TARGET = ./objs
 V6++LIB = ../lib/Lib_V6++.a
 V6++LIB_DEP = ../lib/Lib_V6++.a
+USER_LD = ../lib/User.ld
 INCLUDE = .
 LIB_INCLUDE = ../lib/include
 
@@ -66,7 +67,7 @@ $(MAKEIMAGEPATH)/$(BIN):
 	mkdir -p $@
 
 define BUILD_PROGRAM
-$(TARGET)/$(1).exe : $(2) $(V6++LIB_DEP) | $(TARGET)
+$(TARGET)/$(1).exe : $(2) $(V6++LIB_DEP) $(USER_LD) | $(TARGET)
 	$(CC) $(CFLAGS) -no-pie -I"$(INCLUDE)" -I"$(LIB_INCLUDE)" $$(filter %.c,$$^) $(V6++LIB) $(LDFLAGS) -o $$@
 
 $(MAKEIMAGEPATH)/$(BIN)/$(1) : $(TARGET)/$(1).exe | $(MAKEIMAGEPATH)/$(BIN)

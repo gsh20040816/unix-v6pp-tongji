@@ -14,6 +14,7 @@ LDFLAGS = -Wl,-m,elf_i386,-T,../lib/User.ld,-e,main1
 TARGET = ./OBJS
 V6++LIB = ../lib/Lib_V6++.a
 V6++LIB_DEP = ../lib/Lib_V6++.a
+USER_LD = ../lib/User.ld
 INCLUDE = .
 LIB_INCLUDE = ../lib/include
 
@@ -37,7 +38,7 @@ $(TARGET):
 $(MAKEIMAGEPATH):
 	mkdir -p $@
 
-$(SHELL_EXE)	:	$(SHELL_OBJS) $(V6++LIB_DEP) | $(TARGET)
+$(SHELL_EXE)	:	$(SHELL_OBJS) $(V6++LIB_DEP) $(USER_LD) | $(TARGET)
 	$(CC) $(CFLAGS) -no-pie $(SHELL_OBJS) $(V6++LIB) $(LDFLAGS) -o $@
 
 
