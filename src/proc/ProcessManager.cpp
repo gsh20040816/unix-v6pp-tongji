@@ -617,6 +617,19 @@ void ProcessManager::Exec()
 	esp -= sizeof(int);
 	Utility::MemCopy((unsigned long)&argc, desAddress, sizeof(int));	/* Done! */
 
+	/*
+	 * 先释放旧进程图像，再重建地址空间布局。
+	 * 否则 ConfigureExecutableLayout() 会先清空旧页元数据，
+	 * 导致 ReleaseResidentPages() 无法回收旧图像占用的用户物理页。
+	 */
+	u.u_procp->p_memory.ReleaseResidentPages(false);
+	if ( u.u_procp->p_textp != NULL )
+	{
+		u.u_procp->p_textp->XFree();
+		u.u_procp->p_textp = NULL;
+	}
+	u.u_procp->p_size = ProcessManager::USIZE;
+
 	/* 获取分析PE头结构得到正文段的起始地址、长度 */
 	if ( u.u_procp->p_memory.ConfigureExecutableLayout(parser.EntryPointAddress,
 			parser.TextAddress,
@@ -635,16 +648,6 @@ void ProcessManager::Exec()
 		u.u_error = User::ENOMEM;
 		return;
 	}
-
-
-	/* 释放原进程图像的共享正文段，数据段，堆栈段 */
-	u.u_procp->p_memory.ReleaseResidentPages(false);
-	if ( u.u_procp->p_textp != NULL )
-	{
-		u.u_procp->p_textp->XFree();
-		u.u_procp->p_textp = NULL;
-	}
-	u.u_procp->p_size = ProcessManager::USIZE;
 
 	pText = NULL;
 	/* 分配一个空闲Text结构，或者和其它进程共享同一正文段 */
