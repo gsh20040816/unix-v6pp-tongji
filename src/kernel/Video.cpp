@@ -14,14 +14,6 @@ namespace
 #define DIAGNOSE_VA_ARG(ap, type) __builtin_va_arg(ap, type)
 #define DIAGNOSE_VA_END(ap) __builtin_va_end(ap)
 
-	static inline unsigned short* ResolveDiagnoseVideoMemory(unsigned short*& videoMemory)
-	{
-		if ( videoMemory == 0 )
-		{
-			videoMemory = (unsigned short*)DIAGNOSE_VIDEO_MEMORY_BASE;
-		}
-		return videoMemory;
-	}
 }
 
 unsigned short* Diagnose::m_VideoMemory = (unsigned short *)(0xB8000 + 0xC0000000);
@@ -42,38 +34,10 @@ Diagnose::~Diagnose()
 	//this is an empty dtor
 }
 
-void Diagnose::RepairState()
-{
-	ResolveDiagnoseVideoMemory(Diagnose::m_VideoMemory);
-
-	if ( Diagnose::trace_on )
-	{
-		if ( Diagnose::ROWS == 0 || Diagnose::ROWS > Diagnose::SCREEN_ROWS )
-		{
-			Diagnose::ROWS = DIAGNOSE_DEFAULT_ROWS;
-		}
-
-		unsigned int firstRow = Diagnose::SCREEN_ROWS - Diagnose::ROWS;
-		if ( Diagnose::m_Row < firstRow || Diagnose::m_Row >= Diagnose::SCREEN_ROWS )
-		{
-			Diagnose::m_Row = firstRow;
-		}
-	}
-	else if ( Diagnose::ROWS > Diagnose::SCREEN_ROWS )
-	{
-		Diagnose::ROWS = 0;
-	}
-
-	if ( Diagnose::m_Column >= Diagnose::COLUMNS )
-	{
-		Diagnose::m_Column = 0;
-	}
-}
 
 void Diagnose::TraceOn()
 {
 	Diagnose::trace_on = 1;
-	Diagnose::RepairState();
 }
 
 void Diagnose::TraceOff()
@@ -92,7 +56,7 @@ void Diagnose::Write(const char* fmt, ...)
 		return;
 	}
 
-	Diagnose::RepairState();
+	// Diagnose::RepairState();
 
 	DiagnoseVaList args;
 	DIAGNOSE_VA_START(args, fmt);
@@ -180,7 +144,6 @@ void Diagnose::NextLine()
 
 void Diagnose::WriteChar(const char ch)
 {
-	Diagnose::RepairState();
 	unsigned short* videoMemory = Diagnose::m_VideoMemory;
 
 	if(Diagnose::m_Column >= Diagnose::COLUMNS)
@@ -199,7 +162,6 @@ void Diagnose::WriteChar(const char ch)
 
 void Diagnose::ClearScreen()
 {
-	Diagnose::RepairState();
 	unsigned short* videoMemory = Diagnose::m_VideoMemory;
 	unsigned int i;
 

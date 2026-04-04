@@ -1,81 +1,95 @@
 {
     "tasks": [
-        {
-            "type": "shell",
-            "label": "OOS make",
-            "command": "bash",
-            "args": [
-                "-lc",
-                "bash ./build.sh"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "detail": "在 Linux 工作区中触发 build.sh，并通过 SSH 到 Windows 完成构建",
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            }
-        },
-        {
-            "label": "OOS debug prep",
-            "dependsOrder": "sequence",
-            "dependsOn": [
-                "OOS make",
-                "OOS linux debug host"
-            ]
-        },
-        {
-            "type": "shell",
-            "label": "OOS linux debug host",
-            "command": "bash",
-            "args": [
-                "-lc",
-                "bash ./debug.sh"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "detail": "在 Linux 本机启动 bochs-gdb，并等待 gdbstub 可连接",
-            "presentation": {
-                "reveal": "always",
-                "panel": "dedicated",
-                "focus": false,
-                "clear": false
-            },
-            "isBackground": true,
-            "problemMatcher": {
-                "owner": "custom",
-                "pattern": {
-                    "regexp": "^(?!)$"
-                },
-                "background": {
-                    "activeOnStart": true,
-                    "beginsPattern": ".*Starting bochs-gdb in .*",
-                    "endsPattern": ".*Enabled gdbstub.*"
-                }
-            }
-        },
 		{
-            "type": "shell",
-            "label": "OOS run bochs",
-            "command": "bochs-gdb",
-            "args": [
-                "-q",
+			"type": "shell",
+			"label": "OOS make",
+			"command": "bash",
+			"args": [
+				"-lc",
+				"bash ./build.sh"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"detail": "在 Linux 工作区中触发 build.sh，并通过 SSH 到 Windows 完成构建",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		},
+		{
+			"type": "shell",
+			"label": "OOS clean",
+			"command": "bash",
+			"args": [
+				"-lc",
+				"bash ./build.sh \"cd /d Z:\\\\UNIX V6++V1\\\\oos\\\\tools && call oosvars_mingw.bat && call clean.bat\""
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"detail": "在 Linux 工作区中触发 Windows clean.bat 清理构建产物"
+		},
+		{
+			"label": "OOS debug prep",
+			"dependsOrder": "sequence",
+			"dependsOn": [
+				"OOS make",
+				"OOS linux debug host"
+			]
+		},
+		{
+			"type": "shell",
+			"label": "OOS linux debug host",
+			"command": "bash",
+			"args": [
+				"-lc",
+				"bash ./debug.sh"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"detail": "在 Linux 本机启动 bochs-gdb，并等待 gdbstub 可连接",
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"focus": false,
+				"clear": false
+			},
+			"isBackground": true,
+			"problemMatcher": {
+				"owner": "custom",
+				"pattern": {
+					"regexp": "^(?!)$"
+				},
+				"background": {
+					"activeOnStart": true,
+					"beginsPattern": ".*Starting bochs-gdb in .*",
+					"endsPattern": ".*Enabled gdbstub.*"
+				}
+			}
+		},
+		{
+			"type": "shell",
+			"label": "OOS run bochs",
+			"command": "bochs-gdb",
+			"args": [
+				"-q",
 				"-f",
 				"bochsrc_nodebug.bxrc"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}/targets/UNIXV6++"
-            },
-            "detail": "在 Linux 本机启动 bochs，不调试",
-            "presentation": {
-                "reveal": "always",
-                "panel": "dedicated",
-                "focus": false,
-                "clear": false
-            }
-        }
-    ],
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/targets/UNIXV6++"
+			},
+			"detail": "在 Linux 本机启动 bochs，不调试",
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"focus": false,
+				"clear": false
+			},
+			"problemMatcher": []
+		}
+	],
     "version": "2.0.0"
 }
