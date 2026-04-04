@@ -1,11 +1,31 @@
 // Support.c
 
 #ifdef __cplusplus
+extern "C" {
+#endif
+extern char __bss;
+extern char __end;
+#ifdef __cplusplus
+}
+#endif
+
+#ifdef __cplusplus
 extern "C" void _main()
 #else
 void _main()
 #endif
 {
+	/*
+	 * 运行全局构造函数前，先清空内核 .bss。
+	 * bootloader 不保证 .bss 已被置零；在某些虚拟机上会出现随机残留值。
+	 */
+	unsigned char *p = (unsigned char *)&__bss;
+	unsigned char *e = (unsigned char *)&__end;
+	while ( (unsigned long)p < (unsigned long)e )
+	{
+		*p++ = 0;
+	}
+
 	/* ELF toolchain path: run .init_array constructors first. */
 	extern void (*__init_array_start[])();
 	extern void (*__init_array_end[])();
