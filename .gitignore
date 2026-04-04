@@ -22,7 +22,13 @@ src/shell/OBJS/
 .vscode/c_cpp_properties.json
 
 # Tool-side generated outputs and temporary workspaces.
-tools/v6pp-fs-edit-2022/workspace/
+tools/v6pp-fs-edit-2022/workspace/*
+!tools/v6pp-fs-edit-2022/workspace/programs/
+!tools/v6pp-fs-edit-2022/workspace/programs/**
+tools/v6pp-fs-edit-2022/workspace/programs/Shell
+tools/v6pp-fs-edit-2022/workspace/programs/Shell.exe
+tools/v6pp-fs-edit-2022/workspace/programs/bin/*
+!tools/v6pp-fs-edit-2022/workspace/programs/bin/.gitkeep
 tools/v6pp-fs-edit-2022/src/**/objs/
 
 # OS noise.
