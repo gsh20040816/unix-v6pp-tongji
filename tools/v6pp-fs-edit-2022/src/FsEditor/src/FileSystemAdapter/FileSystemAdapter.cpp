@@ -526,8 +526,8 @@ void FileSystemAdapter::format() {
 
 void FileSystemAdapter::writeKernel(fstream& kernelFile) {
     int kernelSize = MachineProps::BLOCK_SIZE * MachineProps::KERNEL_BIN_BLOCKS;
-    // 申请缓冲区。不做失败检查，让其自然抛异常。
-    char* buffer = new char[kernelSize];
+    // 先清零，避免 kernel.bin 小于预留区时把未初始化内存写入镜像。
+    char* buffer = new char[kernelSize]();
     kernelFile.clear();
     kernelFile.seekg(0, ios::beg);
     kernelFile.read(buffer, kernelSize);
@@ -539,8 +539,8 @@ void FileSystemAdapter::writeKernel(fstream& kernelFile) {
 void FileSystemAdapter::writeBootLoader(fstream& bootLoaderFile) {
     
     int bootloaderSize = MachineProps::BLOCK_SIZE * MachineProps::BOOT_LOADER_BLOCKS;
-    // 申请缓冲区。不做失败检查，让其自然抛异常。另外，如果 512个字节都拿不到，也没什么可玩的了...
-    char* buffer = new char[bootloaderSize];
+    // 先清零，避免 bootloader 文件长度异常时写入未初始化字节。
+    char* buffer = new char[bootloaderSize]();
     bootLoaderFile.clear();
     bootLoaderFile.seekg(0, ios::beg);
     bootLoaderFile.read(buffer, bootloaderSize);

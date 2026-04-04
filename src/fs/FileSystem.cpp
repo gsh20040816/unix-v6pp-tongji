@@ -5,6 +5,23 @@
 #include "TimeInterrupt.h"
 #include "Video.h"
 
+namespace
+{
+	enum SuperBlockLayoutPaddingIndex
+	{
+		SB_LAYOUT_PRESENT = 0,
+		SB_DISK_SECTORS = 1,
+		SB_INODE_ZONE_BEGIN = 2,
+		SB_INODE_ZONE_BLOCKS = 3,
+		SB_DATA_ZONE_BEGIN = 4,
+		SB_DATA_ZONE_BLOCKS = 5,
+		SB_SWAP_ZONE_BEGIN = 6,
+		SB_SWAP_ZONE_BLOCKS = 7
+	};
+
+	static const int EXPECTED_DISK_SECTORS = 20 * 16 * 63;
+}
+
 /*==============================class SuperBlock===================================*/
 /* 系统全局超级块SuperBlock对象 */
 SuperBlock g_spb;
@@ -75,6 +92,36 @@ void FileSystem::LoadSuperBlock()
 	if (User::NOERROR != u.u_error)
 	{
 		Utility::Panic("Load SuperBlock Error....!\n");
+	}
+
+	/*
+	 * 快速校验磁盘布局，避免常量改动后误用旧布局c.img，
+	 * 触发后续NameI()上的ENOTDIR等二次故障。
+	 */
+	int expectedSwapZoneStart = FileSystem::DATA_ZONE_END_SECTOR + 1;
+	int expectedSwapZoneBlocks = EXPECTED_DISK_SECTORS - expectedSwapZoneStart;
+	bool layoutOk =
+		g_spb.padding[SB_LAYOUT_PRESENT] == 1 &&
+		g_spb.s_isize == FileSystem::INODE_ZONE_SIZE &&
+		g_spb.s_fsize == EXPECTED_DISK_SECTORS &&
+		g_spb.padding[SB_DISK_SECTORS] == EXPECTED_DISK_SECTORS &&
+		g_spb.padding[SB_INODE_ZONE_BEGIN] == FileSystem::INODE_ZONE_START_SECTOR &&
+		g_spb.padding[SB_INODE_ZONE_BLOCKS] == FileSystem::INODE_ZONE_SIZE &&
+		g_spb.padding[SB_DATA_ZONE_BEGIN] == FileSystem::DATA_ZONE_START_SECTOR &&
+		g_spb.padding[SB_DATA_ZONE_BLOCKS] == FileSystem::DATA_ZONE_SIZE &&
+		g_spb.padding[SB_SWAP_ZONE_BEGIN] == expectedSwapZoneStart &&
+		g_spb.padding[SB_SWAP_ZONE_BLOCKS] == expectedSwapZoneBlocks;
+
+	if (!layoutOk)
+	{
+		Diagnose::Write("SuperBlock layout mismatch: rebuild c.img with current tools.\n");
+		Diagnose::Write("spb: isize=%d fsize=%d inode_begin=%d data_begin=%d swap_begin=%d\n",
+			g_spb.s_isize,
+			g_spb.s_fsize,
+			g_spb.padding[SB_INODE_ZONE_BEGIN],
+			g_spb.padding[SB_DATA_ZONE_BEGIN],
+			g_spb.padding[SB_SWAP_ZONE_BEGIN]);
+		Utility::Panic("SuperBlock layout mismatch");
 	}
 
 	this->m_Mount[0].m_dev = DeviceManager::ROOTDEV;

@@ -33,13 +33,13 @@ public:
     static const int SUPER_BLOCK_ZONE_BLOCKS = 2;
 
     /** Inode 区占用块数。 */
-    static const int INODE_ZONE_BLOCKS = 822;
+    static const int INODE_ZONE_BLOCKS = 998;
 
     /** 交换区占用块数。 */
     static const int SWAP_ZONE_BLOCKS = 2160;
 
     /** 内核映像文件区占用块数。不含 bootloader。 */
-    static const int KERNEL_BIN_BLOCKS = 199;
+    static const int KERNEL_BIN_BLOCKS = 999;
 
     /** 内核映像文件与启动引导区占用总块数。 */
     static const int KERNEL_AND_BOOT_BLOCKS = BOOT_LOADER_BLOCKS + KERNEL_BIN_BLOCKS;

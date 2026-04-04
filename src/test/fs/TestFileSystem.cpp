@@ -52,8 +52,8 @@ void MakeFS()
 {
 	/* 说明:
 	 * c.img扇区区域划分，常量定义在FileSystem类中，扇区号 0 ~ 20,159 。
-	 * (0 - 99) (100, 101) (102 - 1023) (1024 - 20,159)
-	 * (boot & kernel) (SuperBlock) (DiskInode Zone) (Data Zone)
+	 * (0) (1 - 999) (1000, 1001) (1002 - 1999) (2000 - 17,999) (18,000 - 20,159)
+	 * (bootloader) (kernel) (SuperBlock) (DiskInode Zone) (Data Zone) (swap/reserved)
 	 */
 
 	FileSystem& filesys = Kernel::Instance().GetFileSystem();
@@ -71,7 +71,7 @@ void MakeFS()
 	spb.padding[46] = 0x473C2B1A;
 	
 	/* 
-	 * 对数据区( 1024 <= blkno < 18000 )中每个扇区，Free(dev, blkno)一下，
+	 * 对数据区( 2000 <= blkno < 18000 )中每个扇区，Free(dev, blkno)一下，
 	 * 即可将所有free block按照"栈的栈"方式组织起来。
 	 */
 	for(int blkno = FileSystem::DATA_ZONE_END_SECTOR; blkno >= FileSystem::DATA_ZONE_START_SECTOR; --blkno)
@@ -175,7 +175,7 @@ bool AllocAllBlock()
 
 		if( i + FileSystem::DATA_ZONE_START_SECTOR != pBuf->b_blkno)
 		{
-			/* 分配到的字符块号(or扇区号)应该是1024, 1025, 1026, ... , 20,159这样。 */
+			/* 分配到的字符块号(or扇区号)应该从DATA_ZONE_START_SECTOR开始连续递增。 */
 			Diagnose::Write("Test Failed in AllocAllBlock()!\n");
 			while(1);
 			return false;

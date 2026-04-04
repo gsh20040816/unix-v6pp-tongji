@@ -64,6 +64,57 @@ ensure_linux_fs_edit_tools() {
   fi
 }
 
+refresh_linux_image_inputs() {
+  local kernel_exe="$script_dir/targets/objs/kernel.exe"
+  local kernel_bin="$script_dir/targets/objs/kernel.bin"
+  local boot_bin="$script_dir/targets/objs/boot.bin"
+  local kernel_size_inc="$script_dir/src/boot/kernel_size.inc"
+  local workspace="$script_dir/tools/v6pp-fs-edit-2022/workspace"
+
+  if ! command -v objcopy >/dev/null 2>&1; then
+    echo "missing required command: objcopy (needed to export kernel.bin)" >&2
+    return 1
+  fi
+
+  if ! command -v nasm >/dev/null 2>&1; then
+    echo "missing required command: nasm (needed to build boot.bin)" >&2
+    return 1
+  fi
+
+  if [[ ! -f "$kernel_exe" ]]; then
+    echo "missing required file: $kernel_exe" >&2
+    return 1
+  fi
+
+  echo "Exporting kernel.bin from latest kernel.exe"
+  objcopy -O binary "$kernel_exe" "$kernel_bin"
+
+  local kernel_size
+  local kernel_sectors
+  local kernel_size_line
+  local existing_kernel_size_line=""
+  kernel_size=$(stat -c '%s' "$kernel_bin")
+  kernel_sectors=$(( (kernel_size + 511) / 512 ))
+  kernel_size_line="KERNEL_SIZE equ ${kernel_sectors}"
+
+  if [[ -f "$kernel_size_inc" ]]; then
+    existing_kernel_size_line="$(tr -d '\r\n' < "$kernel_size_inc")"
+  fi
+  if [[ "$existing_kernel_size_line" != "$kernel_size_line" ]]; then
+    printf '%s\r\n' "$kernel_size_line" > "$kernel_size_inc"
+  fi
+
+  echo "Building boot.bin with KERNEL_SIZE=$kernel_sectors"
+  (
+    cd "$script_dir/src/boot"
+    nasm -f bin boot.s -o "$boot_bin"
+  )
+
+  mkdir -p "$workspace"
+  cp "$boot_bin" "$workspace/boot.bin"
+  cp "$kernel_bin" "$workspace/kernel.bin"
+}
+
 generate_disk_image_on_linux() {
   local workspace="$script_dir/tools/v6pp-fs-edit-2022/workspace"
   local filescanner="$workspace/linux-bin/filescanner"
@@ -94,6 +145,14 @@ generate_disk_image_on_linux() {
 
   mkdir -p "$(dirname "$final_img")"
   cp "$workspace_img" "$final_img"
+}
+
+cleanup_disk_images() {
+  local workspace_img="$script_dir/tools/v6pp-fs-edit-2022/workspace/c.img"
+  local final_img="$script_dir/targets/UNIXV6++/c.img"
+
+  echo "Cleaning disk images on Linux"
+  rm -f "$workspace_img" "$final_img"
 }
 
 if [[ ! -f "$ssh_win" ]]; then
@@ -148,10 +207,20 @@ if [[ -n "$make_jobs" ]]; then
   remote_command="set OOS_MAKE_JOBS=${make_jobs} && ${remote_command}"
 fi
 
+should_generate_image=true
+if [[ "$remote_command" == *"clean.bat"* && "$remote_command" != *"build.bat"* && "$remote_command" != *"all.bat"* ]]; then
+  should_generate_image=false
+fi
+
 echo "Building on Windows host ${OOS_WIN_HOST:-win}"
 if bash "$ssh_win" "cmd.exe /c \"$remote_command\""; then
-  ensure_linux_fs_edit_tools
-  generate_disk_image_on_linux
+  if [[ "$should_generate_image" == true ]]; then
+    refresh_linux_image_inputs
+    ensure_linux_fs_edit_tools
+    generate_disk_image_on_linux
+  else
+    cleanup_disk_images
+  fi
 
   if [[ "$user_provided_command" == false && "$env_provided_command" == false ]]; then
     mkdir -p "$build_cache_dir"

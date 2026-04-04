@@ -28,7 +28,8 @@
 			"options": {
 				"cwd": "${workspaceFolder}"
 			},
-			"detail": "在 Linux 工作区中触发 Windows clean.bat 清理构建产物"
+			"detail": "在 Linux 工作区中触发 Windows clean.bat 清理构建产物",
+			"problemMatcher": []
 		},
 		{
 			"label": "OOS debug prep",

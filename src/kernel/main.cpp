@@ -187,13 +187,11 @@ extern "C" void next()
 	/*  初始化rootDirInode和用户当前工作目录，以便NameI()正常工作 */
 	FileManager& fileMgr = Kernel::Instance().GetFileManager();
 
-	//fileMgr.rootDirInode = g_InodeTable.IGet(DeviceManager::ROOTDEV, FileSystem::ROOTINO);
-	fileMgr.rootDirInode = g_InodeTable.IGet(DeviceManager::ROOTDEV, 1);
+	fileMgr.rootDirInode = g_InodeTable.IGet(DeviceManager::ROOTDEV, FileSystem::ROOTINO);
 	fileMgr.rootDirInode->i_flag &= (~Inode::ILOCK);
 
 	User& us = Kernel::Instance().GetUser();
-	us.u_cdir = g_InodeTable.IGet(DeviceManager::ROOTDEV, 1);
-	//us.u_cdir = g_InodeTable.IGet(DeviceManager::ROOTDEV, FileSystem::ROOTINO);
+	us.u_cdir = g_InodeTable.IGet(DeviceManager::ROOTDEV, FileSystem::ROOTINO);
 	us.u_cdir->i_flag &= (~Inode::ILOCK);
 	Utility::StringCopy("/", us.u_curdir);
 
