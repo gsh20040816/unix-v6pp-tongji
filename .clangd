@@ -1,10 +1,13 @@
 CompileFlags:
+  CompilationDatabase: build/cmake-debug
   Add:
     - -m32
     - -march=i386
     - -mtune=i386
     - -I./src/include
     - -I./src/lib/include
+Diagnostics:
+  UnusedIncludes: None
 ---
 If:
   PathMatch: .*\.cpp

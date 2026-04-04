@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.20)
 
 project(oos LANGUAGES C CXX ASM_NASM)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
   message(FATAL_ERROR "OOS CMake build currently supports Linux hosts only.")
 endif()
