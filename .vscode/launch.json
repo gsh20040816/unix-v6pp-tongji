@@ -5,7 +5,7 @@
             "name": "Bochs GDB (Linux Local)",
             "type": "cppdbg",
             "request": "launch",
-            "preLaunchTask": "OOS debug prep",
+            "preLaunchTask": "OOS cmake debug prep",
             "program": "${workspaceFolder}/build/cmake-debug/objs/kernel",
             "cwd": "${workspaceFolder}",
             "MIMode": "gdb",

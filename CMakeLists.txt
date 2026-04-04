@@ -55,3 +55,17 @@ if(OOS_BOCHS_GDB_EXECUTABLE)
 else()
   message(STATUS "bochs-gdb executable not found; target 'bochs-gdb' is not generated.")
 endif()
+
+if(OOS_BOCHS_GDB_EXECUTABLE)
+  add_custom_target(bochsrc_gui
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${OOS_BOCHS_DIR}"
+    COMMAND "${CMAKE_COMMAND}" -E env "BXSHARE=${OOS_BOCHS_BXSHARE}"
+            "${OOS_BOCHS_GDB_EXECUTABLE}" -q -f bochsrc_gui.bxrc
+    WORKING_DIRECTORY "${OOS_BOCHS_DIR}"
+    DEPENDS image
+    USES_TERMINAL
+    VERBATIM
+  )
+else()
+  message(STATUS "bochs-gdb executable not found; target 'bochsrc_gui' is not generated.")
+endif()

@@ -13,7 +13,7 @@
 			"options": {
 				"cwd": "${workspaceFolder}"
 			},
-			"detail": "配置 Linux 本机 CMake 构建目录",
+			"detail": "在 Linux 本机通过 CMake 配置构建目录",
 			"problemMatcher": []
 		},
 		{
@@ -30,7 +30,7 @@
 			"options": {
 				"cwd": "${workspaceFolder}"
 			},
-			"detail": "在 Linux 本机构建内核与用户程序，并生成 c.img",
+			"detail": "在 Linux 本机通过 CMake 构建内核与用户程序并生成 c.img",
 			"dependsOrder": "sequence",
 			"dependsOn": [
 				"OOS cmake configure"
@@ -42,7 +42,7 @@
 		},
 		{
 			"type": "shell",
-			"label": "OOS clean",
+			"label": "OOS cmake clean",
 			"command": "cmake",
 			"args": [
 				"--build",
@@ -53,7 +53,7 @@
 			"options": {
 				"cwd": "${workspaceFolder}"
 			},
-			"detail": "清理 Linux 本机构建产物与磁盘镜像",
+			"detail": "在 Linux 本机通过 CMake 清理构建产物与磁盘镜像",
 			"dependsOrder": "sequence",
 			"dependsOn": [
 				"OOS cmake configure"
@@ -74,7 +74,7 @@
 			"options": {
 				"cwd": "${workspaceFolder}"
 			},
-			"detail": "调试前静默构建",
+			"detail": "在 Linux 本机通过 CMake 执行调试前静默构建",
 			"dependsOrder": "sequence",
 			"dependsOn": [
 				"OOS cmake configure"
@@ -89,16 +89,17 @@
 			"problemMatcher": []
 		},
 		{
-			"label": "OOS debug prep",
+			"label": "OOS cmake debug prep",
+			"detail": "在 Linux 本机串行执行调试前构建与 bochs-gdb 主机启动",
 			"dependsOrder": "sequence",
 			"dependsOn": [
 				"OOS cmake prelaunch",
-				"OOS linux debug host"
+				"OOS cmake bochs-gdb host"
 			]
 		},
 		{
 			"type": "shell",
-			"label": "OOS linux debug host",
+			"label": "OOS cmake bochs-gdb host",
 			"command": "cmake",
 			"args": [
 				"--build",
@@ -110,7 +111,7 @@
 			"options": {
 				"cwd": "${workspaceFolder}"
 			},
-			"detail": "在 Linux 本机启动 bochs-gdb，并等待 gdbstub 可连接",
+			"detail": "在 Linux 本机通过 CMake 启动 bochs-gdb 并等待 gdbstub 可连接",
 			"dependsOrder": "sequence",
 			"dependsOn": [
 				"OOS cmake configure"
@@ -136,7 +137,7 @@
 		},
 		{
 			"type": "shell",
-			"label": "OOS run bochs",
+			"label": "OOS cmake bochs run",
 			"command": "cmake",
 			"args": [
 				"--build",
@@ -148,7 +149,34 @@
 			"options": {
 				"cwd": "${workspaceFolder}"
 			},
-			"detail": "在 Linux 本机启动 bochs，不调试",
+			"detail": "在 Linux 本机通过 CMake 启动 bochs（nodebug 配置）",
+			"dependsOrder": "sequence",
+			"dependsOn": [
+				"OOS cmake configure"
+			],
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"focus": true,
+				"clear": false
+			},
+			"problemMatcher": []
+		},
+		{
+			"type": "shell",
+			"label": "OOS cmake bochs gui",
+			"command": "cmake",
+			"args": [
+				"--build",
+				"build/cmake-debug",
+				"--target",
+				"bochsrc_gui",
+				"-j"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"detail": "在 Linux 本机通过 CMake 启动 bochs（gui 配置）",
 			"dependsOrder": "sequence",
 			"dependsOn": [
 				"OOS cmake configure"
