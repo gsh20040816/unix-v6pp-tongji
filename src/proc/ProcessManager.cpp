@@ -587,6 +587,10 @@ void ProcessManager::Exec()
 			parser.TextSize,
 			parser.DataAddress,
 			parser.DataSize,
+			parser.RodataAddress,
+			parser.RodataSize,
+			parser.BssAddress,
+			parser.BssSize,
 			parser.StackSize) == false )
 	{
 		delete [] fakeStack;

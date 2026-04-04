@@ -372,6 +372,10 @@ bool MemoryDescriptor::ConfigureExecutableLayout(unsigned long entryPoint,
 												 unsigned long codeSize,
 												 unsigned long dataStart,
 												 unsigned long dataSize,
+											 unsigned long rodataStart,
+											 unsigned long rodataSize,
+											 unsigned long bssStart,
+											 unsigned long bssSize,
 												 unsigned long stackSize)
 {
 	this->ResetLayout();
@@ -384,9 +388,59 @@ bool MemoryDescriptor::ConfigureExecutableLayout(unsigned long entryPoint,
 	unsigned long codeEnd = AlignUp(codeStart + codeSize);
 	unsigned long dataEnd = AlignUp(dataStart + dataSize);
 	unsigned long stackBottom = AlignDown(USER_SPACE_END - stackSize);
+	unsigned long roProtectStart = 0;
+	unsigned long roProtectEnd = 0;
+	unsigned long bssProtectStart = 0;
+	unsigned long bssProtectEnd = 0;
+
+	if ( rodataSize != 0 )
+	{
+		/*
+		 * 页保护粒度是 4KB。仅将完整落在 rodata 内的页设为只读，
+		 * 避免误伤与可写数据共享同一页的边界字节。
+		 */
+		unsigned long candidateStart = AlignUp(rodataStart);
+		unsigned long candidateEnd = AlignDown(rodataStart + rodataSize);
+		if ( candidateStart < dataStart )
+		{
+			candidateStart = dataStart;
+		}
+		if ( candidateEnd > dataEnd )
+		{
+			candidateEnd = dataEnd;
+		}
+		if ( candidateStart < candidateEnd )
+		{
+			roProtectStart = candidateStart;
+			roProtectEnd = candidateEnd;
+		}
+	}
+
+	if ( bssSize != 0 )
+	{
+		/*
+		 * bss 也按页粒度拆分：仅完整落在 bss 的页标记为 BACKING_ZERO。
+		 * 与已初始化数据混合的边界页仍保留在 BACKING_EXEC_FILE 区域。
+		 */
+		unsigned long candidateStart = AlignUp(bssStart);
+		unsigned long candidateEnd = AlignDown(bssStart + bssSize);
+		if ( candidateStart < dataStart )
+		{
+			candidateStart = dataStart;
+		}
+		if ( candidateEnd > dataEnd )
+		{
+			candidateEnd = dataEnd;
+		}
+		if ( candidateStart < candidateEnd )
+		{
+			bssProtectStart = candidateStart;
+			bssProtectEnd = candidateEnd;
+		}
+	}
 
 	/*
-	 * 区域顺序固定为 runtime -> code -> data -> heap -> stack，
+	 * 区域顺序固定为 runtime -> code -> [data/rodata/bss] -> heap -> stack，
 	 * 便于后续 CheckUserSpace 用“相邻不重叠”规则直接校验。
 	 */
 
@@ -402,10 +456,112 @@ bool MemoryDescriptor::ConfigureExecutableLayout(unsigned long entryPoint,
 		return false;
 	}
 
-	if ( this->AddRegion(REGION_DATA, dataStart, dataEnd,
-			PROT_READ | PROT_WRITE | PROT_USER, PAGE_FLAG_NONE, BACKING_EXEC_FILE) == false )
+	struct SpecialRange
 	{
-		return false;
+		unsigned long start;
+		unsigned long end;
+		RegionType type;
+	};
+
+	SpecialRange ranges[2];
+	unsigned int rangeCount = 0;
+	if ( roProtectStart < roProtectEnd )
+	{
+		ranges[rangeCount].start = roProtectStart;
+		ranges[rangeCount].end = roProtectEnd;
+		ranges[rangeCount].type = REGION_RODATA;
+		++rangeCount;
+	}
+	if ( bssProtectStart < bssProtectEnd )
+	{
+		ranges[rangeCount].start = bssProtectStart;
+		ranges[rangeCount].end = bssProtectEnd;
+		ranges[rangeCount].type = REGION_BSS;
+		++rangeCount;
+	}
+
+	for ( unsigned int i = 0; i + 1 < rangeCount; ++i )
+	{
+		for ( unsigned int j = i + 1; j < rangeCount; ++j )
+		{
+			if ( ranges[j].start < ranges[i].start )
+			{
+				SpecialRange temp = ranges[i];
+				ranges[i] = ranges[j];
+				ranges[j] = temp;
+			}
+		}
+	}
+
+	bool hasDataRegion = false;
+	unsigned long cursor = dataStart;
+	for ( unsigned int i = 0; i < rangeCount; ++i )
+	{
+		unsigned long start = ranges[i].start;
+		unsigned long end = ranges[i].end;
+		if ( end <= cursor )
+		{
+			continue;
+		}
+		if ( start < cursor )
+		{
+			start = cursor;
+		}
+
+		if ( cursor < start )
+		{
+			if ( this->AddRegion(REGION_DATA, cursor, start,
+					PROT_READ | PROT_WRITE | PROT_USER,
+					PAGE_FLAG_NONE,
+					BACKING_EXEC_FILE) == false )
+			{
+				return false;
+			}
+			hasDataRegion = true;
+		}
+
+		if ( ranges[i].type == REGION_RODATA )
+		{
+			if ( this->AddRegion(REGION_RODATA, start, end,
+					PROT_READ | PROT_USER, PAGE_FLAG_NONE, BACKING_EXEC_FILE) == false )
+			{
+				return false;
+			}
+		}
+		else
+		{
+			if ( this->AddRegion(REGION_BSS, start, end,
+					PROT_READ | PROT_WRITE | PROT_USER,
+					PAGE_FLAG_NONE,
+					BACKING_ZERO) == false )
+			{
+				return false;
+			}
+		}
+
+		cursor = end;
+	}
+
+	if ( cursor < dataEnd )
+	{
+		if ( this->AddRegion(REGION_DATA, cursor, dataEnd,
+				PROT_READ | PROT_WRITE | PROT_USER, PAGE_FLAG_NONE, BACKING_EXEC_FILE) == false )
+		{
+			return false;
+		}
+		hasDataRegion = true;
+	}
+
+	if ( hasDataRegion == false )
+	{
+		/* 兼容旧路径：始终保留一个 DATA 锚点，供 GetDataStart()/统计逻辑使用。 */
+		if ( this->AddRegion(REGION_DATA, dataStart, dataStart,
+				PROT_READ | PROT_WRITE | PROT_USER,
+				PAGE_FLAG_NONE,
+				BACKING_EXEC_FILE) == false )
+		{
+			return false;
+		}
 	}
 
 	this->m_HeapBase = dataEnd;
@@ -536,9 +692,17 @@ bool MemoryDescriptor::MaterializeBootstrapStack()
 bool MemoryDescriptor::MaterializeExecutableImage()
 {
 	/*
-	 * Exec 阶段不再提前映射用户低地址 runtime 页。
-	 * 该页保持 RESERVED，由缺页异常路径 EnsurePagePresent() 按需分配零页。
+	 * Exec 阶段保持 runtime 低地址页立即映射，避免 0# 用户页表共享语义下
+	 * 的跨进程映射污染；其余区域维持按需缺页补页。
 	 */
+	const Region* runtime = this->FindRegionByType(REGION_RUNTIME);
+	if ( runtime != NULL )
+	{
+		unsigned int runtimePageIndex = this->AddressToPageIndex(runtime->start);
+		this->m_PageInfos[runtimePageIndex].state = PAGE_STATE_RESIDENT;
+		this->m_PageInfos[runtimePageIndex].frameAddress = 0;
+		this->MapPage(runtime->start, 0, true);
+	}
 
 	const Region* code = this->FindRegionByType(REGION_CODE);
 	if ( code != NULL )
@@ -1056,7 +1220,24 @@ bool MemoryDescriptor::AllocateZeroedPage(unsigned long virtualAddress)
 	Utility::ZeroPage(newPage);
 	pageInfo.state = PAGE_STATE_RESIDENT;
 	pageInfo.frameAddress = newPage;
-	this->MapPage(virtualAddress, newPage, (region.prot & PROT_WRITE) != 0);
+
+	bool readWrite = (region.prot & PROT_WRITE) != 0;
+	if ( readWrite == false )
+	{
+		/*
+		 * 若调用方在缺页前预置了页表 RW（例如 Relocate 临时写 rodata），
+		 * 则本次映射继承该位，装载完成后再由调用方恢复只读。
+		 */
+		unsigned int tableIndex = pageIndex / PageTable::ENTRY_CNT_PER_PAGETABLE;
+		unsigned int entryIndex = pageIndex % PageTable::ENTRY_CNT_PER_PAGETABLE;
+		PageTable* table = this->GetUserPageTableByIndex(tableIndex);
+		if ( table != NULL && table->m_Entrys[entryIndex].m_ReadWriter != 0 )
+		{
+			readWrite = true;
+		}
+	}
+
+	this->MapPage(virtualAddress, newPage, readWrite);
 	return true;
 }
 

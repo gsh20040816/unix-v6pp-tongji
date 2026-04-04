@@ -8,6 +8,32 @@
 
 namespace
 {
+	static void SetRangeReadWrite(MemoryDescriptor& memory,
+		unsigned long start,
+		unsigned long size,
+		bool readWrite)
+	{
+		if ( size == 0 )
+		{
+			return;
+		}
+
+		unsigned long begin = start >> 12;
+		unsigned long end = (start + size + PageManager::PAGE_SIZE - 1) >> 12;
+		for ( unsigned long page = begin; page < end; ++page )
+		{
+			unsigned int tableIndex = (unsigned int)(page / PageTable::ENTRY_CNT_PER_PAGETABLE);
+			unsigned int entryIndex = (unsigned int)(page % PageTable::ENTRY_CNT_PER_PAGETABLE);
+			PageTable* pageTable = memory.GetUserPageTableByIndex(tableIndex);
+			if ( pageTable == NULL )
+			{
+				continue;
+			}
+
+			pageTable->m_Entrys[entryIndex].m_ReadWriter = readWrite ? 1 : 0;
+		}
+	}
+
 	static bool ReadInPagedChunks(Inode* p_inode,
 		unsigned long fileOffset,
 		unsigned long virtualAddress,
@@ -75,6 +101,16 @@ namespace
 PEParser::PEParser()
 {
     this->EntryPointAddress = 0;
+	this->TextAddress = 0;
+	this->TextSize = 0;
+	this->DataAddress = 0;
+	this->DataSize = 0;
+	this->RodataAddress = 0;
+	this->RodataSize = 0;
+	this->BssAddress = 0;
+	this->BssSize = 0;
+	this->StackSize = 0;
+	this->HeapSize = 0;
     this->sectionHeaders = 0;
 }
 
@@ -82,6 +118,18 @@ PEParser::PEParser()
 PEParser::PEParser(unsigned long peAddress)
 {
 	this->peAddress = peAddress + 0xC0000000;   // pe头的虚地址
+	this->EntryPointAddress = 0;
+	this->TextAddress = 0;
+	this->TextSize = 0;
+	this->DataAddress = 0;
+	this->DataSize = 0;
+	this->RodataAddress = 0;
+	this->RodataSize = 0;
+	this->BssAddress = 0;
+	this->BssSize = 0;
+	this->StackSize = 0;
+	this->HeapSize = 0;
+	this->sectionHeaders = 0;
 }
 
 unsigned int PEParser::Relocate(Inode* p_inode, int sharedText)
@@ -98,9 +146,7 @@ unsigned int PEParser::Relocate(Inode* p_inode, int sharedText)
 	}
 
 	/* 如果可以和其它进程共享正文段，无需文件中读入正文段 */
-	unsigned int textBegin = this->TextAddress >> 12;
-	unsigned int textLength =
-		(this->TextSize + PageManager::PAGE_SIZE - 1) >> 12;
+	MemoryDescriptor& memory = u.u_procp->p_memory;
 
 	/*如果与其它进程共享正文段，共享正文段切不可清0*/
 	if(sharedText == 1)
@@ -108,25 +154,24 @@ unsigned int PEParser::Relocate(Inode* p_inode, int sharedText)
 	else
 	{
 		i = 0;
-		// 修改正文段的读写标志，为内核写代码段做准备
-		for (unsigned int page = textBegin; page < textBegin + textLength; ++page)
-		{
-			unsigned int tableIndex = page / PageTable::ENTRY_CNT_PER_PAGETABLE;
-			unsigned int entryIndex = page % PageTable::ENTRY_CNT_PER_PAGETABLE;
-			PageTable* pageTable = u.u_procp->p_memory.GetUserPageTableByIndex(tableIndex);
-			if ( pageTable == NULL )
-			{
-				continue;
-			}
-
-			pageTable->m_Entrys[entryIndex].m_ReadWriter = 1;
-		}
-		X86Assembly::FlushPageDirectory((unsigned long)u.u_procp->p_memory.GetPageDirectoryPointer());
 	}
+
+	/* 装载阶段临时放开写保护：正文（非共享时）+ rodata。 */
+	if ( sharedText == 0 )
+	{
+		SetRangeReadWrite(memory, this->TextAddress, this->TextSize, true);
+	}
+	SetRangeReadWrite(memory, this->RodataAddress, this->RodataSize, true);
+	X86Assembly::FlushPageDirectory((unsigned long)memory.GetPageDirectoryPointer());
 
     /* 对所有页面执行清0操作，这样bss变量的初值就是0 */
 	for (; i <= lastDataSectionIdx; i++ )
 	{
+		if ( i == this->BSS_SECTION_IDX )
+		{
+			continue;
+		}
+
 		ImageSectionHeader* sectionHeader = &(this->sectionHeaders[i]);
 		unsigned long beginVM =
 			sectionHeader->VirtualAddress + ntHeader.OptionalHeader.ImageBase;
@@ -177,22 +222,13 @@ unsigned int PEParser::Relocate(Inode* p_inode, int sharedText)
 		cnt += sectionHeader->Misc.VirtualSize;
 	}
 
+	/* 装载完成后恢复只读属性。 */
 	if(sharedText == 0)
-	{   //将正文段页面改回只读
-		for (unsigned int page = textBegin; page < textBegin + textLength; ++page)
-		{
-			unsigned int tableIndex = page / PageTable::ENTRY_CNT_PER_PAGETABLE;
-			unsigned int entryIndex = page % PageTable::ENTRY_CNT_PER_PAGETABLE;
-			PageTable* pageTable = u.u_procp->p_memory.GetUserPageTableByIndex(tableIndex);
-			if ( pageTable == NULL )
-			{
-				continue;
-			}
-
-			pageTable->m_Entrys[entryIndex].m_ReadWriter = 0;
-		}
-		X86Assembly::FlushPageDirectory((unsigned long)u.u_procp->p_memory.GetPageDirectoryPointer());
+	{
+		SetRangeReadWrite(memory, this->TextAddress, this->TextSize, false);
 	}
+	SetRangeReadWrite(memory, this->RodataAddress, this->RodataSize, false);
+	X86Assembly::FlushPageDirectory((unsigned long)memory.GetPageDirectoryPointer());
 
 	delete [] this->sectionHeaders;
 	this->sectionHeaders = 0;
@@ -281,9 +317,57 @@ bool PEParser::HeaderLoad(Inode* p_inode)
 
 	this->DataAddress =
 		ntHeader.OptionalHeader.BaseOfData + ntHeader.OptionalHeader.ImageBase;
-	unsigned long dataEnd =
-		this->sectionHeaders[this->BSS_SECTION_IDX].VirtualAddress +
-		this->sectionHeaders[this->BSS_SECTION_IDX].Misc.VirtualSize;
+
+	unsigned long dataRawEnd =
+		this->sectionHeaders[this->DATA_SECTION_IDX].VirtualAddress +
+		this->sectionHeaders[this->DATA_SECTION_IDX].Misc.VirtualSize;
+	if ( dataRawEnd <
+			this->sectionHeaders[this->DATA_SECTION_IDX].VirtualAddress +
+			this->sectionHeaders[this->DATA_SECTION_IDX].SizeOfRawData )
+	{
+		dataRawEnd =
+			this->sectionHeaders[this->DATA_SECTION_IDX].VirtualAddress +
+			this->sectionHeaders[this->DATA_SECTION_IDX].SizeOfRawData;
+	}
+
+	this->RodataAddress = 0;
+	this->RodataSize = 0;
+	if ( ntHeader.FileHeader.NumberOfSections > this->RDATA_SECTION_IDX )
+	{
+		this->RodataAddress =
+			this->sectionHeaders[this->RDATA_SECTION_IDX].VirtualAddress +
+			ntHeader.OptionalHeader.ImageBase;
+		this->RodataSize =
+			this->sectionHeaders[this->RDATA_SECTION_IDX].Misc.VirtualSize;
+		if ( this->RodataSize < this->sectionHeaders[this->RDATA_SECTION_IDX].SizeOfRawData )
+		{
+			this->RodataSize = this->sectionHeaders[this->RDATA_SECTION_IDX].SizeOfRawData;
+		}
+	}
+
+	this->BssAddress = 0;
+	this->BssSize = 0;
+	unsigned long dataEnd = dataRawEnd;
+	if ( ntHeader.FileHeader.NumberOfSections > this->BSS_SECTION_IDX )
+	{
+		this->BssAddress =
+			this->sectionHeaders[this->BSS_SECTION_IDX].VirtualAddress +
+			ntHeader.OptionalHeader.ImageBase;
+		this->BssSize =
+			this->sectionHeaders[this->BSS_SECTION_IDX].Misc.VirtualSize;
+		if ( this->BssSize < this->sectionHeaders[this->BSS_SECTION_IDX].SizeOfRawData )
+		{
+			this->BssSize = this->sectionHeaders[this->BSS_SECTION_IDX].SizeOfRawData;
+		}
+
+		unsigned long bssEnd =
+			this->sectionHeaders[this->BSS_SECTION_IDX].VirtualAddress + this->BssSize;
+		if ( bssEnd > dataEnd )
+		{
+			dataEnd = bssEnd;
+		}
+	}
+
 	if ( ntHeader.FileHeader.NumberOfSections > this->IDATA_SECTION_IDX )
 	{
 		unsigned long idataSize = this->sectionHeaders[this->IDATA_SECTION_IDX].Misc.VirtualSize;

@@ -187,12 +187,16 @@ public:
 	/* 将 other 的驻留页复制/共享到当前地址空间。 */
 	bool CloneResidentPagesFrom(const MemoryDescriptor& other);
 
-	/* 根据可执行文件信息建立 code/data/heap/stack 区域布局。 */
+	/* 根据可执行文件信息建立 code/rodata/data/heap/stack 区域布局。 */
 	bool ConfigureExecutableLayout(unsigned long entryPoint,
 								   unsigned long codeStart,
 								   unsigned long codeSize,
 								   unsigned long dataStart,
 								   unsigned long dataSize,
+								   unsigned long rodataStart,
+								   unsigned long rodataSize,
+								   unsigned long bssStart,
+								   unsigned long bssSize,
 								   unsigned long stackSize);
 
 	/* 校验区域边界和相互重叠关系是否合法。 */

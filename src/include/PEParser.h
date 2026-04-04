@@ -148,6 +148,12 @@ public:
 	unsigned long DataAddress;
 	unsigned long DataSize;
 
+    unsigned long RodataAddress;
+    unsigned long RodataSize;
+
+    unsigned long BssAddress;
+    unsigned long BssSize;
+
 	unsigned long StackSize;
 	unsigned long HeapSize;
 
