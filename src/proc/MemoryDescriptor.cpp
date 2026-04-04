@@ -1067,6 +1067,13 @@ void MemoryDescriptor::ReservePagesForRegion(unsigned int regionIndex)
 
 	for ( unsigned int i = startPage; i <= endPage; ++i )
 	{
+		if ( this->m_PageInfos[i].state == PAGE_STATE_RESIDENT &&
+			this->m_PageInfos[i].regionIndex == regionIndex )
+		{
+			this->m_PageInfos[i].flags = region.flags;
+			continue;
+		}
+
 		this->m_PageInfos[i].state = PAGE_STATE_RESERVED;
 		this->m_PageInfos[i].flags = region.flags;
 		this->m_PageInfos[i].regionIndex = regionIndex;

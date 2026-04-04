@@ -16,13 +16,176 @@ namespace
 
 }
 
-unsigned short* Diagnose::m_VideoMemory = (unsigned short *)(0xB8000 + 0xC0000000);
-unsigned int Diagnose::m_Row = 10;
+unsigned short* Diagnose::m_VideoMemory = (unsigned short *)DIAGNOSE_VIDEO_MEMORY_BASE;
+unsigned int Diagnose::m_Row = DIAGNOSE_DEFAULT_ROWS;
 unsigned int Diagnose::m_Column = 0;
 
-unsigned int Diagnose::ROWS = 10;
+unsigned int Diagnose::ROWS = DIAGNOSE_DEFAULT_ROWS;
 
 bool Diagnose::trace_on = true;
+
+char Diagnose::m_History[Diagnose::HISTORY_LINE_COUNT][Diagnose::COLUMNS];
+unsigned int Diagnose::m_TotalLines = 1;
+unsigned int Diagnose::m_CurrentLine = 0;
+unsigned int Diagnose::m_ViewTopLine = 0;
+bool Diagnose::m_IsBrowsing = false;
+bool Diagnose::m_HistoryReady = false;
+
+void Diagnose::EnsureHistoryReady()
+{
+	if ( m_HistoryReady )
+	{
+		return;
+	}
+
+	for ( unsigned int i = 0; i < HISTORY_LINE_COUNT; ++i )
+	{
+		for ( unsigned int j = 0; j < COLUMNS; ++j )
+		{
+			m_History[i][j] = ' ';
+		}
+	}
+
+	m_HistoryReady = true;
+	m_TotalLines = 1;
+	m_CurrentLine = 0;
+	m_ViewTopLine = 0;
+	m_IsBrowsing = false;
+	m_Column = 0;
+
+	if ( ROWS == 0 )
+	{
+		m_Row = SCREEN_ROWS;
+	}
+	else
+	{
+		m_Row = RegionTopRow();
+	}
+}
+
+unsigned int Diagnose::RegionTopRow()
+{
+	if ( ROWS == 0 )
+	{
+		return SCREEN_ROWS;
+	}
+
+	if ( ROWS >= SCREEN_ROWS )
+	{
+		return 0;
+	}
+
+	return SCREEN_ROWS - ROWS;
+}
+
+unsigned int Diagnose::EarliestLine()
+{
+	if ( m_TotalLines > HISTORY_LINE_COUNT )
+	{
+		return m_TotalLines - HISTORY_LINE_COUNT;
+	}
+
+	return 0;
+}
+
+unsigned int Diagnose::TailTopLine()
+{
+	if ( ROWS == 0 )
+	{
+		return m_CurrentLine;
+	}
+
+	if ( m_CurrentLine + 1 > ROWS )
+	{
+		return m_CurrentLine + 1 - ROWS;
+	}
+
+	return 0;
+}
+
+unsigned int Diagnose::LogicalToHistoryLine(unsigned int logicalLine)
+{
+	return logicalLine % HISTORY_LINE_COUNT;
+}
+
+void Diagnose::ClearLogicalLine(unsigned int logicalLine)
+{
+	unsigned int historyLine = LogicalToHistoryLine(logicalLine);
+
+	for ( unsigned int i = 0; i < COLUMNS; ++i )
+	{
+		m_History[historyLine][i] = ' ';
+	}
+}
+
+void Diagnose::SyncCursorByView()
+{
+	if ( ROWS == 0 )
+	{
+		m_Row = SCREEN_ROWS;
+		return;
+	}
+
+	unsigned int visibleRow = 0;
+
+	if ( m_CurrentLine < m_ViewTopLine )
+	{
+		visibleRow = 0;
+	}
+	else if ( m_CurrentLine >= m_ViewTopLine + ROWS )
+	{
+		visibleRow = ROWS - 1;
+	}
+	else
+	{
+		visibleRow = m_CurrentLine - m_ViewTopLine;
+	}
+
+	m_Row = RegionTopRow() + visibleRow;
+}
+
+void Diagnose::RenderViewport()
+{
+	if ( ROWS == 0 )
+	{
+		m_Row = SCREEN_ROWS;
+		return;
+	}
+
+	unsigned int earliest = EarliestLine();
+	unsigned int tailTop = TailTopLine();
+
+	if ( m_ViewTopLine < earliest )
+	{
+		m_ViewTopLine = earliest;
+	}
+
+	if ( m_ViewTopLine > tailTop )
+	{
+		m_ViewTopLine = tailTop;
+	}
+
+	unsigned int topRow = RegionTopRow();
+
+	for ( unsigned int row = 0; row < ROWS; ++row )
+	{
+		unsigned int logicalLine = m_ViewTopLine + row;
+
+		for ( unsigned int col = 0; col < COLUMNS; ++col )
+		{
+			char ch = ' ';
+
+			if ( logicalLine < m_TotalLines && logicalLine >= earliest )
+			{
+				ch = m_History[LogicalToHistoryLine(logicalLine)][col];
+			}
+
+			m_VideoMemory[(topRow + row) * COLUMNS + col] = (unsigned char)ch | Diagnose::COLOR;
+		}
+	}
+
+	SyncCursorByView();
+}
 
 Diagnose::Diagnose()
 {
@@ -55,6 +218,13 @@ void Diagnose::Write(const char* fmt, ...)
 	{
 		return;
 	}
+
+	if ( 0 == Diagnose::ROWS )
+	{
+		return;
+	}
+
+	EnsureHistoryReady();
 
 	// Diagnose::RepairState();
 
@@ -138,38 +308,134 @@ void Diagnose::PrintInt(unsigned int value, int base)
 
 void Diagnose::NextLine()
 {
-	m_Row += 1;
+	if ( 0 == Diagnose::ROWS )
+	{
+		return;
+	}
+
+	EnsureHistoryReady();
+	m_CurrentLine += 1;
+	if ( m_TotalLines < m_CurrentLine + 1 )
+	{
+		m_TotalLines = m_CurrentLine + 1;
+	}
+	ClearLogicalLine(m_CurrentLine);
+
+	if ( !m_IsBrowsing )
+	{
+		m_ViewTopLine = TailTopLine();
+	}
+
 	m_Column = 0;
+	RenderViewport();
 }
 
 void Diagnose::WriteChar(const char ch)
 {
-	unsigned short* videoMemory = Diagnose::m_VideoMemory;
+	if ( 0 == Diagnose::ROWS )
+	{
+		return;
+	}
+
+	EnsureHistoryReady();
 
 	if(Diagnose::m_Column >= Diagnose::COLUMNS)
 	{
 		NextLine();
 	}
 
-	if(Diagnose::m_Row >= Diagnose::SCREEN_ROWS)
+	m_History[LogicalToHistoryLine(m_CurrentLine)][m_Column] = ch;
+
+	if ( !m_IsBrowsing )
 	{
-		Diagnose::ClearScreen();
+		SyncCursorByView();
+		m_VideoMemory[m_Row * COLUMNS + m_Column] = (unsigned char) ch | Diagnose::COLOR;
 	}
 
-	videoMemory[Diagnose::m_Row * COLUMNS + Diagnose::m_Column] = (unsigned char) ch | Diagnose::COLOR;
 	Diagnose::m_Column++;
+
+	if ( Diagnose::m_Column >= Diagnose::COLUMNS )
+	{
+		NextLine();
+	}
 }
 
 void Diagnose::ClearScreen()
 {
-	unsigned short* videoMemory = Diagnose::m_VideoMemory;
-	unsigned int i;
+	EnsureHistoryReady();
 
-	Diagnose::m_Row = Diagnose::SCREEN_ROWS - Diagnose::ROWS;
-	Diagnose::m_Column = 0;
-
-	for(i = 0; i < (COLUMNS * ROWS); i++)
+	for ( unsigned int i = 0; i < HISTORY_LINE_COUNT; ++i )
 	{
-		videoMemory[i + m_Row * COLUMNS] = (unsigned char) ' ' | Diagnose::COLOR;
+		for ( unsigned int j = 0; j < COLUMNS; ++j )
+		{
+			m_History[i][j] = ' ';
+		}
 	}
+
+	m_TotalLines = 1;
+	m_CurrentLine = 0;
+	m_ViewTopLine = 0;
+	m_IsBrowsing = false;
+	m_Column = 0;
+
+	if ( 0 == Diagnose::ROWS )
+	{
+		Diagnose::m_Row = Diagnose::SCREEN_ROWS;
+		return;
+	}
+
+	Diagnose::m_Row = RegionTopRow();
+	RenderViewport();
+}
+
+void Diagnose::ScrollUpOneLine()
+{
+	if ( 0 == Diagnose::ROWS )
+	{
+		return;
+	}
+
+	EnsureHistoryReady();
+	unsigned int earliest = EarliestLine();
+
+	if ( m_ViewTopLine > earliest )
+	{
+		m_IsBrowsing = true;
+		m_ViewTopLine -= 1;
+		RenderViewport();
+	}
+}
+
+void Diagnose::ScrollDownOneLine()
+{
+	if ( 0 == Diagnose::ROWS )
+	{
+		return;
+	}
+
+	EnsureHistoryReady();
+	unsigned int tailTop = TailTopLine();
+
+	if ( m_ViewTopLine < tailTop )
+	{
+		m_IsBrowsing = true;
+		m_ViewTopLine += 1;
+		RenderViewport();
+		return;
+	}
+
+	FollowTail();
+}
+
+void Diagnose::FollowTail()
+{
+	if ( 0 == Diagnose::ROWS )
+	{
+		return;
+	}
+
+	EnsureHistoryReady();
+	m_IsBrowsing = false;
+	m_ViewTopLine = TailTopLine();
+	RenderViewport();
 }

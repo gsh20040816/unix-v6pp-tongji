@@ -317,7 +317,7 @@ void Process::SBreak()
 
 	md.BuildPageTablesForImage();
 	md.Activate();
-	md.DisplayPageTable();
+	// md.DisplayPageTable();
 	u.u_procp->p_size = ProcessManager::USIZE + md.GetWritableSize();
 
 	u.u_ar0[User::EAX] = md.GetHeapBreak();

@@ -14,6 +14,7 @@ public:
 	/* 屏幕大小为80 * 25 */
 	static const unsigned int COLUMNS = 80;
 	static unsigned int ROWS;
+	static const unsigned int HISTORY_LINE_COUNT = 512;
 	
 	static const unsigned short COLOR = 0x0F00;		/* char in white color */
 
@@ -40,6 +41,13 @@ public:
 	/* 清除屏幕 */
 	static void ClearScreen();
 
+	/* 历史浏览：逐行向上/向下滚动 */
+	static void ScrollUpOneLine();
+	static void ScrollDownOneLine();
+	static void FollowTail();
+
+	static bool IsBrowsingHistory();
+
 	/* Members */
 public:
 	static unsigned short* m_VideoMemory;
@@ -52,6 +60,22 @@ public:
 	 * 最后一个回车之前的内容为已确认内容，不可被Backspace键删除。
 	 */
 	static char* m_BeginChar;
+
+	static char m_History[HISTORY_LINE_COUNT][COLUMNS];
+	static unsigned int m_TotalLines;
+	static unsigned int m_CurrentLine;
+	static unsigned int m_ViewTopLine;
+	static bool m_IsBrowsing;
+	static bool m_HistoryReady;
+
+private:
+	static void EnsureHistoryReady();
+	static unsigned int EarliestLine();
+	static unsigned int TailTopLine();
+	static unsigned int LogicalToHistoryLine(unsigned int logicalLine);
+	static void ClearLogicalLine(unsigned int logicalLine);
+	static void SyncCursorByView();
+	static void RenderViewport();
 };
 
 #endif

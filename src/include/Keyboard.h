@@ -23,6 +23,10 @@ public:
 	static const unsigned char SCAN_NUMLOCK = 0x45;
 	static const unsigned char SCAN_CAPSLOCK = 0x3a;
 	static const unsigned char SCAN_SCRLOCK = 0x46;
+	static const unsigned char SCAN_HOME = 0x47;
+	static const unsigned char SCAN_END = 0x4f;
+	static const unsigned char SCAN_PGUP = 0x49;
+	static const unsigned char SCAN_PGDOWN = 0x51;
 
 	/* 以下为控制键按下的状态，mode中各比特位的定义 */
 	static const int M_LCTRL = 0x01;

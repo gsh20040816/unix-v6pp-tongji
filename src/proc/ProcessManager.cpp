@@ -478,7 +478,7 @@ void ProcessManager::Fork()
 	if ( this->NewProc() )	/* 子进程返回1，父进程返回0 */
 	{
 		/* 子进程fork()系统调用返回0 */
-		u.u_procp->p_memory.DisplayPageTable();
+		// u.u_procp->p_memory.DisplayPageTable();
 		u.u_ar0[User::EAX] = 0;
 		u.u_cstime = 0;
 		u.u_stime = 0;
@@ -758,7 +758,7 @@ void ProcessManager::Exec()
 	}
 	u.u_procp->p_memory.BuildPageTablesForImage();
 	u.u_procp->p_memory.Activate();
-    u.u_procp->p_memory.DisplayPageTable();
+    // u.u_procp->p_memory.DisplayPageTable();
 
 	/* 从exe文件中依次读入.text段、.data段、.rdata段、.bss段 */
 	parser.Relocate(pInode, sharedText);

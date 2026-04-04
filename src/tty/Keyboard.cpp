@@ -2,8 +2,9 @@
 #include "IOPort.h"
 #include "Kernel.h"
 #include "ProcessManager.h"
-#include "Video.h"
 #include "CharDevice.h"
+#include "CRT.h"
+#include "Video.h"
 
 char Keyboard::Keymap[] = {
 	0,0x1b,'1','2','3','4','5','6',		/* 0x00-0x07 0, <esc>,1,2,3,4,5,6, */
@@ -95,6 +96,30 @@ void Keyboard::HandleScanCode(unsigned char scanCode, int expand)
 {
 	int isOK = 0;
 	char ch = 0;
+
+	if ( 0xE0 == expand )
+	{
+		if ( scanCode == Keyboard::SCAN_HOME )
+		{
+			Diagnose::ScrollUpOneLine();
+			return;
+		}
+		if ( scanCode == Keyboard::SCAN_END )
+		{
+			Diagnose::ScrollDownOneLine();
+			return;
+		}
+		if ( scanCode == Keyboard::SCAN_PGUP )
+		{
+			CRT::ScrollUpOneLine();
+			return;
+		}
+		if ( scanCode == Keyboard::SCAN_PGDOWN )
+		{
+			CRT::ScrollDownOneLine();
+			return;
+		}
+	}
 
 	if ( 0xE1 == expand )
 	{
