@@ -206,8 +206,11 @@ public:
 
 	/* 校验区域边界和相互重叠关系是否合法。 */
 	bool CheckUserSpace() const;
-	/* 处理用户地址缺页，必要时扩栈并触发按需补页。 */
-	bool HandlePageFault(unsigned long faultAddress, unsigned long stackPointer, bool isUserMode);
+	/* 处理用户地址页故障（缺页/写保护），必要时扩栈并触发按需补页。 */
+	bool HandlePageFault(unsigned long faultAddress,
+		unsigned long stackPointer,
+		bool isUserMode,
+		unsigned int errorCode);
 	/* 初始化早期引导所需的最小用户布局和栈页。 */
 	bool MaterializeBootstrapStack();
 	/* 为 exec 后的新映像做必要驻留：当前仅预分配用户栈。 */
@@ -299,6 +302,8 @@ private:
 	bool ShareTextPage(unsigned long virtualAddress,
 		unsigned long textPhysicalAddress,
 		bool readWrite);
+	/* 处理可写页写保护触发的 COW 分裂。 */
+	bool HandleCopyOnWriteFault(unsigned long faultAddress);
 	/* 释放单个 PageInfo 的驻留页（按策略可跳过共享正文页）。 */
 	void FreePageInfo(PageInfo& pageInfo, bool releaseSharedText);
 	/* 按 PageInfo 扫描并恢复所有 RESIDENT 页的页表映射。 */

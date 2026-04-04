@@ -399,6 +399,9 @@ bool MemoryDescriptor::CloneResidentPagesFrom(const MemoryDescriptor& other)
 		return false;
 	}
 
+	UserPageManager& userPageManager = Kernel::Instance().GetUserPageManager();
+	bool parentPteUpdated = false;
+
 	for ( unsigned int i = 0; i < USER_PAGE_COUNT; ++i )
 	{
 		if ( other.m_PageInfos == NULL || other.m_PageInfos[i].state != PAGE_STATE_RESIDENT )
@@ -429,17 +432,40 @@ bool MemoryDescriptor::CloneResidentPagesFrom(const MemoryDescriptor& other)
 			continue;
 		}
 
-		unsigned long newPage = Kernel::Instance().GetUserPageManager().AllocatePage();
-		if ( newPage == 0 )
+		if ( srcPage.frameAddress == 0 )
 		{
 			return false;
 		}
 
-		/* 其余页走写时独立副本：逐页复制父进程内容。 */
-		Utility::CopyPage(srcPage.frameAddress, newPage);
+		unsigned int tableIndex =
+			i / PageTable::ENTRY_CNT_PER_PAGETABLE;
+		unsigned int entryIndex =
+			i % PageTable::ENTRY_CNT_PER_PAGETABLE;
+		PageTable* parentTable = other.GetUserPageTableByIndex(tableIndex);
+		if ( parentTable == NULL ||
+			parentTable->m_Entrys[entryIndex].m_Present == 0 )
+		{
+			return false;
+		}
+
+		if ( userPageManager.ShareAsCopyOnWrite(srcPage.frameAddress) == false )
+		{
+			return false;
+		}
+
+		parentTable->m_Entrys[entryIndex].m_ReadWriter = 0;
+		parentPteUpdated = true;
+
 		dstPage.state = PAGE_STATE_RESIDENT;
-		dstPage.frameAddress = newPage;
-		this->MapPage(virtualAddress, newPage, (region.prot & PROT_WRITE) != 0);
+		dstPage.frameAddress = srcPage.frameAddress;
+		/* fork 后父子先共享只读页，首次写入时由 COW 分裂。 */
+		this->MapPage(virtualAddress, srcPage.frameAddress, false);
+	}
+
+	if ( parentPteUpdated )
+	{
+		/* 父进程当前仍在运行，更新其 RW 位后需刷新 TLB。 */
+		X86Assembly::FlushCurrentPageDirectory();
 	}
 
 	return true;
@@ -727,12 +753,27 @@ bool MemoryDescriptor::CheckUserSpace() const
 	return true;
 }
 
-bool MemoryDescriptor::HandlePageFault(unsigned long faultAddress, unsigned long stackPointer, bool isUserMode)
+bool MemoryDescriptor::HandlePageFault(unsigned long faultAddress,
+	unsigned long stackPointer,
+	bool isUserMode,
+	unsigned int errorCode)
 {
 	(void)isUserMode;
+	bool pageNotPresent = (errorCode & 0x1) == 0;
+	bool writeFault = (errorCode & 0x2) != 0;
 
 	/* 超出用户空间上界，一律不是本描述符负责。 */
 	if ( faultAddress >= USER_SPACE_END )
+	{
+		return false;
+	}
+
+	if ( pageNotPresent == false && writeFault )
+	{
+		return this->HandleCopyOnWriteFault(faultAddress);
+	}
+
+	if ( pageNotPresent == false )
 	{
 		return false;
 	}
@@ -763,6 +804,90 @@ bool MemoryDescriptor::HandlePageFault(unsigned long faultAddress, unsigned long
 	}
 
 	return this->EnsurePagePresent(faultAddress);
+}
+
+bool MemoryDescriptor::HandleCopyOnWriteFault(unsigned long faultAddress)
+{
+	if ( this->m_PageInfos == NULL )
+	{
+		return false;
+	}
+
+	unsigned long virtualAddress = AlignDown(faultAddress);
+	if ( virtualAddress >= USER_SPACE_END )
+	{
+		return false;
+	}
+
+	unsigned int pageIndex = this->AddressToPageIndex(virtualAddress);
+	PageInfo& pageInfo = this->m_PageInfos[pageIndex];
+	if ( pageInfo.state != PAGE_STATE_RESIDENT || pageInfo.regionIndex == 0xffff )
+	{
+		return false;
+	}
+
+	const Region& region = this->m_Regions[pageInfo.regionIndex];
+	if ( (region.prot & PROT_WRITE) == 0 ||
+		region.backing.type == BACKING_SHARED_TEXT )
+	{
+		return false;
+	}
+
+	unsigned int tableIndex =
+		pageIndex / PageTable::ENTRY_CNT_PER_PAGETABLE;
+	unsigned int entryIndex =
+		pageIndex % PageTable::ENTRY_CNT_PER_PAGETABLE;
+	PageTable* table = this->GetUserPageTableByIndex(tableIndex);
+	if ( table == NULL || table->m_Entrys[entryIndex].m_Present == 0 )
+	{
+		return false;
+	}
+
+	if ( table->m_Entrys[entryIndex].m_ReadWriter != 0 )
+	{
+		/* 可写页不应进入 COW 路径。 */
+		return false;
+	}
+
+	unsigned long oldPage = pageInfo.frameAddress;
+	if ( oldPage == 0 )
+	{
+		return false;
+	}
+
+	UserPageManager& userPageManager = Kernel::Instance().GetUserPageManager();
+	unsigned short refCount = userPageManager.GetCopyOnWriteRefCount(oldPage);
+	if ( refCount == 0 )
+	{
+		/* 非 COW 页但可写区被只读映射，直接恢复 RW。 */
+		table->m_Entrys[entryIndex].m_ReadWriter = 1;
+		X86Assembly::FlushCurrentPageDirectory();
+		return true;
+	}
+
+	if ( refCount == 1 )
+	{
+		/* 最后一个副本，无需拷贝，直接提权并退出 COW。 */
+		table->m_Entrys[entryIndex].m_ReadWriter = 1;
+		userPageManager.ClearCopyOnWriteRef(oldPage);
+		X86Assembly::FlushCurrentPageDirectory();
+		return true;
+	}
+
+	unsigned long newPage = userPageManager.AllocatePage();
+	if ( newPage == 0 )
+	{
+		return false;
+	}
+
+	/* 仍有多个副本，执行真正的 COW 分裂。 */
+	Utility::CopyPage(oldPage, newPage);
+	userPageManager.ReleaseCopyOnWriteRef(oldPage);
+	pageInfo.frameAddress = newPage;
+	this->MapPage(virtualAddress, newPage, true);
+	userPageManager.ClearCopyOnWriteRef(newPage);
+	X86Assembly::FlushCurrentPageDirectory();
+	return true;
 }
 
 bool MemoryDescriptor::MaterializeBootstrapStack()
@@ -1486,8 +1611,23 @@ void MemoryDescriptor::FreePageInfo(PageInfo& pageInfo, bool releaseSharedText)
 	if ( pageInfo.frameAddress != 0 &&
 		(region.backing.type != BACKING_SHARED_TEXT || releaseSharedText) )
 	{
-		/* 默认不回收共享 Text 页，避免误释放共享正文。 */
-		Kernel::Instance().GetUserPageManager().FreePage(pageInfo.frameAddress);
+		/* COW 页按引用计数回收；非 COW 页直接释放。 */
+		UserPageManager& userPageManager = Kernel::Instance().GetUserPageManager();
+		unsigned short cowRef =
+			userPageManager.GetCopyOnWriteRefCount(pageInfo.frameAddress);
+		if ( cowRef != 0 )
+		{
+			unsigned short remain =
+				userPageManager.ReleaseCopyOnWriteRef(pageInfo.frameAddress);
+			if ( remain == 0 )
+			{
+				userPageManager.FreePage(pageInfo.frameAddress);
+			}
+		}
+		else
+		{
+			userPageManager.FreePage(pageInfo.frameAddress);
+		}
 	}
 
 	pageInfo.state = PAGE_STATE_RESERVED;
@@ -1511,8 +1651,17 @@ void MemoryDescriptor::RemapResidentPages()
 
 		const Region& region = this->m_Regions[this->m_PageInfos[i].regionIndex];
 		unsigned long virtualAddress = USER_SPACE_START + i * PageManager::PAGE_SIZE;
-		this->MapPage(virtualAddress, this->m_PageInfos[i].frameAddress,
-			(region.prot & PROT_WRITE) != 0);
+		bool readWrite = (region.prot & PROT_WRITE) != 0;
+		if ( readWrite )
+		{
+			UserPageManager& userPageManager = Kernel::Instance().GetUserPageManager();
+			if ( userPageManager.GetCopyOnWriteRefCount(this->m_PageInfos[i].frameAddress) != 0 )
+			{
+				readWrite = false;
+			}
+		}
+
+		this->MapPage(virtualAddress, this->m_PageInfos[i].frameAddress, readWrite);
 	}
 }
 

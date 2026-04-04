@@ -77,6 +77,25 @@ public:
 public:
 	UserPageManager();
 	int Initialize();	/* 初始化用户物理页池 bitmap */
+	unsigned long AllocatePages(unsigned long pageCount);
+	unsigned long FreePages(unsigned long pageCount, unsigned long startAddress);
+	unsigned long AllocatePage();
+	unsigned long FreePage(unsigned long startAddress);
+
+	/* 将页纳入 COW 追踪：首次共享时置为2，后续共享继续递增。 */
+	bool ShareAsCopyOnWrite(unsigned long pageAddress);
+	/* 查询页的 COW 引用计数，0 表示未追踪。 */
+	unsigned short GetCopyOnWriteRefCount(unsigned long pageAddress) const;
+	/* COW 引用计数减1，返回新计数。 */
+	unsigned short ReleaseCopyOnWriteRef(unsigned long pageAddress);
+	/* 清除页的 COW 引用计数。 */
+	void ClearCopyOnWriteRef(unsigned long pageAddress);
+
+private:
+	bool ResolvePoolPageIndex(unsigned long pageAddress, unsigned long& pageIndex) const;
+
+private:
+	unsigned short m_CowRefCount[PageManager::MAX_BITMAP_PAGE_COUNT];
 };
 
 #endif

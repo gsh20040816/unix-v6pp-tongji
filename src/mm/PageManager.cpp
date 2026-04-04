@@ -166,12 +166,151 @@ int KernelPageManager::Initialize()
 UserPageManager::UserPageManager()
 	:PageManager()
 {
+	for ( unsigned int i = 0; i < PageManager::MAX_BITMAP_PAGE_COUNT; ++i )
+	{
+		this->m_CowRefCount[i] = 0;
+	}
 }
 
 int UserPageManager::Initialize()
 {
-	return this->InitializePool(
+	int ret = this->InitializePool(
 		USER_PAGE_POOL_START_ADDR,
 		USER_PAGE_POOL_SIZE);
+	for ( unsigned int i = 0; i < PageManager::MAX_BITMAP_PAGE_COUNT; ++i )
+	{
+		this->m_CowRefCount[i] = 0;
+	}
+	return ret;
+}
+
+bool UserPageManager::ResolvePoolPageIndex(unsigned long pageAddress,
+	unsigned long& pageIndex) const
+{
+	if ( pageAddress < USER_PAGE_POOL_START_ADDR )
+	{
+		return false;
+	}
+
+	unsigned long offset = pageAddress - USER_PAGE_POOL_START_ADDR;
+	if ( offset % PageManager::PAGE_SIZE != 0 )
+	{
+		return false;
+	}
+
+	pageIndex = offset / PageManager::PAGE_SIZE;
+	if ( pageIndex >= this->GetTotalPageCount() )
+	{
+		return false;
+	}
+
+	return true;
+}
+
+unsigned long UserPageManager::AllocatePages(unsigned long pageCount)
+{
+	unsigned long startAddress = PageManager::AllocatePages(pageCount);
+	if ( startAddress == 0 )
+	{
+		return 0;
+	}
+
+	unsigned long startIndex = 0;
+	if ( this->ResolvePoolPageIndex(startAddress, startIndex) )
+	{
+		for ( unsigned long i = 0; i < pageCount; ++i )
+		{
+			this->m_CowRefCount[startIndex + i] = 0;
+		}
+	}
+
+	return startAddress;
+}
+
+unsigned long UserPageManager::FreePages(unsigned long pageCount,
+	unsigned long startAddress)
+{
+	unsigned long startIndex = 0;
+	if ( this->ResolvePoolPageIndex(startAddress, startIndex) )
+	{
+		for ( unsigned long i = 0; i < pageCount; ++i )
+		{
+			this->m_CowRefCount[startIndex + i] = 0;
+		}
+	}
+
+	return PageManager::FreePages(pageCount, startAddress);
+}
+
+unsigned long UserPageManager::AllocatePage()
+{
+	return this->AllocatePages(1);
+}
+
+unsigned long UserPageManager::FreePage(unsigned long startAddress)
+{
+	return this->FreePages(1, startAddress);
+}
+
+bool UserPageManager::ShareAsCopyOnWrite(unsigned long pageAddress)
+{
+	unsigned long pageIndex = 0;
+	if ( this->ResolvePoolPageIndex(pageAddress, pageIndex) == false )
+	{
+		return false;
+	}
+
+	if ( this->m_CowRefCount[pageIndex] == 0 )
+	{
+		this->m_CowRefCount[pageIndex] = 2;
+		return true;
+	}
+
+	if ( this->m_CowRefCount[pageIndex] == 0xffff )
+	{
+		return false;
+	}
+
+	this->m_CowRefCount[pageIndex]++;
+	return true;
+}
+
+unsigned short UserPageManager::GetCopyOnWriteRefCount(unsigned long pageAddress) const
+{
+	unsigned long pageIndex = 0;
+	if ( this->ResolvePoolPageIndex(pageAddress, pageIndex) == false )
+	{
+		return 0;
+	}
+
+	return this->m_CowRefCount[pageIndex];
+}
+
+unsigned short UserPageManager::ReleaseCopyOnWriteRef(unsigned long pageAddress)
+{
+	unsigned long pageIndex = 0;
+	if ( this->ResolvePoolPageIndex(pageAddress, pageIndex) == false )
+	{
+		return 0;
+	}
+
+	if ( this->m_CowRefCount[pageIndex] == 0 )
+	{
+		return 0;
+	}
+
+	this->m_CowRefCount[pageIndex]--;
+	return this->m_CowRefCount[pageIndex];
+}
+
+void UserPageManager::ClearCopyOnWriteRef(unsigned long pageAddress)
+{
+	unsigned long pageIndex = 0;
+	if ( this->ResolvePoolPageIndex(pageAddress, pageIndex) == false )
+	{
+		return;
+	}
+
+	this->m_CowRefCount[pageIndex] = 0;
 }
 

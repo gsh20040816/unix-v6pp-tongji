@@ -300,7 +300,15 @@ void Exception::PageFault(struct pt_regs* regs, struct pte_context* context)
 
     /*由缺页异常处理程序每次扩展一页，如果合理的缺了多张堆栈页面，那就多执行几次缺页异常，直到把这些页面补齐*/
 	if ( pageNotPresent && isUserAddress &&
-		md.HandlePageFault(cr2, stackPointer, isUserMode) )
+		md.HandlePageFault(cr2, stackPointer, isUserMode, context->error_code) )
+	{
+		return;
+	}
+
+	bool writeProtectFault =
+		(pageNotPresent == false) && ((context->error_code & 0x2) != 0);
+	if ( writeProtectFault && isUserAddress &&
+		md.HandlePageFault(cr2, stackPointer, isUserMode, context->error_code) )
 	{
 		return;
 	}
