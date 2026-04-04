@@ -535,9 +535,15 @@ void ProcessManager::Exec()
 		argv[i] = (char *)esp;
 	}
 
-	/* 后续存放的是int型数值，这里以16字节边界对齐 */
-	desAddress = desAddress & 0xFFFFFFF0;
-	esp = esp & 0xFFFFFFF0;
+	/*
+	 * 后续存放的是int型数值，这里让用户栈按16字节对齐。
+	 * 关键点：desAddress 与 esp 必须保持固定偏移关系，
+	 * 否则 fakeStack 非页对齐时会把 argc/argv 整体错位。
+	 */
+	unsigned int alignedEsp = esp & 0xFFFFFFF0;
+	unsigned int alignDelta = esp - alignedEsp;
+	desAddress -= alignDelta;
+	esp = alignedEsp;
 
 	/* 复制argc和argv[] */
 	int endValue = 0;
