@@ -70,7 +70,7 @@ clean:
 
 bochs: all
 	@echo "Starting bochs in $(UNIXV6PP_DIR)"
-	cd $(UNIXV6PP_DIR) && BXSHARE="$${OOS_LINUX_BXSHARE:-$(BOCHS_BXSHARE)}" bochs -q -f bochsrc_nodebug.bxrc
+	cd $(UNIXV6PP_DIR) && BXSHARE="$${OOS_LINUX_BXSHARE:-$(BOCHS_BXSHARE)}" bochs -q -f bochsrc_gui.bxrc
 
 bochs-gdb: all
 	@echo "Starting bochs-gdb in $(UNIXV6PP_DIR)"

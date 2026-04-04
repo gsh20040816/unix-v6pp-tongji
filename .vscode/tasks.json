@@ -86,18 +86,20 @@
 		{
 			"type": "shell",
 			"label": "OOS run bochs",
-			"command": "make",
+			"command": "bochs-gdb",
 			"args": [
-				"bochs"
+				"-q",
+				"-f",
+				"bochsrc_nodebug.bxrc"
 			],
 			"options": {
-				"cwd": "${workspaceFolder}"
+				"cwd": "${workspaceFolder}/targets/UNIXV6++"
 			},
 			"detail": "在 Linux 本机启动 bochs，不调试",
 			"presentation": {
 				"reveal": "always",
 				"panel": "dedicated",
-				"focus": false,
+				"focus": true,
 				"clear": false
 			},
 			"problemMatcher": []
