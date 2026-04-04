@@ -18,7 +18,6 @@ src/shell/OBJS/
 .vscode/compile_commands.json
 .vscode/configurationCache.log
 .vscode/dryrun.log
-.vscode/make-dryrun-full.log
 .vscode/targets.log
 .vscode/c_cpp_properties.json
 
