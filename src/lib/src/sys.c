@@ -207,6 +207,24 @@ int getUserFreeMemory()
 	return -1;
 }
 
+int getKernelHeapFreeMemory()
+{
+	int res;
+	__asm__ volatile ("int $0x80":"=a"(res):"a"(52));
+	if ( res >= 0 )
+		return res;
+	return -1;
+}
+
+int getKernelPageFreeMemory()
+{
+	int res;
+	__asm__ volatile ("int $0x80":"=a"(res):"a"(53));
+	if ( res >= 0 )
+		return res;
+	return -1;
+}
+
 unsigned int fakeedata = 0;
 int sbrk(int increment)
 {

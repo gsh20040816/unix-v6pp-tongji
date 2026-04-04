@@ -64,8 +64,8 @@ SystemCallTableEntry SystemCall::m_SystemEntranceTable[SYSTEM_CALL_NUM] =
 	{ 2, &Sys_GetUsrPt},			/* 49 = getusrpt	*/
 	{ 0, &Sys_GetUsrMem},			/* 50 = getusrmem	*/
 	{ 0, &Sys_Shutdown},			/* 51 = shutdown	*/
-	{ 0, &Sys_Nosys	},				/* 52 = nosys	*/
-	{ 0, &Sys_Nosys	},				/* 53 = nosys	*/
+	{ 0, &Sys_GetKerHeapMem},		/* 52 = getkerheapmem */
+	{ 0, &Sys_GetKerPageMem},		/* 53 = getkerpagemem */
 	{ 0, &Sys_Nosys	},				/* 54 = nosys	*/
 	{ 0, &Sys_Nosys	},				/* 55 = nosys	*/
 	{ 0, &Sys_Nosys	},				/* 56 = nosys	*/
@@ -762,6 +762,49 @@ int SystemCall::Sys_GetUsrMem()
 	for ( unsigned int i = 0; i < PageManager::MEMORY_MAP_ARRAY_SIZE; ++i )
 	{
 		freePageCount += userPageManager.map[i].m_Size;
+	}
+
+	unsigned long freeBytes = freePageCount * PageManager::PAGE_SIZE;
+	if ( freeBytes > 0x7fffffffUL )
+	{
+		freeBytes = 0x7fffffffUL;
+	}
+
+	u.u_ar0[User::EAX] = (int)freeBytes;
+	return 0;	/* GCC likes it ! */
+}
+
+/*	52 = getkerheapmem	count = 0	*/
+int SystemCall::Sys_GetKerHeapMem()
+{
+	User& u = Kernel::Instance().GetUser();
+	KernelAllocator& kernelAllocator = Kernel::Instance().GetKernelAllocator();
+	unsigned long freeBytes = 0;
+
+	for ( unsigned int i = 0; i < KernelAllocator::MEMORY_MAP_ARRAY_SIZE; ++i )
+	{
+		freeBytes += kernelAllocator.map[i].m_Size;
+	}
+
+	if ( freeBytes > 0x7fffffffUL )
+	{
+		freeBytes = 0x7fffffffUL;
+	}
+
+	u.u_ar0[User::EAX] = (int)freeBytes;
+	return 0;	/* GCC likes it ! */
+}
+
+/*	53 = getkerpagemem	count = 0	*/
+int SystemCall::Sys_GetKerPageMem()
+{
+	User& u = Kernel::Instance().GetUser();
+	KernelPageManager& kernelPageManager = Kernel::Instance().GetKernelPageManager();
+	unsigned long freePageCount = 0;
+
+	for ( unsigned int i = 0; i < PageManager::MEMORY_MAP_ARRAY_SIZE; ++i )
+	{
+		freePageCount += kernelPageManager.map[i].m_Size;
 	}
 
 	unsigned long freeBytes = freePageCount * PageManager::PAGE_SIZE;

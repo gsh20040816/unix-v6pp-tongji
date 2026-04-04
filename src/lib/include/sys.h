@@ -101,6 +101,12 @@ int getUserPageTable(struct user_page_snapshot_entry* entries, int maxEntries);
 /* 获取用户区当前可用物理内存大小(字节) */
 int getUserFreeMemory();
 
+/* 获取核心堆当前可用内存大小(字节) */
+int getKernelHeapFreeMemory();
+
+/* 获取核心页表区当前可用内存大小(字节) */
+int getKernelPageFreeMemory();
+
 
 
 #endif

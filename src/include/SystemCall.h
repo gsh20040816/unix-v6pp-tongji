@@ -229,7 +229,13 @@ private:
 	/*	51 = shutdown	count = 0	*/
 	static int Sys_Shutdown();
 
-	/*	52 ~ 63 = nosys	count = 0	*/	
+	/*	52 = getkerheapmem	count = 0	*/
+	static int Sys_GetKerHeapMem();
+
+	/*	53 = getkerpagemem	count = 0	*/
+	static int Sys_GetKerPageMem();
+
+	/*	54 ~ 63 = nosys	count = 0	*/	
 
 private:
 	/*系统调用入口表的声明*/
