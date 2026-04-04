@@ -8,6 +8,10 @@
 
 namespace
 {
+	/*
+	 * 将 Text 后备偏移解析为物理地址。
+	 * 注意：Text 物理页地址改为 x_addr[] 离散存放，不能再按单基址连续计算。
+	 */
 	static bool ResolveTextPhysicalAddress(const Text* text,
 		unsigned long backingOffset,
 		unsigned long& textPhysicalAddress)
@@ -158,6 +162,7 @@ void MemoryDescriptor::Initialize()
 
 	if ( this->m_PageDirectory == NULL )
 	{
+		/* 页目录必须按页分配，供 CR3 使用。 */
 		unsigned long pageDirectory =
 			kernelPageManager.AllocMemory(PageManager::PAGE_SIZE);
 		if ( pageDirectory == 0 )
@@ -174,6 +179,7 @@ void MemoryDescriptor::Initialize()
 			Utility::Panic("USER_PRIVATE_PAGE_TABLE_CNT must be 1");
 		}
 
+		/* 当前设计只维护 1# 私有用户页表，0# 由 Machine 统一维护。 */
 		unsigned long pageTables =
 			kernelPageManager.AllocMemory(PageManager::PAGE_SIZE);
 		if ( pageTables == 0 )
@@ -282,6 +288,10 @@ void MemoryDescriptor::CloneFrom(const MemoryDescriptor& other)
 
 	for ( unsigned int i = 0; i < USER_PAGE_COUNT; ++i )
 	{
+		/*
+		 * 仅继承布局与后备信息，不继承对方页帧。
+		 * 由 CloneResidentPagesFrom 决定是否复制/共享物理页。
+		 */
 		this->m_PageInfos[i].state = other.m_PageInfos[i].state == PAGE_STATE_FREE ? PAGE_STATE_FREE : PAGE_STATE_RESERVED;
 		this->m_PageInfos[i].flags = other.m_PageInfos[i].flags;
 		this->m_PageInfos[i].regionIndex = other.m_PageInfos[i].regionIndex;
@@ -317,6 +327,7 @@ bool MemoryDescriptor::CloneResidentPagesFrom(const MemoryDescriptor& other)
 
 		if ( region.type == REGION_RUNTIME )
 		{
+			/* runtime 低地址页固定映射到物理 0（历史兼容语义）。 */
 			dstPage.state = PAGE_STATE_RESIDENT;
 			dstPage.frameAddress = 0;
 			this->MapPage(0, 0, true);
@@ -326,6 +337,7 @@ bool MemoryDescriptor::CloneResidentPagesFrom(const MemoryDescriptor& other)
 		if ( region.backing.type == BACKING_SHARED_TEXT && other.m_Owner != NULL &&
 			other.m_Owner->p_textp != NULL )
 		{
+			/* Text 页共享：新进程直接映射同一物理页，不做复制。 */
 			unsigned long textPhysicalAddress = 0;
 			if ( ResolveTextPhysicalAddress(other.m_Owner->p_textp,
 				srcPage.backingOffset,
@@ -345,6 +357,7 @@ bool MemoryDescriptor::CloneResidentPagesFrom(const MemoryDescriptor& other)
 			return false;
 		}
 
+		/* 其余页走写时独立副本：逐页复制父进程内容。 */
 		Utility::CopyPage(srcPage.frameAddress, newPage);
 		dstPage.state = PAGE_STATE_RESIDENT;
 		dstPage.frameAddress = newPage;
@@ -371,6 +384,11 @@ bool MemoryDescriptor::ConfigureExecutableLayout(unsigned long entryPoint,
 	unsigned long codeEnd = AlignUp(codeStart + codeSize);
 	unsigned long dataEnd = AlignUp(dataStart + dataSize);
 	unsigned long stackBottom = AlignDown(USER_SPACE_END - stackSize);
+
+	/*
+	 * 区域顺序固定为 runtime -> code -> data -> heap -> stack，
+	 * 便于后续 CheckUserSpace 用“相邻不重叠”规则直接校验。
+	 */
 
 	if ( this->AddRegion(REGION_RUNTIME, 0, PageManager::PAGE_SIZE,
 			PROT_READ | PROT_WRITE | PROT_EXEC | PROT_USER, PAGE_FLAG_NONE, BACKING_ANON) == false )
@@ -432,6 +450,9 @@ bool MemoryDescriptor::CheckUserSpace() const
 
 bool MemoryDescriptor::HandlePageFault(unsigned long faultAddress, unsigned long stackPointer, bool isUserMode)
 {
+	(void)isUserMode;
+
+	/* 超出用户空间上界，一律不是本描述符负责。 */
 	if ( faultAddress >= USER_SPACE_END )
 	{
 		return false;
@@ -447,6 +468,7 @@ bool MemoryDescriptor::HandlePageFault(unsigned long faultAddress, unsigned long
 	if ( region == NULL && stack != NULL &&
 		faultAddress >= stackPointer - 8 && faultAddress < stack->start )
 	{
+		/* 栈向下增长时，必须保证与 heap 之间至少保留一页缓冲。 */
 		if ( stack->start <= this->m_HeapBreak + PageManager::PAGE_SIZE )
 		{
 			return false;
@@ -503,6 +525,7 @@ bool MemoryDescriptor::MaterializeBootstrapStack()
 		return false;
 	}
 
+	/* 引导阶段仍保留 runtime 页的立即映射，避免早期路径缺页依赖。 */
 	unsigned int runtimePageIndex = this->AddressToPageIndex(0);
 	this->m_PageInfos[runtimePageIndex].state = PAGE_STATE_RESIDENT;
 	this->m_PageInfos[runtimePageIndex].frameAddress = 0;
@@ -529,6 +552,7 @@ bool MemoryDescriptor::MaterializeExecutableImage()
 	const Region* stack = this->FindRegionByType(REGION_STACK);
 	if ( stack != NULL )
 	{
+		/* 当前策略：仅用户栈在 Exec 时预分配，其余页全部按需缺页补入。 */
 		for ( unsigned long va = stack->start; va < stack->end; va += PageManager::PAGE_SIZE )
 		{
 			if ( this->AllocateZeroedPage(va) == false )
@@ -562,10 +586,12 @@ bool MemoryDescriptor::EnsurePagePresent(unsigned long faultAddress)
 
 	const Region& region = this->m_Regions[pageInfo.regionIndex];
 	bool ok = false;
+	/* 按区域后备类型分派补页策略。 */
 	switch ( region.backing.type )
 	{
 	case BACKING_ZERO:
 	case BACKING_ANON:
+		/* 匿名/零页后备：直接分配清零页。 */
 		ok = this->AllocateZeroedPage(virtualAddress);
 		break;
 	case BACKING_SHARED_TEXT:
@@ -582,6 +608,10 @@ bool MemoryDescriptor::EnsurePagePresent(unsigned long faultAddress)
 				return false;
 			}
 
+			/*
+			 * Text 缺页时继承当前页表项 RW 位，兼容 Relocate 期间代码页临时可写。
+			 * Relocate 完成后再按既有流程恢复只读。
+			 */
 			bool readWrite = false;
 			unsigned int tableIndex =
 				pageIndex / PageTable::ENTRY_CNT_PER_PAGETABLE;
@@ -597,6 +627,7 @@ bool MemoryDescriptor::EnsurePagePresent(unsigned long faultAddress)
 		}
 		break;
 	case BACKING_EXEC_FILE:
+		/* TODO: 后续可在此实现按 backingOffset 从可执行文件回填单页。 */
 		ok = this->AllocateZeroedPage(virtualAddress);
 		break;
 	default:
@@ -605,6 +636,7 @@ bool MemoryDescriptor::EnsurePagePresent(unsigned long faultAddress)
 
 	if ( ok )
 	{
+		/* 页表已更新，刷新当前页目录使 CPU 立即可见。 */
 		X86Assembly::FlushCurrentPageDirectory();
 	}
 	return ok;
@@ -743,6 +775,7 @@ bool MemoryDescriptor::SetHeapBreak(unsigned long newBreak)
 	unsigned long oldEnd = heap->end;
 	if ( alignedBreak < oldEnd )
 	{
+		/* 收缩堆：释放已驻留页并清空对应 PageInfo。 */
 		for ( unsigned long va = alignedBreak; va < oldEnd; va += PageManager::PAGE_SIZE )
 		{
 			unsigned int pageIndex = this->AddressToPageIndex(va);
@@ -759,6 +792,7 @@ bool MemoryDescriptor::SetHeapBreak(unsigned long newBreak)
 
 	if ( alignedBreak > oldAlignedEnd )
 	{
+		/* 扩展堆：只保留页元数据，不立即分配物理页。 */
 		unsigned int startPage = this->AddressToPageIndex(oldAlignedEnd);
 		unsigned int endPage = this->AddressToPageIndex(alignedBreak - 1);
 		for ( unsigned int i = startPage; i <= endPage; ++i )
@@ -793,6 +827,7 @@ void MemoryDescriptor::GrowStackByPage()
 
 	unsigned int regionIndex = (unsigned int)(stack - this->m_Regions);
 	unsigned int newPageIndex = this->AddressToPageIndex(newStart);
+	/* 扩栈仅登记为 RESERVED，首次访问时再由 EnsurePagePresent 分配物理页。 */
 	this->m_PageInfos[newPageIndex].state = PAGE_STATE_RESERVED;
 	this->m_PageInfos[newPageIndex].flags = stack->flags;
 	this->m_PageInfos[newPageIndex].regionIndex = (unsigned short)regionIndex;
@@ -950,6 +985,10 @@ bool MemoryDescriptor::AddRegion(RegionType type,
 	}
 
 	unsigned int idx = this->m_RegionCount++;
+	/*
+	 * 区域元数据按声明顺序追加。
+	 * 目前不做插入排序，调用方负责按地址顺序传入。
+	 */
 	this->m_Regions[idx].start = start;
 	this->m_Regions[idx].end = end;
 	this->m_Regions[idx].prot = prot;
@@ -983,10 +1022,12 @@ void MemoryDescriptor::ReservePagesForRegion(unsigned int regionIndex)
 		if ( this->m_PageInfos[i].state == PAGE_STATE_RESIDENT &&
 			this->m_PageInfos[i].regionIndex == regionIndex )
 		{
+			/* 已驻留页保留现状，只更新标记。 */
 			this->m_PageInfos[i].flags = region.flags;
 			continue;
 		}
 
+		/* 未驻留页进入 RESERVED，等待缺页按需物化。 */
 		this->m_PageInfos[i].state = PAGE_STATE_RESERVED;
 		this->m_PageInfos[i].flags = region.flags;
 		this->m_PageInfos[i].regionIndex = regionIndex;
@@ -1011,6 +1052,7 @@ bool MemoryDescriptor::AllocateZeroedPage(unsigned long virtualAddress)
 		return false;
 	}
 
+	/* 分配后立即清零，避免泄露旧页内容到用户空间。 */
 	Utility::ZeroPage(newPage);
 	pageInfo.state = PAGE_STATE_RESIDENT;
 	pageInfo.frameAddress = newPage;
@@ -1026,6 +1068,7 @@ bool MemoryDescriptor::ShareTextPage(unsigned long virtualAddress,
 	PageInfo& pageInfo = this->m_PageInfos[pageIndex];
 	pageInfo.state = PAGE_STATE_RESIDENT;
 	pageInfo.frameAddress = textPhysicalAddress;
+	/* 共享页不分配新物理内存，只建立页表映射。 */
 	this->MapPage(virtualAddress, textPhysicalAddress, readWrite);
 	return true;
 }
@@ -1041,6 +1084,7 @@ void MemoryDescriptor::FreePageInfo(PageInfo& pageInfo, bool releaseSharedText)
 	if ( pageInfo.frameAddress != 0 &&
 		(region.backing.type != BACKING_SHARED_TEXT || releaseSharedText) )
 	{
+		/* 默认不回收共享 Text 页，避免误释放共享正文。 */
 		Kernel::Instance().GetUserPageManager().FreeMemory(PageManager::PAGE_SIZE, pageInfo.frameAddress);
 	}
 
@@ -1086,6 +1130,7 @@ void MemoryDescriptor::MapPage(unsigned long virtualAddress, unsigned long physi
 		return;
 	}
 
+	/* 统一以用户态可访问映射写入，RW 由调用方决定。 */
 	table->m_Entrys[entryIndex].m_Present = 1;
 	table->m_Entrys[entryIndex].m_UserSupervisor = 1;
 	table->m_Entrys[entryIndex].m_ReadWriter = readWrite ? 1 : 0;
