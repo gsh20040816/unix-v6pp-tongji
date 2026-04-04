@@ -45,7 +45,7 @@ void ATADriver::ATAHandler(struct pt_regs *reg, struct pt_context *context)
 	return;
 }
 
-void ATADriver::DevStart(struct Buf* bp)
+void ATADriver::DevStart(Buf* bp)
 {
 	if(bp == NULL)
 	{

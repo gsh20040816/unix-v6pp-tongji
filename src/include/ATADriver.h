@@ -3,6 +3,8 @@
 
 #include "Regs.h"
 
+class Buf;
+
 class ATADriver
 {
 public:
@@ -10,7 +12,7 @@ public:
 	static void ATAHandler(struct pt_regs* reg, struct pt_context* context);
 
 	/* 设置磁盘寄存器，启动磁盘进行I/O操作 */
-	static void DevStart(struct Buf* bp);
+	static void DevStart(Buf* bp);
 
 private:
 	/* 检查控制器是否就绪，返回值非零表示就绪，才可以发送命令 */

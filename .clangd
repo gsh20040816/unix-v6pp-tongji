@@ -17,6 +17,7 @@ CompileFlags:
 ---
 If:
   PathMatch: .*\.c
+  PathExclude: .*src/boot/support\.c$
 CompileFlags:
   Add:
     - -std=gnu89
