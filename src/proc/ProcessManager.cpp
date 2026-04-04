@@ -480,6 +480,11 @@ void ProcessManager::Exec()
     if ( parser.HeaderLoad(pInode)==false )
     {
         fileMgr.m_InodeTable->IPut(pInode);
+		if ( this->ExeCnt >= NEXEC )
+		{
+			WakeUpAll((unsigned long)&ExeCnt);
+		}
+		this->ExeCnt--;
         return;
     }
 
@@ -683,6 +688,22 @@ void ProcessManager::Exec()
 	unsigned int newSize = ProcessManager::USIZE + u.u_procp->p_memory.GetWritableSize();
 	if ( false == u.u_procp->p_memory.CheckUserSpace() )
 	{
+		u.u_procp->p_memory.ReleaseResidentPages(false);
+		if ( u.u_procp->p_textp != NULL )
+		{
+			u.u_procp->p_textp->XFree();
+			u.u_procp->p_textp = NULL;
+		}
+		u.u_procp->p_size = ProcessManager::USIZE;
+
+		delete [] fakeStack;
+		fileMgr.m_InodeTable->IPut(pInode);
+		if ( this->ExeCnt >= NEXEC )
+		{
+			WakeUpAll((unsigned long)&ExeCnt);
+		}
+		this->ExeCnt--;
+		u.u_error = User::ENOMEM;
 		return;   // out of virtual space. fail
 	}
 
@@ -696,6 +717,21 @@ void ProcessManager::Exec()
 
 	if ( u.u_procp->p_memory.MaterializeExecutableImage() == false )
 	{
+		u.u_procp->p_memory.ReleaseResidentPages(false);
+		if ( u.u_procp->p_textp != NULL )
+		{
+			u.u_procp->p_textp->XFree();
+			u.u_procp->p_textp = NULL;
+		}
+		u.u_procp->p_size = ProcessManager::USIZE;
+
+		delete [] fakeStack;
+		fileMgr.m_InodeTable->IPut(pInode);
+		if ( this->ExeCnt >= NEXEC )
+		{
+			WakeUpAll((unsigned long)&ExeCnt);
+		}
+		this->ExeCnt--;
 		u.u_error = User::ENOMEM;
 		return;
 	}

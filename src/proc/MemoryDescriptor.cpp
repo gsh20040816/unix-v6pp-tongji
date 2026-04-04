@@ -8,76 +8,6 @@
 
 namespace
 {
-	static unsigned int BytesToPageCount(unsigned long size)
-	{
-		if ( size == 0 )
-		{
-			return 0;
-		}
-		return (unsigned int)((size + PageManager::PAGE_SIZE - 1) / PageManager::PAGE_SIZE);
-	}
-
-	static unsigned long AllocContiguousPages(KernelPageManager& pageManager, unsigned long size)
-	{
-		unsigned int pageCount = BytesToPageCount(size);
-		if ( pageCount == 0 )
-		{
-			return 0;
-		}
-
-		unsigned long base = 0;
-		for ( unsigned int i = 0; i < pageCount; ++i )
-		{
-			unsigned long page = pageManager.AllocMemory(PageManager::PAGE_SIZE);
-			if ( page == 0 )
-			{
-				if ( base != 0 )
-				{
-					for ( unsigned int j = 0; j < i; ++j )
-					{
-						pageManager.FreeMemory(PageManager::PAGE_SIZE,
-							base + j * PageManager::PAGE_SIZE);
-					}
-				}
-				return 0;
-			}
-
-			if ( i == 0 )
-			{
-				base = page;
-			}
-			else if ( page != base + i * PageManager::PAGE_SIZE )
-			{
-				pageManager.FreeMemory(PageManager::PAGE_SIZE, page);
-				for ( unsigned int j = 0; j < i; ++j )
-				{
-					pageManager.FreeMemory(PageManager::PAGE_SIZE,
-						base + j * PageManager::PAGE_SIZE);
-				}
-				return 0;
-			}
-		}
-
-		return base;
-	}
-
-	static void FreeContiguousPages(KernelPageManager& pageManager,
-		unsigned long base,
-		unsigned long size)
-	{
-		unsigned int pageCount = BytesToPageCount(size);
-		if ( base == 0 || pageCount == 0 )
-		{
-			return;
-		}
-
-		for ( unsigned int i = 0; i < pageCount; ++i )
-		{
-			pageManager.FreeMemory(PageManager::PAGE_SIZE,
-				base + i * PageManager::PAGE_SIZE);
-		}
-	}
-
 	static bool ResolveTextPhysicalAddress(const Text* text,
 		unsigned long backingOffset,
 		unsigned long& textPhysicalAddress)
@@ -228,7 +158,8 @@ void MemoryDescriptor::Initialize()
 
 	if ( this->m_PageDirectory == NULL )
 	{
-		unsigned long pageDirectory = AllocContiguousPages(kernelPageManager, sizeof(PageDirectory));
+		unsigned long pageDirectory =
+			kernelPageManager.AllocMemory(PageManager::PAGE_SIZE);
 		if ( pageDirectory == 0 )
 		{
 			Utility::Panic("Out of kernel memory for page directory");
@@ -238,8 +169,13 @@ void MemoryDescriptor::Initialize()
 
 	if ( this->m_UserPageTableArray == NULL )
 	{
-		unsigned long pageTables = AllocContiguousPages(kernelPageManager,
-			sizeof(PageTable) * USER_PRIVATE_PAGE_TABLE_CNT);
+		if ( USER_PRIVATE_PAGE_TABLE_CNT != 1 )
+		{
+			Utility::Panic("USER_PRIVATE_PAGE_TABLE_CNT must be 1");
+		}
+
+		unsigned long pageTables =
+			kernelPageManager.AllocMemory(PageManager::PAGE_SIZE);
 		if ( pageTables == 0 )
 		{
 			Utility::Panic("Out of kernel memory for user page tables");
@@ -286,17 +222,17 @@ void MemoryDescriptor::Release()
 
 	if ( this->m_UserPageTableArray != NULL )
 	{
-		FreeContiguousPages(kernelPageManager,
-			(unsigned long)this->m_UserPageTableArray - Machine::KERNEL_SPACE_START_ADDRESS,
-			sizeof(PageTable) * USER_PRIVATE_PAGE_TABLE_CNT);
+		kernelPageManager.FreeMemory(
+			PageManager::PAGE_SIZE,
+			(unsigned long)this->m_UserPageTableArray - Machine::KERNEL_SPACE_START_ADDRESS);
 		this->m_UserPageTableArray = NULL;
 	}
 
 	if ( this->m_PageDirectory != NULL )
 	{
-		FreeContiguousPages(kernelPageManager,
-			(unsigned long)this->m_PageDirectory - Machine::KERNEL_SPACE_START_ADDRESS,
-			sizeof(PageDirectory));
+		kernelPageManager.FreeMemory(
+			PageManager::PAGE_SIZE,
+			(unsigned long)this->m_PageDirectory - Machine::KERNEL_SPACE_START_ADDRESS);
 		this->m_PageDirectory = NULL;
 	}
 
@@ -1168,29 +1104,6 @@ void MemoryDescriptor::MapPage(unsigned long virtualAddress, unsigned long physi
 	table->m_Entrys[entryIndex].m_ReadWriter = readWrite ? 1 : 0;
 	table->m_Entrys[entryIndex].m_PageBaseAddress =
 		physicalAddress / PageManager::PAGE_SIZE;
-}
-
-void MemoryDescriptor::MarkRangeResident(unsigned long virtualAddress,
-										 unsigned long size,
-										 unsigned long physicalAddress,
-										 bool readWrite)
-{
-	if ( size == 0 )
-	{
-		return;
-	}
-
-	unsigned long start = AlignDown(virtualAddress);
-	unsigned long end = AlignUp(virtualAddress + size);
-
-	for ( unsigned long va = start, pa = physicalAddress; va < end;
-		  va += PageManager::PAGE_SIZE, pa += PageManager::PAGE_SIZE )
-	{
-		unsigned int pageIndex = this->AddressToPageIndex(va);
-		this->m_PageInfos[pageIndex].state = PAGE_STATE_RESIDENT;
-		this->m_PageInfos[pageIndex].frameAddress = pa;
-		this->MapPage(va, pa, readWrite);
-	}
 }
 
 MemoryDescriptor::Region* MemoryDescriptor::FindRegionByType(RegionType type)

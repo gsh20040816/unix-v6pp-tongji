@@ -178,10 +178,6 @@ private:
 
 	unsigned int AddressToPageIndex(unsigned long address) const;
 	void MapPage(unsigned long virtualAddress, unsigned long physicalAddress, bool readWrite);
-	void MarkRangeResident(unsigned long virtualAddress,
-						   unsigned long size,
-						   unsigned long physicalAddress,
-						   bool readWrite);
 	Region* FindRegionByType(RegionType type);
 	const Region* FindRegionByType(RegionType type) const;
 
