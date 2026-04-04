@@ -4,7 +4,7 @@
 #include "Kernel.h"
 #include "Video.h"
 #include "Utility.h"
-#include "PEParser.h"
+#include "ELFParser.h"
 #include "Regs.h"
 #include "MemoryDescriptor.h"
 
@@ -449,7 +449,7 @@ void ProcessManager::Exec()
 		return;
 	}
 
-	PEParser parser;
+	ELFParser parser;
 
     if ( parser.HeaderLoad(pInode)==false )
     {
@@ -469,6 +469,19 @@ void ProcessManager::Exec()
 	 * 注意：这里必须在ConfigureExecutableLayout()之前完成参数备份，否则旧用户栈映射会被清空。
 	 */
 	int allocLength = (parser.StackSize + PageManager::PAGE_SIZE * 2 - 1) >> 13 << 13;
+	Diagnose::Write(
+		"Exec ELF layout: entry=%x text=%x/%x data=%x/%x ro=%x/%x bss=%x/%x stack=%x fake=%x\n",
+		parser.EntryPointAddress,
+		parser.TextAddress,
+		parser.TextSize,
+		parser.DataAddress,
+		parser.DataSize,
+		parser.RodataAddress,
+		parser.RodataSize,
+		parser.BssAddress,
+		parser.BssSize,
+		parser.StackSize,
+		allocLength);
 	unsigned char* fakeStack = new unsigned char[allocLength];
 	if ( fakeStack == NULL )
 	{
@@ -555,7 +568,7 @@ void ProcessManager::Exec()
 	}
 	u.u_procp->p_size = ProcessManager::USIZE;
 
-	/* 获取分析PE头结构得到正文段的起始地址、长度 */
+	/* 解析 ELF 头并获取正文段/数据段等布局信息。 */
 	if ( u.u_procp->p_memory.ConfigureExecutableLayout(parser.EntryPointAddress,
 			parser.TextAddress,
 			parser.TextSize,

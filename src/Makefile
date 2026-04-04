@@ -1,67 +1,31 @@
 include Makefile.inc
 
-.PHONY : all build deploy run clean $(DIRS)
+.PHONY : all build deploy run clean prepare_dirs $(DIRS)
 
-KERNEL_EXE = $(TARGET)\kernel.exe
-KERNEL_BIN = $(TARGET)\kernel.bin
-KERNEL_SYM = $(TARGET)\kernel.sym
-KERNEL_ASM = $(TARGET)\kernel.asm
+KERNEL_EXE = $(TARGET)/kernel.exe
+KERNEL_BIN = $(TARGET)/kernel.bin
+KERNEL_SYM = $(TARGET)/kernel.sym
+KERNEL_ASM = $(TARGET)/kernel.asm
 
-IMG_BOOT = $(IMGTARGET)\boot.bin
-IMG_KERNEL_BIN = $(IMGTARGET)\kernel.bin
-IMG_KERNEL_SYM = $(IMGTARGET)\kernel.sym
-IMG_KERNEL_ASM = $(IMGTARGET)\kernel.asm
+IMG_BOOT = $(IMGTARGET)/boot.bin
+IMG_KERNEL_BIN = $(IMGTARGET)/kernel.bin
+IMG_KERNEL_SYM = $(IMGTARGET)/kernel.sym
+IMG_KERNEL_ASM = $(IMGTARGET)/kernel.asm
 
-WORKSPACE_BOOT = $(V6PP_FS_EDIT_WORKSPACE)\boot.bin
-WORKSPACE_KERNEL = $(V6PP_FS_EDIT_WORKSPACE)\kernel.bin
-WORKSPACE_IMG = $(V6PP_FS_EDIT_WORKSPACE)\$(IMG)
-FINAL_IMG = ..\targets\UNIXV6++\$(IMG)
+WORKSPACE_BOOT = $(V6PP_FS_EDIT_WORKSPACE)/boot.bin
+WORKSPACE_KERNEL = $(V6PP_FS_EDIT_WORKSPACE)/kernel.bin
 
-WORKSPACE_PROGRAMS = \
-	$(V6PP_FS_EDIT_WORKSPACE)\programs\Shell.exe \
-	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\cat \
-	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\cp \
-	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\ls \
-	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\mkdir \
-	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\rm \
-	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\perf \
-	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\sig \
-	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\copyfile \
-	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\shutdown \
-	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\test \
-	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\forks \
-	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\trace \
-	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\echo \
-	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\date \
-	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\newsig \
-	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\sigTest \
-	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\stack \
-	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\malloc \
-	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\testSTDOUT \
-	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\fork \
-	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\HelloWorld \
-	$(V6PP_FS_EDIT_WORKSPACE)\programs\bin\showStack
+all: build
 
-all: build deploy 
+prepare_dirs:
+	mkdir -p $(TARGET) $(IMGTARGET)
 
-# .PHONY: qemug
-# qemug: all
-#	qemu-system-i386 -m 32M -audiodev pa,id=hda -machine pcspk-audiodev=hda -rtc 
-# base=localtime \
-#	-boot c -drive file=../targets/UNIXV6++/c.img,if=ide,index=0,media=disk,format=raw \
-#	-s -S
-
-#.PHONY: qemu
-#qemu: all
-#	qemu-system-i386 -m 32M -audiodev pa,id=hda -machine pcspk-audiodev=hda -rtc #base=localtime \
-#	-boot c -drive file=../targets/UNIXV6++/c.img,if=ide,index=0,media=disk,format=raw 
-
-$(DIRS) : 
+$(DIRS) :
 	$(MAKE) --directory=$@
-	
-build	: $(DIRS) $(KERNEL_ASM)
 
-deploy	: $(DIRS) $(IMG_BOOT) $(IMG_KERNEL_BIN) $(IMG_KERNEL_SYM) $(IMG_KERNEL_ASM) $(FINAL_IMG)
+build	: prepare_dirs $(DIRS) $(KERNEL_ASM)
+
+deploy	: build $(IMG_BOOT) $(IMG_KERNEL_BIN) $(IMG_KERNEL_SYM) $(IMG_KERNEL_ASM) $(WORKSPACE_BOOT) $(WORKSPACE_KERNEL)
 
 $(KERNEL_EXE)	: $(OBJS)
 	$(LD) $(LDFLAGS) $(OBJS) -o $@
@@ -78,46 +42,36 @@ $(KERNEL_SYM)	: $(KERNEL_EXE)
 $(KERNEL_ASM)	: $(KERNEL_EXE)
 	$(OBJDUMP) -d $< > $@
 
-$(TARGET)\$(SECTOR2_OBJ) :
-	$(MAKE) --directory=boot ..\..\targets\objs\$(SECTOR2_OBJ)
+$(TARGET)/$(SECTOR2_OBJ) :
+	$(MAKE) --directory=boot ../../targets/objs/$(SECTOR2_OBJ)
 
-$(TARGET)\boot.bin : $(KERNEL_BIN)
-	$(MAKE) --directory=boot ..\..\targets\objs\boot.bin
+$(TARGET)/boot.bin : $(KERNEL_BIN)
+	$(MAKE) --directory=boot ../../targets/objs/boot.bin
 
-$(IMG_BOOT)	: $(TARGET)\boot.bin
-	copy $< $@
+$(IMG_BOOT)	: $(TARGET)/boot.bin
+	cp $< $@
 
 $(IMG_KERNEL_BIN)	: $(KERNEL_BIN)
-	copy $< $@
+	cp $< $@
 
 $(IMG_KERNEL_SYM)	: $(KERNEL_SYM)
-	copy $< $@
+	cp $< $@
 
 $(IMG_KERNEL_ASM)	: $(KERNEL_ASM)
-	copy $< $@
+	cp $< $@
 
-$(WORKSPACE_BOOT)	: $(TARGET)\boot.bin
-	copy $< $@
+$(WORKSPACE_BOOT)	: $(TARGET)/boot.bin
+	mkdir -p $(V6PP_FS_EDIT_WORKSPACE)
+	cp $< $@
 
 $(WORKSPACE_KERNEL)	: $(KERNEL_BIN)
-	copy $< $@
+	mkdir -p $(V6PP_FS_EDIT_WORKSPACE)
+	cp $< $@
 
-$(WORKSPACE_IMG)	: $(WORKSPACE_BOOT) $(WORKSPACE_KERNEL) $(WORKSPACE_PROGRAMS) \
-		$(V6PP_FS_EDIT_WORKSPACE)\filescanner.exe $(V6PP_FS_EDIT_WORKSPACE)\fsedit.exe
-	cd $(V6PP_FS_EDIT_WORKSPACE) && filescanner.exe | fsedit.exe $(IMG) c
-
-$(FINAL_IMG)	: $(WORKSPACE_IMG)
-	copy $< "$@"
-
-clean	:	
-	del     $(TARGET)\*.o
-	del     $(TARGET)\*.exe
-	del     $(TARGET)\*.bin
-	del     $(TARGET)\*.sym
-	del     $(TARGET)\*.asm
-	
-	del     $(IMGTARGET)\*.bin
-	del     $(IMGTARGET)\*.sym
-	del     $(IMGTARGET)\*.asm
-	
-	del     "$(FINAL_IMG)"
+clean	:
+	-$(MAKE) --directory=lib clean
+	-$(MAKE) --directory=shell clean
+	-$(MAKE) --directory=program clean
+	rm -f $(TARGET)/*.o $(TARGET)/*.exe $(TARGET)/*.bin $(TARGET)/*.sym $(TARGET)/*.asm
+	rm -f $(IMGTARGET)/*.bin $(IMGTARGET)/*.sym $(IMGTARGET)/*.asm
+	rm -f $(UNIXV6PPTARGET)/$(IMG)

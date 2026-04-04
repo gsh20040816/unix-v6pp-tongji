@@ -1,9 +1,9 @@
-include ..\Makefile.inc
+include ../Makefile.inc
 
-TARGET = ..\..\targets\objs
+TARGET = ../../targets/objs
 
-all		:	$(TARGET)\peparser.o
-		
-$(TARGET)\PEParser.o	:	PEParser.cpp $(INCLUDE)\PEParser.h
+all		:	$(TARGET)/ELFParser.o
+
+$(TARGET)/ELFParser.o	:	ELFParser.cpp $(INCLUDE)/ELFParser.h
 	$(CC) $(CFLAGS) -I"$(INCLUDE)" -c $< -o $@
 

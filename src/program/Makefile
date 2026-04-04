@@ -11,59 +11,66 @@ LD = ld
 OBJDUMP = objdump
 
 #参数定义-nostartfiles
-CFLAGS = -w -O0 -g -nostdlib -nostartfiles -nostdinc -fno-builtin -fno-exceptions
+CFLAGS = -w -O0 -g -std=gnu89 -m32 -nostdlib -nostartfiles -nostdinc -fno-builtin -fcommon -fno-pic -fno-PIE -fno-stack-protector
+LDFLAGS = -Wl,-m,elf_i386,-T,../lib/User.ld,-e,main1
 
 #目录定义
-TARGET = .\objs
-V6++LIB = "..\lib\Lib_V6++.a"
-V6++LIB_DEP = ..\lib\Lib_V6++.a
+TARGET = ./objs
+V6++LIB = ../lib/Lib_V6++.a
+V6++LIB_DEP = ../lib/Lib_V6++.a
 INCLUDE = .
-LIB_INCLUDE = ..\lib\include
+LIB_INCLUDE = ../lib/include
 
-MAKEIMAGEPATH = ..\..\tools\v6pp-fs-edit-2022\workspace\programs
+MAKEIMAGEPATH = ../../tools/v6pp-fs-edit-2022/workspace/programs
 BIN = bin
 
 .PHONY : all build clean
 
 PROGRAM_WORKSPACE_TARGETS = \
-	$(MAKEIMAGEPATH)\$(BIN)\cat \
-	$(MAKEIMAGEPATH)\$(BIN)\cp \
-	$(MAKEIMAGEPATH)\$(BIN)\ls \
-	$(MAKEIMAGEPATH)\$(BIN)\mkdir \
-	$(MAKEIMAGEPATH)\$(BIN)\rm \
-	$(MAKEIMAGEPATH)\$(BIN)\perf \
-	$(MAKEIMAGEPATH)\$(BIN)\sig \
-	$(MAKEIMAGEPATH)\$(BIN)\copyfile \
-	$(MAKEIMAGEPATH)\$(BIN)\shutdown \
-	$(MAKEIMAGEPATH)\$(BIN)\test \
-	$(MAKEIMAGEPATH)\$(BIN)\forks \
-	$(MAKEIMAGEPATH)\$(BIN)\trace \
-	$(MAKEIMAGEPATH)\$(BIN)\echo \
-	$(MAKEIMAGEPATH)\$(BIN)\date \
-	$(MAKEIMAGEPATH)\$(BIN)\newsig \
-	$(MAKEIMAGEPATH)\$(BIN)\sigTest \
-	$(MAKEIMAGEPATH)\$(BIN)\stack \
-	$(MAKEIMAGEPATH)\$(BIN)\malloc \
-	$(MAKEIMAGEPATH)\$(BIN)\testSTDOUT \
-	$(MAKEIMAGEPATH)\$(BIN)\fork \
-	$(MAKEIMAGEPATH)\$(BIN)\HelloWorld \
-	$(MAKEIMAGEPATH)\$(BIN)\showStack \
-	$(MAKEIMAGEPATH)\$(BIN)\testfork \
-	$(MAKEIMAGEPATH)\$(BIN)\stackpt \
-	$(MAKEIMAGEPATH)\$(BIN)\top \
-	$(MAKEIMAGEPATH)\$(BIN)\argvdump \
-	$(MAKEIMAGEPATH)\$(BIN)\zeropage
+	$(MAKEIMAGEPATH)/$(BIN)/cat \
+	$(MAKEIMAGEPATH)/$(BIN)/cp \
+	$(MAKEIMAGEPATH)/$(BIN)/ls \
+	$(MAKEIMAGEPATH)/$(BIN)/mkdir \
+	$(MAKEIMAGEPATH)/$(BIN)/rm \
+	$(MAKEIMAGEPATH)/$(BIN)/perf \
+	$(MAKEIMAGEPATH)/$(BIN)/sig \
+	$(MAKEIMAGEPATH)/$(BIN)/copyfile \
+	$(MAKEIMAGEPATH)/$(BIN)/shutdown \
+	$(MAKEIMAGEPATH)/$(BIN)/test \
+	$(MAKEIMAGEPATH)/$(BIN)/forks \
+	$(MAKEIMAGEPATH)/$(BIN)/trace \
+	$(MAKEIMAGEPATH)/$(BIN)/echo \
+	$(MAKEIMAGEPATH)/$(BIN)/date \
+	$(MAKEIMAGEPATH)/$(BIN)/newsig \
+	$(MAKEIMAGEPATH)/$(BIN)/sigTest \
+	$(MAKEIMAGEPATH)/$(BIN)/stack \
+	$(MAKEIMAGEPATH)/$(BIN)/malloc \
+	$(MAKEIMAGEPATH)/$(BIN)/testSTDOUT \
+	$(MAKEIMAGEPATH)/$(BIN)/fork \
+	$(MAKEIMAGEPATH)/$(BIN)/HelloWorld \
+	$(MAKEIMAGEPATH)/$(BIN)/showStack \
+	$(MAKEIMAGEPATH)/$(BIN)/testfork \
+	$(MAKEIMAGEPATH)/$(BIN)/stackpt \
+	$(MAKEIMAGEPATH)/$(BIN)/top \
+	$(MAKEIMAGEPATH)/$(BIN)/argvdump \
+	$(MAKEIMAGEPATH)/$(BIN)/zeropage
 
 all	:	$(PROGRAM_WORKSPACE_TARGETS)
 
 build : $(PROGRAM_WORKSPACE_TARGETS)
 
-define BUILD_PROGRAM
-$(TARGET)\$(1).exe : $(2) $(V6++LIB_DEP)
-	$(CC) $(CFLAGS) -I"$(INCLUDE)" -I"$(LIB_INCLUDE)" $$(filter %.c,$$^) -e _main1 $(V6++LIB) -o $$@
+$(TARGET):
+	mkdir -p $@
 
-$(MAKEIMAGEPATH)\$(BIN)\$(1) : $(TARGET)\$(1).exe
-	copy $$< $$@
+$(MAKEIMAGEPATH)/$(BIN):
+	mkdir -p $@
+
+define BUILD_PROGRAM
+$(TARGET)/$(1).exe : $(2) $(V6++LIB_DEP) | $(TARGET)
+	$(CC) $(CFLAGS) -no-pie -I"$(INCLUDE)" -I"$(LIB_INCLUDE)" $$(filter %.c,$$^) $(V6++LIB) $(LDFLAGS) -o $$@
+
+$(MAKEIMAGEPATH)/$(BIN)/$(1) : $(TARGET)/$(1).exe | $(MAKEIMAGEPATH)/$(BIN)
+	cp $$< $$@
 endef
 
 $(eval $(call BUILD_PROGRAM,cat,cat.c))
@@ -94,5 +101,5 @@ $(eval $(call BUILD_PROGRAM,top,top.c))
 $(eval $(call BUILD_PROGRAM,argvdump,argvdump.c))
 $(eval $(call BUILD_PROGRAM,zeropage,zeropage.c))
 clean:
-	del $(TARGET)\*.exe
-	del /Q $(MAKEIMAGEPATH)\$(BIN)\*
+	rm -f $(TARGET)/*.exe
+	rm -f $(MAKEIMAGEPATH)/$(BIN)/*

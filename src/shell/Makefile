@@ -7,48 +7,55 @@ CC = gcc
 LD = ld
 
 #参数定义
-CFLAGS = -W -O0 -g -nostdlib -nostdinc -nostartfiles -fno-builtin -fno-exceptions
+CFLAGS = -W -O0 -g -std=gnu89 -m32 -nostdlib -nostdinc -nostartfiles -fno-builtin -fcommon -fno-pic -fno-PIE -fno-stack-protector
+LDFLAGS = -Wl,-m,elf_i386,-T,../lib/User.ld,-e,main1
 
 #目录定义
-TARGET = .\OBJS
-V6++LIB = "..\lib\Lib_V6++.a"
-V6++LIB_DEP = ..\lib\Lib_V6++.a
+TARGET = ./OBJS
+V6++LIB = ../lib/Lib_V6++.a
+V6++LIB_DEP = ../lib/Lib_V6++.a
 INCLUDE = .
-LIB_INCLUDE = ..\lib\include
+LIB_INCLUDE = ../lib/include
 
-MAKEIMAGEPATH = ..\..\tools\v6pp-fs-edit-2022\workspace\programs
+MAKEIMAGEPATH = ../../tools/v6pp-fs-edit-2022/workspace/programs
 
 .PHONY : clean
 
-SHELL_OBJS =$(TARGET)\commandtree.o	\
-			$(TARGET)\executecommand.o	\
-			$(TARGET)\preexecute.o	\
-			$(TARGET)\main.o
+SHELL_OBJS =$(TARGET)/commandtree.o	\
+			$(TARGET)/executecommand.o	\
+			$(TARGET)/preexecute.o	\
+			$(TARGET)/main.o
 
-SHELL_EXE = $(TARGET)\Shell.exe
-WORKSPACE_SHELL = $(MAKEIMAGEPATH)\Shell.exe
+SHELL_EXE = $(TARGET)/Shell.exe
+WORKSPACE_SHELL = $(MAKEIMAGEPATH)/Shell.exe
 			
 all	:	$(WORKSPACE_SHELL)
 
-$(SHELL_EXE)	:	$(SHELL_OBJS) $(V6++LIB_DEP)
-	$(CC) $(CFLAGS) $(SHELL_OBJS) $(V6++LIB) -e _main1 -o $@
+$(TARGET):
+	mkdir -p $@
 
-$(WORKSPACE_SHELL)	:	$(SHELL_EXE)
-	copy $< $@
+$(MAKEIMAGEPATH):
+	mkdir -p $@
+
+$(SHELL_EXE)	:	$(SHELL_OBJS) $(V6++LIB_DEP) | $(TARGET)
+	$(CC) $(CFLAGS) -no-pie $(SHELL_OBJS) $(V6++LIB) $(LDFLAGS) -o $@
+
+
+$(WORKSPACE_SHELL)	:	$(SHELL_EXE) | $(MAKEIMAGEPATH)
+	cp $< $@
 	
-$(TARGET)\commandtree.o :	CommandTree.c $(INCLUDE)\CommandTree.h
+$(TARGET)/commandtree.o :	CommandTree.c $(INCLUDE)/CommandTree.h | $(TARGET)
 	$(CC) $(CFLAGS) -I"$(INCLUDE)" -I"$(LIB_INCLUDE)" -c $< -o $@
 	
-$(TARGET)\executecommand.o :	ExecuteCommand.c $(INCLUDE)\ExecuteCommand.h
+$(TARGET)/executecommand.o :	ExecuteCommand.c $(INCLUDE)/ExecuteCommand.h | $(TARGET)
 	$(CC) $(CFLAGS) -I"$(INCLUDE)" -I"$(LIB_INCLUDE)" -c $< -o $@
 	
-$(TARGET)\preexecute.o :	PreExecute.c $(INCLUDE)\PreExecute.h
+$(TARGET)/preexecute.o :	PreExecute.c $(INCLUDE)/PreExecute.h | $(TARGET)
 	$(CC) $(CFLAGS) -I"$(INCLUDE)" -I"$(LIB_INCLUDE)" -c $< -o $@
 	
-$(TARGET)\main.o :	main.c
+$(TARGET)/main.o :	main.c | $(TARGET)
 	$(CC) $(CFLAGS) -I"$(INCLUDE)" -I"$(LIB_INCLUDE)" -c $< -o $@
 
 	
 clean:
-	del $(TARGET)\*.o
-	del $(TARGET)\*.exe
+	rm -f $(TARGET)/*.o $(TARGET)/*.exe

@@ -5,23 +5,19 @@ usage() {
   cat <<'EOF'
 Usage:
   bash build.sh
-  bash build.sh [remote-cmd...]
+  bash build.sh clean
+  bash build.sh [build-cmd...]
 
 Defaults:
-  Windows host    win
-  Windows repo    Z:\UNIX V6++V1\oos
-  remote command  cd /d Z:\UNIX V6++V1\oos\tools && call oosvars_mingw.bat && call build.bat
+  local command   make -C src build
 
 Environment overrides:
-  OOS_WIN_HOST
-  OOS_WIN_REPO
-  OOS_WIN_BUILD_COMMAND
-  OOS_MAKE_JOBS (or OOS_WIN_MAKE_JOBS)
+  OOS_LINUX_BUILD_COMMAND
+  OOS_MAKE_JOBS
 EOF
 }
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ssh_win="$script_dir/tools/ssh-win.sh"
 build_cache_dir="$script_dir/.build-cache"
 fingerprint_file="$build_cache_dir/build-inputs.sha1"
 
@@ -155,23 +151,15 @@ cleanup_disk_images() {
   rm -f "$workspace_img" "$final_img"
 }
 
-if [[ ! -f "$ssh_win" ]]; then
-  echo "ssh helper not found: $ssh_win" >&2
-  exit 1
-fi
-
 if (($# > 0)) && [[ "$1" == "-h" || "$1" == "--help" ]]; then
   usage
   exit 0
 fi
 
-remote_repo="${OOS_WIN_REPO:-Z:\\UNIX V6++V1\\oos}"
-remote_tools="${remote_repo}\\tools"
-default_remote_command="cd /d ${remote_tools} && call oosvars_mingw.bat && call build.bat"
-remote_command="${OOS_WIN_BUILD_COMMAND:-$default_remote_command}"
+local_build_command="${OOS_LINUX_BUILD_COMMAND:-make -C src build}"
 user_provided_command=false
 env_provided_command=false
-make_jobs="${OOS_WIN_MAKE_JOBS:-${OOS_MAKE_JOBS:-}}"
+make_jobs="${OOS_MAKE_JOBS:-}"
 current_fingerprint=""
 
 if [[ -n "$make_jobs" ]]; then
@@ -181,12 +169,23 @@ if [[ -n "$make_jobs" ]]; then
   fi
 fi
 
-if [[ -n "${OOS_WIN_BUILD_COMMAND:-}" ]]; then
+if [[ -n "${OOS_LINUX_BUILD_COMMAND:-}" ]]; then
   env_provided_command=true
 fi
 
 if (($# > 0)); then
-  remote_command="$*"
+  if [[ "$1" == "clean" && $# -eq 1 ]]; then
+    echo "Cleaning local build artifacts"
+    (
+      cd "$script_dir"
+      make -C src clean || true
+    )
+    cleanup_disk_images
+    rm -f "$fingerprint_file"
+    exit 0
+  fi
+
+  local_build_command="$*"
   user_provided_command=true
 fi
 
@@ -198,22 +197,28 @@ if [[ "$user_provided_command" == false && "$env_provided_command" == false ]]; 
   fi
 
   if [[ "$current_fingerprint" != "$previous_fingerprint" ]]; then
-    remote_command="cd /d ${remote_tools} && call oosvars_mingw.bat && call clean.bat && call build.bat"
     echo "Detected header/makefile changes, forcing clean rebuild."
+    (
+      cd "$script_dir"
+      make -C src clean || true
+    )
   fi
 fi
 
-if [[ -n "$make_jobs" ]]; then
-  remote_command="set OOS_MAKE_JOBS=${make_jobs} && ${remote_command}"
+if [[ -n "$make_jobs" && "$user_provided_command" == false ]]; then
+  local_build_command="make -C src -j${make_jobs} build"
 fi
 
 should_generate_image=true
-if [[ "$remote_command" == *"clean.bat"* && "$remote_command" != *"build.bat"* && "$remote_command" != *"all.bat"* ]]; then
+if [[ "$local_build_command" == *"clean"* && "$local_build_command" != *"build"* && "$local_build_command" != *"all"* ]]; then
   should_generate_image=false
 fi
 
-echo "Building on Windows host ${OOS_WIN_HOST:-win}"
-if bash "$ssh_win" "cmd.exe /c \"$remote_command\""; then
+echo "Building on Linux host"
+if (
+  cd "$script_dir"
+  bash -lc "$local_build_command"
+); then
   if [[ "$should_generate_image" == true ]]; then
     refresh_linux_image_inputs
     ensure_linux_fs_edit_tools

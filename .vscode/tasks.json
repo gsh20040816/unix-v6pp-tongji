@@ -11,7 +11,7 @@
 			"options": {
 				"cwd": "${workspaceFolder}"
 			},
-			"detail": "在 Linux 工作区中触发 build.sh，并通过 SSH 到 Windows 完成构建",
+			"detail": "在 Linux 本机构建内核与用户程序，并生成 c.img",
 			"group": {
 				"kind": "build",
 				"isDefault": true
@@ -23,12 +23,12 @@
 			"command": "bash",
 			"args": [
 				"-lc",
-				"bash ./build.sh \"cd /d Z:\\\\UNIX V6++V1\\\\oos\\\\tools && call oosvars_mingw.bat && call clean.bat\""
+				"bash ./build.sh clean"
 			],
 			"options": {
 				"cwd": "${workspaceFolder}"
 			},
-			"detail": "在 Linux 工作区中触发 Windows clean.bat 清理构建产物",
+			"detail": "清理 Linux 本机构建产物与磁盘镜像",
 			"problemMatcher": []
 		},
 		{

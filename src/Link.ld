@@ -1,5 +1,5 @@
 /*Link.ld*/
-OUTPUT_FORMAT("pei-i386")
+OUTPUT_FORMAT("elf32-i386")
 
 ENTRY(greatstart)
 
@@ -9,25 +9,37 @@ SECTIONS
 	{
 		code = .; _code = .; __code = .;
 		*(.text)
+		*(.text.*)
 		. = ALIGN(4096);
 	}
 	
 	.data :
 	{
+		. = ALIGN(4);
+		__init_array_start = .;
+		KEEP(*(.init_array))
+		KEEP(*(.init_array.*))
+		__init_array_end = .;
+
+		. = ALIGN(4);
+		__fini_array_start = .;
+		KEEP(*(.fini_array))
+		KEEP(*(.fini_array.*))
+		__fini_array_end = .;
+
 		__CTOR_LIST__ = .;
-			
-		*(.ctors) 
+		KEEP(*(.ctors))
 		LONG(0)
 		__CTOR_END__ = .;
 		
 		__DTOR_LIST__ = .;
-		/*LONG((__DTOR_END__ - __DTOR_LIST__) /4 - 2)*/
-		*(.dtors)
+		KEEP(*(.dtors))
 		LONG(0)
 		__DTOR_END__ = .;
 		
 		data = .; _data = .; __data = .;
 		*(.data)
+		*(.data.*)
 		. = ALIGN(4096);
 	}
 	
@@ -35,6 +47,8 @@ SECTIONS
 	{
 		bss = .; _bss = .; __bss = .;
 		*(.bss)
+		*(.bss.*)
+		*(COMMON)
 		. = ALIGN(4096);
 	}
 	

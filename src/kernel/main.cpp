@@ -19,7 +19,6 @@
 #include "DMA.h"
 #include "CRT.h"
 #include "TimeInterrupt.h"
-#include "PEParser.h"
 #include "CMOSTime.h"
 
 bool isInit = false;
@@ -90,7 +89,7 @@ extern "C" int main0(void)
 		" \
 		mov $0xc0400000, %ebp \n\t \
 		mov $0xc0400000, %esp \n\t \
-		jmp $0x8, $_next"
+		jmp $0x8, $next"
 		);
 
 	return 0;
