@@ -10,7 +10,7 @@ Usage:
 Defaults:
   Windows host    win
   Windows repo    Z:\UNIX V6++V1\oos
-  remote command  cd /d Z:\UNIX V6++V1\oos\tools && call oosvars_mingw.bat && call all.bat
+  remote command  cd /d Z:\UNIX V6++V1\oos\tools && call oosvars_mingw.bat && call build.bat
 
 Environment overrides:
   OOS_WIN_HOST
@@ -37,36 +37,63 @@ compute_build_fingerprint() {
     | awk '{print $1}'
 }
 
-ensure_fs_edit_tools() {
+ensure_linux_fs_edit_tools() {
+  local fs_root="$script_dir/tools/v6pp-fs-edit-2022"
+  local build_dir="$script_dir/.build-cache/v6pp-fs-edit-2022-cmake"
+  local workspace="$fs_root/workspace"
+  local linux_bin="$workspace/linux-bin"
+  local filescanner="$linux_bin/filescanner"
+  local fsedit="$linux_bin/fsedit"
+
+  if ! command -v cmake >/dev/null 2>&1; then
+    echo "missing required command: cmake (needed to build Linux filescanner/fsedit)" >&2
+    return 1
+  fi
+
+  mkdir -p "$build_dir"
+
+  echo "Configuring Linux fs tools with CMake"
+  cmake -S "$fs_root" -B "$build_dir" -DCMAKE_BUILD_TYPE=Release
+
+  echo "Building Linux filescanner/fsedit with CMake"
+  cmake --build "$build_dir" --target filescanner fsedit --parallel
+
+  if [[ ! -x "$filescanner" || ! -x "$fsedit" ]]; then
+    echo "failed to build Linux filescanner/fsedit with CMake" >&2
+    return 1
+  fi
+}
+
+generate_disk_image_on_linux() {
   local workspace="$script_dir/tools/v6pp-fs-edit-2022/workspace"
-  local fs_zip="$script_dir/tools/v6pp-fs-edit-2022.zip"
-  local filescanner="$workspace/filescanner.exe"
-  local fsedit="$workspace/fsedit.exe"
+  local filescanner="$workspace/linux-bin/filescanner"
+  local fsedit="$workspace/linux-bin/fsedit"
+  local workspace_img="$workspace/c.img"
+  local final_img="$script_dir/targets/UNIXV6++/c.img"
 
-  if [[ -f "$filescanner" && -f "$fsedit" ]]; then
-    return 0
-  fi
-
-  if [[ ! -f "$fs_zip" ]]; then
-    echo "missing required tools: filescanner.exe/fsedit.exe and archive not found: $fs_zip" >&2
+  if [[ ! -f "$workspace/boot.bin" ]]; then
+    echo "missing required file: $workspace/boot.bin" >&2
     return 1
   fi
 
-  if ! command -v unzip >/dev/null 2>&1; then
-    echo "missing required command: unzip (needed to restore filescanner.exe/fsedit.exe)" >&2
+  if [[ ! -f "$workspace/kernel.bin" ]]; then
+    echo "missing required file: $workspace/kernel.bin" >&2
     return 1
   fi
 
-  mkdir -p "$workspace"
-  unzip -jo "$fs_zip" \
-    "v6pp-fs-edit-2022/workspace/filescanner.exe" \
-    "v6pp-fs-edit-2022/workspace/fsedit.exe" \
-    -d "$workspace" >/dev/null
-
-  if [[ ! -f "$filescanner" || ! -f "$fsedit" ]]; then
-    echo "failed to restore filescanner.exe/fsedit.exe from $fs_zip" >&2
+  if [[ ! -d "$workspace/programs" ]]; then
+    echo "missing required directory: $workspace/programs" >&2
     return 1
   fi
+
+  echo "Generating disk image on Linux with v6pp-fs-edit-2022"
+  (
+    cd "$workspace"
+    "$filescanner" | "$fsedit" c.img c
+  )
+
+  mkdir -p "$(dirname "$final_img")"
+  cp "$workspace_img" "$final_img"
 }
 
 if [[ ! -f "$ssh_win" ]]; then
@@ -81,7 +108,7 @@ fi
 
 remote_repo="${OOS_WIN_REPO:-Z:\\UNIX V6++V1\\oos}"
 remote_tools="${remote_repo}\\tools"
-default_remote_command="cd /d ${remote_tools} && call oosvars_mingw.bat && call all.bat"
+default_remote_command="cd /d ${remote_tools} && call oosvars_mingw.bat && call build.bat"
 remote_command="${OOS_WIN_BUILD_COMMAND:-$default_remote_command}"
 user_provided_command=false
 env_provided_command=false
@@ -112,7 +139,7 @@ if [[ "$user_provided_command" == false && "$env_provided_command" == false ]]; 
   fi
 
   if [[ "$current_fingerprint" != "$previous_fingerprint" ]]; then
-    remote_command="cd /d ${remote_tools} && call oosvars_mingw.bat && call clean.bat && call all.bat"
+    remote_command="cd /d ${remote_tools} && call oosvars_mingw.bat && call clean.bat && call build.bat"
     echo "Detected header/makefile changes, forcing clean rebuild."
   fi
 fi
@@ -121,10 +148,11 @@ if [[ -n "$make_jobs" ]]; then
   remote_command="set OOS_MAKE_JOBS=${make_jobs} && ${remote_command}"
 fi
 
-ensure_fs_edit_tools
-
 echo "Building on Windows host ${OOS_WIN_HOST:-win}"
 if bash "$ssh_win" "cmd.exe /c \"$remote_command\""; then
+  ensure_linux_fs_edit_tools
+  generate_disk_image_on_linux
+
   if [[ "$user_provided_command" == false && "$env_provided_command" == false ]]; then
     mkdir -p "$build_cache_dir"
     post_fingerprint="$(compute_build_fingerprint)"

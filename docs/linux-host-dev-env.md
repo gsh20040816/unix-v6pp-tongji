@@ -19,13 +19,14 @@
 2. 触发 `OOS make`
 3. `build.sh` 通过 SSH 连接 Windows 主机
 4. Windows 端进入 `Z:\UNIX V6++V1\oos\tools`
-5. Windows 端调用 `oosvars_mingw.bat` 和 `all.bat`
-6. 增量编译并更新共享目录中的 `targets/UNIXV6++/c.img`
-7. 调试时，VS Code 先执行 `OOS debug prep`
-8. `OOS debug prep` 顺序执行 `OOS make` 和 `OOS linux debug host`
-9. `debug.sh` 在 Linux 本机启动 `bochs-gdb -q -f bochsrc.bxrc`
-10. VS Code 再通过 SSH 到 Windows 启动 `gdb.exe`
-11. Windows 上的 GDB 连接 Linux 上 `10.200.65.1:1234` 的 `gdbstub`
+5. Windows 端调用 `oosvars_mingw.bat` 和 `build.bat`
+6. Windows 端完成增量编译，并更新 `tools/v6pp-fs-edit-2022/workspace` 下的 boot、kernel、programs 产物
+7. Linux 端使用 `tools/v6pp-fs-edit-2022` 的 `filescanner | fsedit` 生成 `c.img`，并同步到 `targets/UNIXV6++/c.img`
+8. 调试时，VS Code 先执行 `OOS debug prep`
+9. `OOS debug prep` 顺序执行 `OOS make` 和 `OOS linux debug host`
+10. `debug.sh` 在 Linux 本机启动 `bochs-gdb -q -f bochsrc.bxrc`
+11. VS Code 再通过 SSH 到 Windows 启动 `gdb.exe`
+12. Windows 上的 GDB 连接 Linux 上 `10.200.65.1:1234` 的 `gdbstub`
 
 ## 目录与主机约定
 
@@ -77,15 +78,18 @@
 - 默认执行：
 
 ```text
-cmd.exe /c "cd /d Z:\UNIX V6++V1\oos\tools && call oosvars_mingw.bat && call all.bat"
+cmd.exe /c "cd /d Z:\UNIX V6++V1\oos\tools && call oosvars_mingw.bat && call build.bat"
 ```
 
-- 作用是使用 Windows 原构建链完成增量编译并更新镜像
+- 作用是使用 Windows 原构建链完成增量编译，并把产物同步到 `tools/v6pp-fs-edit-2022/workspace`
+- 编译完成后，`build.sh` 会在 Linux 本机通过 CMake 构建并运行 `tools/v6pp-fs-edit-2022`，生成 `workspace/c.img`，再复制到 `targets/UNIXV6++/c.img`
+- `tools/v6pp-fs-edit-2022` 的镜像工具构建系统已切换为 Linux-only CMake，不再维护 Windows 兼容构建
+- CMake 中间构建目录默认在 `.build-cache/v6pp-fs-edit-2022-cmake`，避免污染源码树
 - 现在 `src` 下的 Makefile 已改成真正的增量行为：
   - 内核目标无变化时，不重新链接 `kernel.exe`
-  - `lib`、`shell`、`program` 不再因 `all` 目标而全量重编
+  - `lib`、`shell`、`program` 不再因 `build` 目标而全量重编
   - 只有发生变化的用户态程序才会重新生成并复制到 workspace
-  - 只有内核或 workspace 中的用户态程序有变化时，才会重新运行 `filescanner.exe | fsedit.exe` 更新 `c.img`
+  - `c.img` 由 Linux 侧的 `filescanner | fsedit` 统一生成，不再依赖 Windows 执行 `filescanner.exe | fsedit.exe`
 
 ### `debug.sh`
 
@@ -121,7 +125,7 @@ bochs -q -f bochsrc_nodebug.bxrc
 
 - `OOS make`
   - 通过本机 `bash -lc ./build.sh`
-  - 实际构建发生在 Windows 端
+  - Windows 端负责编译，Linux 端负责生成 `c.img`
 
 - `OOS linux debug host`
   - 通过本机 `bash -lc ./debug.sh`
@@ -194,3 +198,4 @@ bash tools/ssh-win.sh --shell
 - `launch.json` 仍依赖较大的显式 `sourceFileMap`
 - Windows GDB 依然要求 `win` SSH 可达，且共享盘映射保持一致
 - `clangd` 现在不再查询 Windows 编译器内置头文件，若后续需要更完整的诊断，需要再补一层本地交叉工具链或更稳定的编译数据库转换
+- Linux 主机构建镜像工具需要可用的 `cmake` 与 C++17 编译器
