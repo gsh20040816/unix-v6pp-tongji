@@ -8,8 +8,8 @@ Kernel Kernel::instance;
 /* 
  * 内存管理相关的全局manager
  */
-UserPageManager g_UserPageManager(&(Allocator::GetInstance()));
-KernelPageManager g_KernelPageManager(&(Allocator::GetInstance()));
+UserPageManager g_UserPageManager;
+KernelPageManager g_KernelPageManager;
 KernelAllocator g_KernelAllocator(&(Allocator::GetInstance()));
 
 /* 

@@ -164,7 +164,7 @@ void MemoryDescriptor::Initialize()
 	{
 		/* 页目录必须按页分配，供 CR3 使用。 */
 		unsigned long pageDirectory =
-			kernelPageManager.AllocMemory(PageManager::PAGE_SIZE);
+			kernelPageManager.AllocatePage();
 		if ( pageDirectory == 0 )
 		{
 			Utility::Panic("Out of kernel memory for page directory");
@@ -181,7 +181,7 @@ void MemoryDescriptor::Initialize()
 
 		/* 当前设计只维护 1# 私有用户页表，0# 由 Machine 统一维护。 */
 		unsigned long pageTables =
-			kernelPageManager.AllocMemory(PageManager::PAGE_SIZE);
+			kernelPageManager.AllocatePage();
 		if ( pageTables == 0 )
 		{
 			Utility::Panic("Out of kernel memory for user page tables");
@@ -228,16 +228,14 @@ void MemoryDescriptor::Release()
 
 	if ( this->m_UserPageTableArray != NULL )
 	{
-		kernelPageManager.FreeMemory(
-			PageManager::PAGE_SIZE,
+		kernelPageManager.FreePage(
 			(unsigned long)this->m_UserPageTableArray - Machine::KERNEL_SPACE_START_ADDRESS);
 		this->m_UserPageTableArray = NULL;
 	}
 
 	if ( this->m_PageDirectory != NULL )
 	{
-		kernelPageManager.FreeMemory(
-			PageManager::PAGE_SIZE,
+		kernelPageManager.FreePage(
 			(unsigned long)this->m_PageDirectory - Machine::KERNEL_SPACE_START_ADDRESS);
 		this->m_PageDirectory = NULL;
 	}
@@ -351,7 +349,7 @@ bool MemoryDescriptor::CloneResidentPagesFrom(const MemoryDescriptor& other)
 			continue;
 		}
 
-		unsigned long newPage = Kernel::Instance().GetUserPageManager().AllocMemory(PageManager::PAGE_SIZE);
+		unsigned long newPage = Kernel::Instance().GetUserPageManager().AllocatePage();
 		if ( newPage == 0 )
 		{
 			return false;
@@ -1210,7 +1208,7 @@ bool MemoryDescriptor::AllocateZeroedPage(unsigned long virtualAddress)
 		return true;
 	}
 
-	unsigned long newPage = Kernel::Instance().GetUserPageManager().AllocMemory(PageManager::PAGE_SIZE);
+	unsigned long newPage = Kernel::Instance().GetUserPageManager().AllocatePage();
 	if ( newPage == 0 )
 	{
 		return false;
@@ -1266,7 +1264,7 @@ void MemoryDescriptor::FreePageInfo(PageInfo& pageInfo, bool releaseSharedText)
 		(region.backing.type != BACKING_SHARED_TEXT || releaseSharedText) )
 	{
 		/* 默认不回收共享 Text 页，避免误释放共享正文。 */
-		Kernel::Instance().GetUserPageManager().FreeMemory(PageManager::PAGE_SIZE, pageInfo.frameAddress);
+		Kernel::Instance().GetUserPageManager().FreePage(pageInfo.frameAddress);
 	}
 
 	pageInfo.state = PAGE_STATE_RESERVED;

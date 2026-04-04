@@ -757,12 +757,7 @@ int SystemCall::Sys_GetUsrMem()
 {
 	User& u = Kernel::Instance().GetUser();
 	UserPageManager& userPageManager = Kernel::Instance().GetUserPageManager();
-	unsigned long freePageCount = 0;
-
-	for ( unsigned int i = 0; i < PageManager::MEMORY_MAP_ARRAY_SIZE; ++i )
-	{
-		freePageCount += userPageManager.map[i].m_Size;
-	}
+	unsigned long freePageCount = userPageManager.GetFreePageCount();
 
 	unsigned long freeBytes = freePageCount * PageManager::PAGE_SIZE;
 	if ( freeBytes > 0x7fffffffUL )
@@ -800,12 +795,7 @@ int SystemCall::Sys_GetKerPageMem()
 {
 	User& u = Kernel::Instance().GetUser();
 	KernelPageManager& kernelPageManager = Kernel::Instance().GetKernelPageManager();
-	unsigned long freePageCount = 0;
-
-	for ( unsigned int i = 0; i < PageManager::MEMORY_MAP_ARRAY_SIZE; ++i )
-	{
-		freePageCount += kernelPageManager.map[i].m_Size;
-	}
+	unsigned long freePageCount = kernelPageManager.GetFreePageCount();
 
 	unsigned long freeBytes = freePageCount * PageManager::PAGE_SIZE;
 	if ( freeBytes > 0x7fffffffUL )

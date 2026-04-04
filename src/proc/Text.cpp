@@ -45,8 +45,7 @@ void Text::XccDec()
 					continue;
 				}
 
-				Kernel::Instance().GetUserPageManager().FreeMemory(PageManager::PAGE_SIZE,
-					this->x_addr[i]);
+				Kernel::Instance().GetUserPageManager().FreePage(this->x_addr[i]);
 				this->x_addr[i] = 0;
 			}
 		}

@@ -4,27 +4,26 @@
 bool TestPageManager()
 {
 	//Setup
-	Allocator allocator;
-	PageManager manager(&allocator);
+	KernelPageManager manager;
 	manager.Initialize();
 
 	//TestCases
 	unsigned long result = 0;
-	unsigned long startidx = manager.map[0].m_AddressIdx;
+	unsigned long freeBefore = manager.GetFreePageCount();
 	
 	//Case1
-	result = manager.AllocMemory(4096);
+	result = manager.AllocatePage();
 	PrintResult(
 		"Case1", 
-		result == PageManager::KERNEL_MEM_START_ADDR + PageManager::KERNEL_SIZE && 
-		manager.map[0].m_AddressIdx - 1 == startidx
+		result == KernelPageManager::KERNEL_PAGE_POOL_START_ADDR &&
+		manager.GetFreePageCount() + 1 == freeBefore
 		);
 
 	//Case2
-	result = manager.FreeMemory(4096, result);
+	result = manager.FreePage(result);
 	PrintResult(
 		"Case2", 
-		manager.map[0].m_AddressIdx == startidx
+		result == 0 && manager.GetFreePageCount() == freeBefore
 		);
 
 	//TearDown

@@ -1,9 +1,6 @@
 #ifndef PAGE_MANAGER_H
 #define PAGE_MANAGER_H
 
-#include "MapNode.h"
-#include "Allocator.h"
-
 class PageManager
 {
 public:
@@ -12,45 +9,42 @@ public:
 	
 	/* static const member */
 	static const unsigned int PAGE_SIZE = 0x1000;					/* 物理内存页大小 */
-	static const unsigned int MEMORY_MAP_ARRAY_SIZE = 0x200;		/* 最多可分配512个对象 */
+	static const unsigned int MAX_BITMAP_PAGE_COUNT = 0x8000;	/* bitmap 最多跟踪 32768 页 (128MB) */
+	static const unsigned int BITMAP_WORD_BITS = sizeof(unsigned long) * 8;
+	static const unsigned int BITMAP_WORD_COUNT =
+		(MAX_BITMAP_PAGE_COUNT + BITMAP_WORD_BITS - 1) / BITMAP_WORD_BITS;
 	static const unsigned int KERNEL_MEM_START_ADDR	= 0x100000;		/* 内核映像从1M物理内存开始 */
 	static const unsigned int KERNEL_SIZE			= 0x80000;		/* 内核映像大小限制(一般二进制映像远不会到512K大小) */
 
 	/* Functions */
 public:
-	PageManager(Allocator* allocator);
+	PageManager();
 	virtual ~PageManager();
 	
-	/* 完成对MapNode map[]数组的初始化清零 */
+	/* 初始化并清空 bitmap 状态 */
 	int Initialize();
-	/* 
-	 * 物理内存分配
-	 * 
-	 * size: 需分配内存大小(单位: byte)，实际分配物理内存大小以页
-	 * 为单位，会根据size大小以4K为边界，向上取整至4K字节整数倍。
-	 * 
-	 * 返回值: 成功分配的物理内存区起始地址，返回0表示分配失败。
-	 */
-	unsigned long AllocMemory(unsigned long size);
-	/* 
-	 * 物理内存释放
-	 * 
-	 * size: 需释放内存大小(单位: byte)，实际释放物理内存大小以页
-	 * 为单位，会根据size大小以4K为边界，向上取整至4K字节整数倍。
-	 * 
-	 * 返回值: 释放物理内存操作总能成功，但通常不检查其返回值。
-	 */
-	unsigned long FreeMemory(unsigned long size, unsigned long memoryStartAddress);
+	/* 按页分配，返回物理地址，失败返回0 */
+	unsigned long AllocatePages(unsigned long pageCount);
+	/* 按页释放，startAddress 需页对齐 */
+	unsigned long FreePages(unsigned long pageCount, unsigned long startAddress);
+	unsigned long AllocatePage();
+	unsigned long FreePage(unsigned long startAddress);
+	unsigned long GetFreePageCount() const;
+	unsigned long GetTotalPageCount() const;
 
-private:
-	PageManager();
+protected:
+	int InitializePool(unsigned long poolStartAddress, unsigned long poolSizeBytes);
 
 	/* Members */
-public:
-	MapNode map[PageManager::MEMORY_MAP_ARRAY_SIZE];
+private:
+	bool IsPageUsed(unsigned long pageIndex) const;
+	void MarkPagesUsed(unsigned long startPage, unsigned long pageCount);
+	void MarkPagesFree(unsigned long startPage, unsigned long pageCount);
 
 private:
-	Allocator* m_pAllocator;
+	unsigned long m_Bitmap[PageManager::BITMAP_WORD_COUNT];
+	unsigned long m_PoolStartAddress;
+	unsigned long m_TotalPageCount;
 };
 
 
@@ -67,8 +61,8 @@ public:
 	static const unsigned int KERNEL_PAGE_POOL_SIZE = 0x200000 - 0x3000;
 
 public:
-	KernelPageManager(Allocator* allocator);
-	int Initialize();	/* 初始化MapNode map[0]为内核物理页区起始地址、大小 */
+	KernelPageManager();
+	int Initialize();	/* 初始化内核物理页池 bitmap */
 };
 
 
@@ -81,8 +75,8 @@ public:
 	static unsigned int USER_PAGE_POOL_SIZE;		/* 用户物理内存区域大小：由内核初始化时进行设置 */
 	
 public:
-	UserPageManager(Allocator* allocator);
-	int Initialize();	/* 初始化MapNode map[0]为用户物理页区起始地址、大小 */
+	UserPageManager();
+	int Initialize();	/* 初始化用户物理页池 bitmap */
 };
 
 #endif

@@ -51,12 +51,12 @@ namespace
 		ClearTextPageArray(text);
 		for ( unsigned int i = 0; i < pageCount; ++i )
 		{
-			unsigned long page = pageManager.AllocMemory(PageManager::PAGE_SIZE);
+			unsigned long page = pageManager.AllocatePage();
 			if ( page == 0 )
 			{
 				for ( unsigned int j = 0; j < i; ++j )
 				{
-					pageManager.FreeMemory(PageManager::PAGE_SIZE, text->x_addr[j]);
+					pageManager.FreePage(text->x_addr[j]);
 					text->x_addr[j] = 0;
 				}
 				return false;
@@ -174,7 +174,7 @@ int ProcessManager::NewProc()
 	child->p_memory.CloneFrom(current->p_memory);
 
 	UserPageManager& userPageManager = Kernel::Instance().GetUserPageManager();
-	child->p_addr = userPageManager.AllocMemory(ProcessManager::USIZE);
+	child->p_addr = userPageManager.AllocatePages(BytesToPageCount(ProcessManager::USIZE));
 	if ( child->p_addr == 0 )
 	{
 		Utility::Panic("Out of user memory for child u area");
@@ -193,7 +193,8 @@ int ProcessManager::NewProc()
 	if ( current->p_memory.GetUserPageTableArray() == NULL )
 	{
 		KernelPageManager& kernelPgMgr = Kernel::Instance().GetKernelPageManager();
-		unsigned long scratchPage = kernelPgMgr.AllocMemory(ProcessManager::USIZE);
+		unsigned long scratchPage =
+			kernelPgMgr.AllocatePages(BytesToPageCount(ProcessManager::USIZE));
 		if ( scratchPage == 0 )
 		{
 			Utility::Panic("Out of kernel memory for bootstrap copy");
@@ -207,7 +208,7 @@ int ProcessManager::NewProc()
 			child->p_addr,
 			(void*)(scratchPage + Machine::KERNEL_SPACE_START_ADDRESS),
 			ProcessManager::USIZE);
-		kernelPgMgr.FreeMemory(ProcessManager::USIZE, scratchPage);
+		kernelPgMgr.FreePages(BytesToPageCount(ProcessManager::USIZE), scratchPage);
 	}
 	else
 	{

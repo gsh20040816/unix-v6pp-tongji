@@ -186,7 +186,9 @@ void Process::Exit()
 	UserPageManager& userPageMgr = Kernel::Instance().GetUserPageManager();
 	if ( current->p_addr != 0 )
 	{
-		userPageMgr.FreeMemory(ProcessManager::USIZE, current->p_addr);
+		userPageMgr.FreePages(
+			(ProcessManager::USIZE + PageManager::PAGE_SIZE - 1) / PageManager::PAGE_SIZE,
+			current->p_addr);
 	}
 	current->p_addr = 0;
 	current->p_size = 0;
