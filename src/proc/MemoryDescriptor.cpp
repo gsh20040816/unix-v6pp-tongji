@@ -760,6 +760,53 @@ void MemoryDescriptor::DisplayPageTable()
 	Diagnose::Write("\n");
 }
 
+unsigned int MemoryDescriptor::ExportResidentUserPages(
+	UserPageSnapshotEntry* entries,
+	unsigned int maxEntries) const
+{
+	if ( this->m_PageInfos == NULL )
+	{
+		return 0;
+	}
+
+	unsigned int total = 0;
+	unsigned int written = 0;
+
+	for ( unsigned int pageIndex = 0; pageIndex < USER_PAGE_COUNT; ++pageIndex )
+	{
+		if ( this->m_PageInfos[pageIndex].state != PAGE_STATE_RESIDENT )
+		{
+			continue;
+		}
+
+		unsigned int tableIndex =
+			pageIndex / PageTable::ENTRY_CNT_PER_PAGETABLE;
+		unsigned int entryIndex =
+			pageIndex % PageTable::ENTRY_CNT_PER_PAGETABLE;
+		PageTable* table = this->GetUserPageTableByIndex(tableIndex);
+		if ( table == NULL || table->m_Entrys[entryIndex].m_Present == 0 )
+		{
+			continue;
+		}
+
+		if ( entries != NULL && written < maxEntries )
+		{
+			entries[written].pageIndex = (unsigned short)pageIndex;
+			entries[written].flags =
+				(table->m_Entrys[entryIndex].m_Present ? 0x1 : 0) |
+				(table->m_Entrys[entryIndex].m_ReadWriter ? 0x2 : 0) |
+				(table->m_Entrys[entryIndex].m_UserSupervisor ? 0x4 : 0);
+			entries[written].pageBaseAddress =
+				table->m_Entrys[entryIndex].m_PageBaseAddress;
+			++written;
+		}
+
+		++total;
+	}
+
+	return total;
+}
+
 bool MemoryDescriptor::SetHeapBreak(unsigned long newBreak)
 {
 	Region* heap = this->FindRegionByType(REGION_HEAP);
@@ -823,8 +870,21 @@ void MemoryDescriptor::GrowStackByPage()
 		return;
 	}
 
-	stack->start -= PageManager::PAGE_SIZE;
-	this->ReservePagesForRegion((unsigned int)(stack - this->m_Regions));
+	unsigned long newStart = stack->start - PageManager::PAGE_SIZE;
+	stack->start = newStart;
+
+	if ( this->m_PageInfos == NULL )
+	{
+		return;
+	}
+
+	unsigned int regionIndex = (unsigned int)(stack - this->m_Regions);
+	unsigned int newPageIndex = this->AddressToPageIndex(newStart);
+	this->m_PageInfos[newPageIndex].state = PAGE_STATE_RESERVED;
+	this->m_PageInfos[newPageIndex].flags = stack->flags;
+	this->m_PageInfos[newPageIndex].regionIndex = (unsigned short)regionIndex;
+	this->m_PageInfos[newPageIndex].frameAddress = 0;
+	this->m_PageInfos[newPageIndex].backingOffset = 0;
 }
 
 PageDirectory* MemoryDescriptor::GetPageDirectoryPointer() const

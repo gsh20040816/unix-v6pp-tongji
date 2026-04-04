@@ -60,7 +60,7 @@ SystemCallTableEntry SystemCall::m_SystemEntranceTable[SYSTEM_CALL_NUM] =
 	{ 1, &Sys_Setgid},				/* 46 = setgid	*/
 	{ 0, &Sys_Getgid},				/* 47 = getgid	*/
 	{ 2, &Sys_Ssig	},				/* 48 = sig	*/
-	{ 0, &Sys_Nosys	},				/* 49 = nosys	*/
+	{ 2, &Sys_GetUsrPt},			/* 49 = getusrpt	*/
 	{ 0, &Sys_Nosys	},				/* 50 = nosys	*/
 	{ 0, &Sys_Nosys	},				/* 51 = nosys	*/
 	{ 0, &Sys_Nosys	},				/* 52 = nosys	*/
@@ -720,5 +720,33 @@ int SystemCall::Sys_Ssig()
 	User& u = Kernel::Instance().GetUser();
 	u.u_procp->Ssig();
 
+	return 0;	/* GCC likes it ! */
+}
+
+/*	49 = getusrpt	count = 2	*/
+int SystemCall::Sys_GetUsrPt()
+{
+	User& u = Kernel::Instance().GetUser();
+	MemoryDescriptor& md = u.u_procp->p_memory;
+	unsigned long entriesAddress = (unsigned long)(unsigned int)u.u_arg[0];
+	MemoryDescriptor::UserPageSnapshotEntry* entries =
+		(MemoryDescriptor::UserPageSnapshotEntry*)entriesAddress;
+	int maxEntries = u.u_arg[1];
+
+	if ( maxEntries < 0 )
+	{
+		u.u_error = User::EINVAL;
+		return 0;
+	}
+
+	if ( entries == NULL && maxEntries != 0 )
+	{
+		u.u_error = User::EFAULT;
+		return 0;
+	}
+
+	u.u_ar0[User::EAX] = md.ExportResidentUserPages(
+		entries,
+		(unsigned int)maxEntries);
 	return 0;	/* GCC likes it ! */
 }

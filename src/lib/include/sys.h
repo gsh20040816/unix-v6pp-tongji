@@ -80,6 +80,21 @@ int getswtch();
 /* 启用屏幕底部的lines行输出调试信息 */
 int trace(int lines);
 
+/* 与内核 MemoryDescriptor::UserPageSnapshotEntry 对齐 */
+struct user_page_snapshot_entry
+{
+	unsigned short pageIndex;
+	unsigned short flags;
+	unsigned int pageBaseAddress;
+};
+
+#define USER_PAGE_SNAPSHOT_PRESENT 0x1
+#define USER_PAGE_SNAPSHOT_RW 0x2
+#define USER_PAGE_SNAPSHOT_USER 0x4
+
+/* 获取当前进程用户态实际驻留页表项，返回总条目数 */
+int getUserPageTable(struct user_page_snapshot_entry* entries, int maxEntries);
+
 
 
 #endif

@@ -180,6 +180,15 @@ int trace(int lines)
 	return -1;
 }
 
+int getUserPageTable(struct user_page_snapshot_entry* entries, int maxEntries)
+{
+	int res;
+	__asm__ volatile ("int $0x80":"=a"(res):"a"(49),"b"(entries),"c"(maxEntries));
+	if ( res >= 0 )
+		return res;
+	return -1;
+}
+
 unsigned int fakeedata = 0;
 int sbrk(int increment)
 {

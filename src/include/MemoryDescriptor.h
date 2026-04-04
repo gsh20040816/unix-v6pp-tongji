@@ -92,6 +92,13 @@ public:
 		unsigned long backingOffset;
 	};
 
+	struct UserPageSnapshotEntry
+	{
+		unsigned short pageIndex;
+		unsigned short flags;
+		unsigned int pageBaseAddress;
+	};
+
 public:
 	MemoryDescriptor();
 	~MemoryDescriptor();
@@ -122,6 +129,8 @@ public:
 	void BuildPageTablesForImage();
 	void Activate();
 	void DisplayPageTable();
+	unsigned int ExportResidentUserPages(UserPageSnapshotEntry* entries,
+		unsigned int maxEntries) const;
 
 	bool SetHeapBreak(unsigned long newBreak);
 	void GrowStackByPage();
