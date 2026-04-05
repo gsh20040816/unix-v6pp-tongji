@@ -12,6 +12,13 @@ SECTIONS
 		*(.text.*)
 		. = ALIGN(4096);
 	}
+
+	.rodata :
+	{
+		*(.rodata)
+		*(.rodata.*)
+		. = ALIGN(4096);
+	}
 	
 	.data :
 	{
@@ -50,6 +57,16 @@ SECTIONS
 		*(.bss.*)
 		*(COMMON)
 		. = ALIGN(4096);
+	}
+
+	/DISCARD/ :
+	{
+		*(.note.gnu.build-id)
+		*(.note.*)
+		*(.comment)
+		*(.eh_frame)
+		*(.eh_frame.*)
+		*(.eh_frame_hdr)
 	}
 	
 	end = .; _end =.; __end = .;

@@ -40,14 +40,6 @@ jobs:
       - name: Build image target
         run: cmake --build build --target image -j"$(nproc)"
 
-      - name: Upload pre-smoke image artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: cimg-presmoke-${{ github.run_number }}
-          path: build/c.img
-          if-no-files-found: warn
-          retention-days: 7
-
       - name: Smoke test boot with QEMU
         env:
           QEMU_SMOKE_TIMEOUT_SEC: 30
