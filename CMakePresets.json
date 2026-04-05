@@ -1,0 +1,87 @@
+{
+  "version": 2,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 20,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "dev-ninja",
+      "displayName": "Development (Ninja, build/)",
+      "description": "Default local development configure preset.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "OOS_KERNEL_DIAGNOSE_TO_DEBUGCON": "ON",
+        "OOS_KERNEL_TTY_STDIO_SERIAL": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "image",
+      "configurePreset": "dev-ninja",
+      "targets": [
+        "image"
+      ]
+    },
+    {
+      "name": "clean",
+      "configurePreset": "dev-ninja",
+      "targets": [
+        "clean"
+      ]
+    },
+    {
+      "name": "bochs",
+      "configurePreset": "dev-ninja",
+      "targets": [
+        "bochs"
+      ]
+    },
+    {
+      "name": "bochs-gdb",
+      "configurePreset": "dev-ninja",
+      "targets": [
+        "bochs-gdb"
+      ]
+    },
+    {
+      "name": "bochsrc-gui",
+      "configurePreset": "dev-ninja",
+      "targets": [
+        "bochsrc_gui"
+      ]
+    },
+    {
+      "name": "qemu",
+      "configurePreset": "dev-ninja",
+      "targets": [
+        "qemu"
+      ]
+    },
+    {
+      "name": "qemu-curses",
+      "configurePreset": "dev-ninja",
+      "targets": [
+        "qemu-curses"
+      ]
+    },
+    {
+      "name": "qemu-gdb",
+      "configurePreset": "dev-ninja",
+      "targets": [
+        "qemu-gdb"
+      ]
+    },
+    {
+      "name": "qemu-gui",
+      "configurePreset": "dev-ninja",
+      "targets": [
+        "qemu-gui"
+      ]
+    }
+  ]
+}

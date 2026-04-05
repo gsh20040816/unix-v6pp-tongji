@@ -9,5 +9,6 @@
     "--background-index",
     "--header-insertion=never",
     "--completion-style=detailed"
-  ]
+  ],
+  "cmake.useCMakePresets": "always"
 }

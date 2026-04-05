@@ -23,6 +23,31 @@
 - 目标架构为 `i386`，核心编译/链接参数为 `-m32`、`elf32-i386`。
 - 若本机未安装 `bochs-gdb` 或 `qemu-system-i386`，对应目标不会生成。
 
+## CMake Presets（Ninja）
+
+仓库根目录新增了 `CMakePresets.json`，默认开发预设固定使用 `Ninja` 生成器，并统一了常用内核调试开关。
+
+常用命令如下：
+
+```bash
+# 1) 配置（开发模式，build/）
+cmake --preset dev-ninja
+
+# 2) 构建镜像
+cmake --build --preset image -j
+
+# 3) 启动 QEMU（stdio）
+cmake --build --preset qemu -j
+
+# 4) 启动 QEMU gdbstub（stdio）
+cmake --build --preset qemu-gdb -j
+```
+
+说明：
+
+- 开发目录固定为 `build/`。
+- `.vscode/tasks.json` 已切换到 `--preset` 调用方式，任务与命令行行为保持一致。
+
 ## 物理内存与磁盘占用约定
 
 ### 1. 内存总参数

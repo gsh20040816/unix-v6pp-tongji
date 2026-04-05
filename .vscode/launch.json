@@ -20,18 +20,7 @@
             "logging": {
                 "engineLogging": true
             },
-            "setupCommands": [
-                {
-                    "description": "Use Intel disassembly syntax",
-                    "text": "set disassembly-flavor intel",
-                    "ignoreFailures": true
-                },
-                {
-                    "description": "Add kernel source directories",
-                    "text": "directory src/boot src/dev src/fs src/include src/interrupt src/kernel src/lib src/machine src/mm src/pe src/proc src/test src/tty",
-                    "ignoreFailures": true
-                }
-            ]
+            "setupCommands": []
         },
         {
             "name": "debug/bochs gdb + user symbols (linux local)",
@@ -53,16 +42,6 @@
                 "engineLogging": true
             },
             "setupCommands": [
-                {
-                    "description": "Use Intel disassembly syntax",
-                    "text": "set disassembly-flavor intel",
-                    "ignoreFailures": true
-                },
-                {
-                    "description": "Add kernel source directories",
-                    "text": "directory src/boot src/dev src/fs src/include src/interrupt src/kernel src/lib src/machine src/mm src/pe src/proc src/test src/tty",
-                    "ignoreFailures": true
-                },
                 {
                     "description": "Remove previous user symbol at fixed user text base (if any)",
                     "text": "remove-symbol-file -a 0x00401000",
@@ -94,18 +73,7 @@
             "logging": {
                 "engineLogging": true
             },
-            "setupCommands": [
-                {
-                    "description": "Use Intel disassembly syntax",
-                    "text": "set disassembly-flavor intel",
-                    "ignoreFailures": true
-                },
-                {
-                    "description": "Add kernel source directories",
-                    "text": "directory src/boot src/dev src/fs src/include src/interrupt src/kernel src/lib src/machine src/mm src/pe src/proc src/test src/tty",
-                    "ignoreFailures": true
-                }
-            ]
+            "setupCommands": []
         },
         {
             "name": "debug/qemu gdb + user symbols (linux local)",
@@ -127,16 +95,6 @@
                 "engineLogging": true
             },
             "setupCommands": [
-                {
-                    "description": "Use Intel disassembly syntax",
-                    "text": "set disassembly-flavor intel",
-                    "ignoreFailures": true
-                },
-                {
-                    "description": "Add kernel source directories",
-                    "text": "directory src/boot src/dev src/fs src/include src/interrupt src/kernel src/lib src/machine src/mm src/pe src/proc src/test src/tty",
-                    "ignoreFailures": true
-                },
                 {
                     "description": "Remove previous user symbol at fixed user text base (if any)",
                     "text": "remove-symbol-file -a 0x00401000",

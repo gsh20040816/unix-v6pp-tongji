@@ -5,12 +5,8 @@
 			"label": "cmake/configure",
 			"command": "cmake",
 			"args": [
-				"-S",
-				".",
-				"-B",
-				"build",
-				"-DOOS_KERNEL_DIAGNOSE_TO_DEBUGCON=ON",
-				"-DOOS_KERNEL_TTY_STDIO_SERIAL=ON"
+				"--preset",
+				"dev-ninja"
 			],
 			"options": {
 				"cwd": "${workspaceFolder}"
@@ -24,8 +20,7 @@
 			"command": "cmake",
 			"args": [
 				"--build",
-				"build",
-				"--target",
+				"--preset",
 				"image",
 				"-j"
 			],
@@ -48,8 +43,7 @@
 			"command": "cmake",
 			"args": [
 				"--build",
-				"build",
-				"--target",
+				"--preset",
 				"clean"
 			],
 			"options": {
@@ -68,8 +62,7 @@
 			"command": "cmake",
 			"args": [
 				"--build",
-				"build",
-				"--target",
+				"--preset",
 				"bochs",
 				"-j"
 			],
@@ -91,8 +84,7 @@
 			"command": "cmake",
 			"args": [
 				"--build",
-				"build",
-				"--target",
+				"--preset",
 				"bochs-gdb",
 				"-j"
 			],
@@ -125,9 +117,8 @@
 			"command": "cmake",
 			"args": [
 				"--build",
-				"build",
-				"--target",
-				"bochsrc_gui",
+				"--preset",
+				"bochsrc-gui",
 				"-j"
 			],
 			"options": {
@@ -148,7 +139,7 @@
 			"command": "bash",
 			"args": [
 				"-lc",
-				"mkdir -p build && : > build/qemu-run-diagnose.log && cmake --build build --target qemu -j 2>>build/qemu-run-diagnose.log"
+				"mkdir -p build && : > build/qemu-run-diagnose.log && cmake --build --preset qemu -j 2>>build/qemu-run-diagnose.log"
 			],
 			"options": {
 				"cwd": "${workspaceFolder}"
@@ -168,8 +159,7 @@
 			"command": "cmake",
 			"args": [
 				"--build",
-				"build",
-				"--target",
+				"--preset",
 				"qemu-curses",
 				"-j"
 			],
@@ -191,7 +181,7 @@
 			"command": "bash",
 			"args": [
 				"-lc",
-				"mkdir -p build && : > build/qemu-debug-diagnose.log && cmake --build build --target qemu-gdb -j 2>>build/qemu-debug-diagnose.log"
+				"mkdir -p build && : > build/qemu-debug-diagnose.log && cmake --build --preset qemu-gdb -j 2>>build/qemu-debug-diagnose.log"
 			],
 			"options": {
 				"cwd": "${workspaceFolder}"
@@ -222,8 +212,7 @@
 			"command": "cmake",
 			"args": [
 				"--build",
-				"build",
-				"--target",
+				"--preset",
 				"qemu-gui",
 				"-j"
 			],

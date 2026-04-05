@@ -1,4 +1,6 @@
 set confirm off
+set disassembly-flavor intel
+directory src/boot src/dev src/fs src/include src/interrupt src/kernel src/lib src/machine src/mm src/pe src/proc src/test src/tty
 
 define hook-quit
   monitor quit
