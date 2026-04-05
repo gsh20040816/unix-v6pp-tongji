@@ -64,9 +64,7 @@ set_target_properties(kernel PROPERTIES
 )
 
 set(OOS_KERNEL_LINKER_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/Link.ld")
-file(RELATIVE_PATH OOS_KERNEL_LINKER_SCRIPT_REL "${CMAKE_BINARY_DIR}" "${OOS_KERNEL_LINKER_SCRIPT}")
-
-set_property(TARGET kernel APPEND PROPERTY LINK_DEPENDS "${OOS_KERNEL_LINKER_SCRIPT_REL}")
+set_property(TARGET kernel APPEND PROPERTY LINK_DEPENDS "${OOS_KERNEL_LINKER_SCRIPT}")
 
 target_link_options(kernel PRIVATE
   -m32
@@ -77,7 +75,7 @@ target_link_options(kernel PRIVATE
   -fno-stack-protector
   -no-pie
   "-Wl,-m,elf_i386"
-  "-Wl,-T,${OOS_KERNEL_LINKER_SCRIPT_REL}"
+  "-Wl,-T,${OOS_KERNEL_LINKER_SCRIPT}"
 )
 
 set(OOS_KERNEL_BIN "${OOS_TARGET_OBJ_DIR}/kernel.bin")
@@ -160,11 +158,6 @@ if(NOT OOS_USER_PAYLOAD_TARGETS)
   message(FATAL_ERROR "No user payload targets were registered by shell/program modules.")
 endif()
 
-set(OOS_USER_PAYLOAD_OUTPUTS)
-foreach(OOS_USER_PAYLOAD_TARGET IN LISTS OOS_USER_PAYLOAD_TARGETS)
-  list(APPEND OOS_USER_PAYLOAD_OUTPUTS "$<TARGET_FILE:${OOS_USER_PAYLOAD_TARGET}>")
-endforeach()
-
 add_custom_target(oos_user_payload DEPENDS ${OOS_USER_PAYLOAD_TARGETS})
 add_custom_target(oos_fs_tools DEPENDS filescanner fsedit)
 
@@ -189,10 +182,10 @@ add_custom_command(
   DEPENDS
     "${OOS_BOOT_BIN}"
     "${OOS_KERNEL_BIN}"
-    "$<TARGET_FILE:filescanner>"
-    "$<TARGET_FILE:fsedit>"
+    filescanner
+    fsedit
+    oos_user_payload
     ${OOS_FS_CONTENT_FILES}
-    ${OOS_USER_PAYLOAD_OUTPUTS}
   VERBATIM
 )
 
