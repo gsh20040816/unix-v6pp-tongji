@@ -14,10 +14,12 @@ cmake -S . -B ../../.build-cache/v6pp-fs-edit-2022-cmake -DCMAKE_BUILD_TYPE=Rele
 cmake --build ../../.build-cache/v6pp-fs-edit-2022-cmake --target filescanner fsedit --parallel
 ```
 
-Binaries are generated in:
+Binaries are generated in the parent build directory when used by the top-level project,
+or in this subproject's build directory when built standalone.
 
-- workspace/linux-bin/filescanner
-- workspace/linux-bin/fsedit
+Static filesystem content is stored in:
+
+- fs/
 
 ## Note
 

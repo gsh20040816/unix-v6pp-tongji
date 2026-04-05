@@ -168,6 +168,8 @@ endforeach()
 add_custom_target(oos_user_payload DEPENDS ${OOS_USER_PAYLOAD_TARGETS})
 add_custom_target(oos_fs_tools DEPENDS filescanner fsedit)
 
+file(GLOB_RECURSE OOS_FS_CONTENT_FILES CONFIGURE_DEPENDS "${OOS_FS_CONTENT_DIR}/*")
+
 set(OOS_WORKSPACE_IMG "${OOS_FS_WORKSPACE}/c.img")
 set(OOS_FINAL_IMG "${CMAKE_BINARY_DIR}/c.img")
 
@@ -176,6 +178,8 @@ add_custom_command(
   BYPRODUCTS "${OOS_WORKSPACE_IMG}"
   COMMAND "${CMAKE_COMMAND}"
           "-DWORKSPACE_DIR=${OOS_FS_WORKSPACE}"
+        "-DFS_CONTENT_DIR=${OOS_FS_CONTENT_DIR}"
+        "-DFS_PAYLOAD_DIR=${OOS_FS_PAYLOAD_DIR}"
           "-DBOOT_BIN=${OOS_BOOT_BIN}"
           "-DKERNEL_BIN=${OOS_KERNEL_BIN}"
           "-DFILESCANNER=$<TARGET_FILE:filescanner>"
@@ -187,6 +191,7 @@ add_custom_command(
     "${OOS_KERNEL_BIN}"
     "$<TARGET_FILE:filescanner>"
     "$<TARGET_FILE:fsedit>"
+    ${OOS_FS_CONTENT_FILES}
     ${OOS_USER_PAYLOAD_OUTPUTS}
   VERBATIM
 )

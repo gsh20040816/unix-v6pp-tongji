@@ -1,28 +1,12 @@
 # Kernel/user build outputs.
 build/
 
-# Bochs runtime outputs.
-bochs/bochsout.txt
-
-# In-tree program/library build outputs.
-src/lib/*.a
-src/lib/objs/
-src/program/objs/
-src/shell/OBJS/
-
 # Shared VS Code workflow files can stay tracked.
 # Ignore only generated indexes, logs, and machine-local compiler settings.
 .vscode/c_cpp_properties.json
 
-# Tool-side generated outputs and temporary workspaces.
-tools/v6pp-fs-edit-2022/workspace/*
-!tools/v6pp-fs-edit-2022/workspace/programs/
-!tools/v6pp-fs-edit-2022/workspace/programs/**
-tools/v6pp-fs-edit-2022/workspace/programs/Shell
-tools/v6pp-fs-edit-2022/workspace/programs/Shell.exe
-tools/v6pp-fs-edit-2022/workspace/programs/bin/*
-!tools/v6pp-fs-edit-2022/workspace/programs/bin/.gitkeep
-tools/v6pp-fs-edit-2022/src/**/objs/
+# Legacy tool-side workspace (no longer used by current CMake flow).
+tools/v6pp-fs-edit-2022/workspace/
 
 # OS noise.
 .DS_Store
