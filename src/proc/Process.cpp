@@ -311,7 +311,6 @@ void Process::SBreak()
 		return;  // 返回当前数据段之后，第一个字节的地址
 	}
 
-	unsigned int oldBreak = md.GetHeapBreak();
 	if ( false == md.SetHeapBreak(newEnd) || false == md.CheckUserSpace() )
 	{
 		return;   // out of virtual space. fail

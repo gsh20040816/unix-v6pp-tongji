@@ -41,9 +41,9 @@ public:
 	
 	static int CaluPageNeed(unsigned int memoryneed, unsigned int pagesize);
 
-	static void StringCopy(char* src, char* dst);
+	static void StringCopy(const char* src, char* dst);
 
-	static int StringLength(char* pString);
+	static int StringLength(const char* pString);
 	
 	/* @comment
 	 * 用于从物理地址src copy 到物理地址des 1个byte
@@ -62,7 +62,7 @@ public:
 	/* 设置参数dev中的次设备号部分，低8比特 */
 	static short SetMinor(short dev, const short vlaue);
 	/* 输出错误信息，然后死循环 */
-	static void Panic(char* str);
+	static void Panic(const char* str);
 
 	/* 以src为源地址，dst为目的地址，复制count个双字 */
 	static void DWordCopy(int* src, int* dst, int count);

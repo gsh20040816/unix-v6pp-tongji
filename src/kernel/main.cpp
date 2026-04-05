@@ -129,7 +129,7 @@ extern "C" void ExecShell()
  * 内核早期初始化阶段直接复用 FileManager::Open 逻辑，
  * 语义与原先 lib_open 一致：成功返回 fd，失败返回 -1。
  */
-static int open(char* pathname, unsigned int mode)
+static int open(const char* pathname, unsigned int mode)
 {
 	User& u = Kernel::Instance().GetUser();
 	unsigned int savedRetSlot = 0;
@@ -142,7 +142,7 @@ static int open(char* pathname, unsigned int mode)
 	u.u_ar0 = &savedRetSlot;
 	u.u_arg[0] = (int)(unsigned long)pathname;
 	u.u_arg[1] = (int)mode;
-	u.u_dirp = pathname;
+	u.u_dirp = (char*)pathname;
 	u.u_error = User::NOERROR;
 
 	Kernel::Instance().GetFileManager().Open();
@@ -164,10 +164,11 @@ extern "C" void Delay()
 	for ( int i = 0; i < 50; i++ )
 		for ( int j = 0; j < 10000; j++ )
 		{
-			int a;
-			int b;
-			int c=a+b;
+			int a = 0;
+			int b = 0;
+			int c = a + b;
 			c++;
+			(void)c;
 		}
 }
 
@@ -245,24 +246,24 @@ extern "C" void next()
 		us.u_procp->p_ttyp = NULL;
 		Kernel::Instance().GetProcessManager().Sched();
 	}
-		else               /* 1#进程执行应用程序Shell,是普通进程  */
-		{
-			Diagnose::Write("boot: init shell path\n");
+	else               /* 1#进程执行应用程序Shell,是普通进程  */
+	{
+		Diagnose::Write("boot: init shell path\n");
 
-			CRT::ClearScreen();
+		CRT::ClearScreen();
 
-			/* 1#进程首次回用户态时，直接从用户地址0处的runtime开始执行。 */
-			__asm__ __volatile__(
-				"movl %0, %%eax\n\t"
-				"movl $0x800000, %%edx\n\t"
-				"pushl $0x23\n\t"
-				"pushl %%edx\n\t"
-				"pushfl\n\t"
-				"pushl $0x1b\n\t"
-				"pushl $0x0\n\t"
-				"iret"
-				:
-				: "r"((unsigned long)ExecShell - (unsigned long)runtime)
-				: "eax", "edx");
-		}
+		/* 1#进程首次回用户态时，直接从用户地址0处的runtime开始执行。 */
+		__asm__ __volatile__(
+			"movl %0, %%eax\n\t"
+			"movl $0x800000, %%edx\n\t"
+			"pushl $0x23\n\t"
+			"pushl %%edx\n\t"
+			"pushfl\n\t"
+			"pushl $0x1b\n\t"
+			"pushl $0x0\n\t"
+			"iret"
+			:
+			: "r"((unsigned long)ExecShell - (unsigned long)runtime)
+			: "eax", "edx");
+	}
 	}

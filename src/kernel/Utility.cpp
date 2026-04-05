@@ -24,15 +24,15 @@ int Utility::CaluPageNeed(unsigned int memoryneed, unsigned int pagesize)
 	return pageRequired;
 }
 
-void Utility::StringCopy(char* src, char* dst)
+void Utility::StringCopy(const char* src, char* dst)
 {
 	while ( (*dst++ = *src++) != 0 ) ;
 }
 
-int Utility::StringLength(char* pString)
+int Utility::StringLength(const char* pString)
 {
 	int length = 0;
-	char* pChar = pString;
+	const char* pChar = pString;
 
 	while( *pChar++ )
 	{
@@ -248,7 +248,7 @@ short Utility::SetMinor(short dev, const short value)
 	return dev;
 }
 
-void Utility::Panic(char* str)
+void Utility::Panic(const char* str)
 {
 	Diagnose::TraceOn();
 	Diagnose::Write("%s\n", str);
