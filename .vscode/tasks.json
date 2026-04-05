@@ -76,11 +76,7 @@
 			"options": {
 				"cwd": "${workspaceFolder}"
 			},
-			"detail": "在 Linux 本机通过 CMake 启动 bochs（nodebug 配置）",
-			"dependsOrder": "sequence",
-			"dependsOn": [
-				"cmake/build"
-			],
+			"detail": "在 Linux 本机通过 CMake 启动 bochs（nodebug 配置，按需增量构建）",
 			"presentation": {
 				"reveal": "always",
 				"panel": "dedicated",
@@ -103,11 +99,7 @@
 			"options": {
 				"cwd": "${workspaceFolder}"
 			},
-			"detail": "在 Linux 本机通过 CMake 启动 bochs-gdb 并等待 gdbstub 可连接",
-			"dependsOrder": "sequence",
-			"dependsOn": [
-				"cmake/build"
-			],
+			"detail": "在 Linux 本机通过 CMake 启动 bochs-gdb 并等待 gdbstub 可连接（按需增量构建）",
 			"presentation": {
 				"reveal": "always",
 				"panel": "dedicated",
@@ -141,11 +133,7 @@
 			"options": {
 				"cwd": "${workspaceFolder}"
 			},
-			"detail": "在 Linux 本机通过 CMake 启动 bochs（gui 配置）",
-			"dependsOrder": "sequence",
-			"dependsOn": [
-				"cmake/build"
-			],
+			"detail": "在 Linux 本机通过 CMake 启动 bochs（gui 配置，按需增量构建）",
 			"presentation": {
 				"reveal": "always",
 				"panel": "dedicated",
@@ -165,11 +153,7 @@
 			"options": {
 				"cwd": "${workspaceFolder}"
 			},
-			"detail": "在 Linux 本机通过 QEMU 启动 qemu（stdin/stdout，diagnose 走 stderr 并写入 build/qemu-run-diagnose.log）",
-			"dependsOrder": "sequence",
-			"dependsOn": [
-				"cmake/build"
-			],
+			"detail": "在 Linux 本机通过 QEMU 启动 qemu（stdin/stdout，diagnose 走 stderr 并写入 build/qemu-run-diagnose.log；按需增量构建）",
 			"presentation": {
 				"reveal": "always",
 				"panel": "dedicated",
@@ -192,11 +176,7 @@
 			"options": {
 				"cwd": "${workspaceFolder}"
 			},
-			"detail": "在 Linux 本机通过 QEMU 启动 qemu（保留原 terminal/curses 运行方式）",
-			"dependsOrder": "sequence",
-			"dependsOn": [
-				"cmake/build"
-			],
+			"detail": "在 Linux 本机通过 QEMU 启动 qemu（保留原 terminal/curses 运行方式，按需增量构建）",
 			"presentation": {
 				"reveal": "always",
 				"panel": "dedicated",
@@ -216,11 +196,7 @@
 			"options": {
 				"cwd": "${workspaceFolder}"
 			},
-			"detail": "在 Linux 本机通过 QEMU 启动 qemu-gdb（stdin/stdout，diagnose 走 stderr 并写入 build/qemu-debug-diagnose.log）并等待 gdbstub 可连接",
-			"dependsOrder": "sequence",
-			"dependsOn": [
-				"cmake/build"
-			],
+			"detail": "在 Linux 本机通过 QEMU 启动 qemu-gdb（stdin/stdout，diagnose 走 stderr 并写入 build/qemu-debug-diagnose.log）并等待 gdbstub 可连接（按需增量构建）",
 			"presentation": {
 				"reveal": "always",
 				"panel": "dedicated",
@@ -254,11 +230,7 @@
 			"options": {
 				"cwd": "${workspaceFolder}"
 			},
-			"detail": "在 Linux 本机通过 QEMU 启动 qemu（gui 配置）",
-			"dependsOrder": "sequence",
-			"dependsOn": [
-				"cmake/build"
-			],
+			"detail": "在 Linux 本机通过 QEMU 启动 qemu（gui 配置，按需增量构建）",
 			"presentation": {
 				"reveal": "always",
 				"panel": "dedicated",

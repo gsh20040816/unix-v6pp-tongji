@@ -141,7 +141,10 @@
   - `qemu/debug`（`qemu-gdb` -> `gdb-stdio`）
 - `headless` 主要用于 CI 冒烟场景，可通过环境变量直接调用脚本启用。
 - `QEMU` 与镜像路径统一绑定 `build/c.img`，与 `CMake image` 目标保持一致。
-- VS Code 任务链路与 `CMake target` 对齐，形成“配置 -> 构建镜像 -> 启动虚拟机”的一致工作流。
+- `bochs/*` 与 `qemu/*` 运行目标会依赖 `image`，按需触发增量构建：
+  - 若 `build/c.img` 及其依赖无变化，仅做检查后直接启动虚拟机。
+  - 若内核/用户程序/镜像内容有变化，会自动更新镜像后再启动。
+- VS Code 运行任务不再额外依赖 `cmake/build`，避免同一次启动里重复触发两次构建链检查。
 
 ### 5. 双区域滚动条
 
