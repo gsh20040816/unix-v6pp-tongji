@@ -42,7 +42,7 @@ jobs:
 
       - name: Smoke test boot with QEMU
         env:
-          QEMU_SMOKE_TIMEOUT_SEC: 120
+          QEMU_SMOKE_TIMEOUT_SEC: 30
         run: bash qemu/smoke_boot.sh
 
       - name: Upload QEMU smoke logs on failure

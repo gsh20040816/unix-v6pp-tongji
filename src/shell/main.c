@@ -14,20 +14,15 @@ int argsCnt;
 int main1()
 {
 	char lineInput[512];
+	notifyShellReady();
 	getPath( curPath );	
 	int root;
-	int shellReadyNotified = 0;
 	while( 1 )
 	{
 		root = -1;
 		argsCnt = 0;
 		InitCommandTree();
 		printf("[%s]#", curPath);
-		if ( shellReadyNotified == 0 )
-		{
-			notifyShellReady();
-			shellReadyNotified = 1;
-		}
 		gets( lineInput );		
 		if ( strcmp( "shutdown", lineInput ) == 0 )
 		{

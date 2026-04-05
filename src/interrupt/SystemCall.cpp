@@ -9,8 +9,10 @@
 
 namespace
 {
-	static const unsigned short QEMU_DEBUGCON_PORT = 0xE9;
+	static const unsigned short QEMU_DEBUGCON_PORT_E9 = 0xE9;
+	static const unsigned short QEMU_DEBUGCON_PORT_402 = 0x402;
 	static const char* QEMU_BOOT_READY_MARKER = "OOS_BOOT_SHELL_READY\n";
+	static bool g_BootReadyReported = false;
 
 	static void WriteQemuDebugCon(const char* text)
 	{
@@ -21,7 +23,14 @@ namespace
 
 		while ( *text != '\0' )
 		{
-			IOPort::OutByte(QEMU_DEBUGCON_PORT, (unsigned char)(*text));
+			/*
+			 * QEMU 版本间 debugcon 默认端口可能不一致：
+			 * - 0xE9 常用于 bochs-style debug port
+			 * - 0x402 是 QEMU debugcon 默认端口
+			 * 为避免 CI 与本机版本差异导致漏日志，这里双端口同时写入。
+			 */
+			IOPort::OutByte(QEMU_DEBUGCON_PORT_E9, (unsigned char)(*text));
+			IOPort::OutByte(QEMU_DEBUGCON_PORT_402, (unsigned char)(*text));
 			++text;
 		}
 	}
@@ -830,12 +839,10 @@ int SystemCall::Sys_GetKerPageMem()
 /*	54 = bootready	count = 0	*/
 int SystemCall::Sys_BootReady()
 {
-	User& u = Kernel::Instance().GetUser();
-
-	/* 仅允许1#进程（初始Shell）上报启动就绪，避免普通进程误触发。 */
-	if ( u.u_procp != NULL && u.u_procp->p_pid == 1 )
+	if ( g_BootReadyReported == false )
 	{
 		WriteQemuDebugCon(QEMU_BOOT_READY_MARKER);
+		g_BootReadyReported = true;
 	}
 
 	return 0;	/* GCC likes it ! */
