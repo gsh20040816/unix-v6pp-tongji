@@ -110,6 +110,8 @@ namespace
 		}
 
 		User& u = Kernel::Instance().GetUser();
+		User::ErrorCode savedError = u.u_error;
+		u.u_error = User::NOERROR;
 		u.u_IOParam.m_Base = (unsigned char*)virtualAddress;
 		u.u_IOParam.m_Offset = fileOffsetBase + backingOffset;
 		u.u_IOParam.m_Count = readSize;
@@ -122,6 +124,8 @@ namespace
 			}
 			return false;
 		}
+
+		u.u_error = savedError;
 
 		return true;
 	}
