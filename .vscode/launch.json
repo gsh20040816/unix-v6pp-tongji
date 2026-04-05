@@ -34,6 +34,48 @@
             ]
         },
         {
+            "name": "debug/bochs gdb + user symbols (linux local)",
+            "type": "cppdbg",
+            "request": "launch",
+            "preLaunchTask": "bochs/debug",
+            "program": "${workspaceFolder}/build/objs/kernel",
+            "cwd": "${workspaceFolder}",
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb",
+            "miDebuggerArgs": "-x ${workspaceFolder}/.vscode/gdbinit.bochs",
+            "miDebuggerServerAddress": "127.0.0.1:1234",
+            "targetArchitecture": "x86",
+            "stopAtEntry": true,
+            "externalConsole": false,
+            "launchCompleteCommand": "None",
+            "stopAtConnect": true,
+            "logging": {
+                "engineLogging": true
+            },
+            "setupCommands": [
+                {
+                    "description": "Use Intel disassembly syntax",
+                    "text": "set disassembly-flavor intel",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Add kernel source directories",
+                    "text": "directory src/boot src/dev src/fs src/include src/interrupt src/kernel src/lib src/machine src/mm src/pe src/proc src/test src/tty",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Remove previous user symbol at fixed user text base (if any)",
+                    "text": "remove-symbol-file -a 0x00401000",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Load selected user program symbols at user text base",
+                    "text": "add-symbol-file ${workspaceFolder}/build/fs-payload/programs${input:userSymbolPathFromFsRoot} 0x00401000",
+                    "ignoreFailures": false
+                }
+            ]
+        },
+        {
             "name": "debug/qemu gdb (linux local)",
             "type": "cppdbg",
             "request": "launch",
@@ -64,6 +106,56 @@
                     "ignoreFailures": true
                 }
             ]
+        },
+        {
+            "name": "debug/qemu gdb + user symbols (linux local)",
+            "type": "cppdbg",
+            "request": "launch",
+            "preLaunchTask": "qemu/debug",
+            "program": "${workspaceFolder}/build/objs/kernel",
+            "cwd": "${workspaceFolder}",
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb",
+            "miDebuggerArgs": "-x ${workspaceFolder}/.vscode/gdbinit.bochs",
+            "miDebuggerServerAddress": "127.0.0.1:1234",
+            "targetArchitecture": "x86",
+            "stopAtEntry": true,
+            "externalConsole": false,
+            "launchCompleteCommand": "None",
+            "stopAtConnect": true,
+            "logging": {
+                "engineLogging": true
+            },
+            "setupCommands": [
+                {
+                    "description": "Use Intel disassembly syntax",
+                    "text": "set disassembly-flavor intel",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Add kernel source directories",
+                    "text": "directory src/boot src/dev src/fs src/include src/interrupt src/kernel src/lib src/machine src/mm src/pe src/proc src/test src/tty",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Remove previous user symbol at fixed user text base (if any)",
+                    "text": "remove-symbol-file -a 0x00401000",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Load selected user program symbols at user text base",
+                    "text": "add-symbol-file ${workspaceFolder}/build/fs-payload/programs${input:userSymbolPathFromFsRoot} 0x00401000",
+                    "ignoreFailures": false
+                }
+            ]
+        }
+    ],
+    "inputs": [
+        {
+            "id": "userSymbolPathFromFsRoot",
+            "type": "promptString",
+            "description": "用户态程序虚拟路径（文件系统根目录路径，例如 /Shell 或 /bin/ls）",
+            "default": "/bin/ls"
         }
     ]
 }
