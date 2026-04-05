@@ -1000,6 +1000,7 @@ bool MemoryDescriptor::EnsurePagePresent(unsigned long faultAddress)
 
 	const Region& region = this->m_Regions[pageInfo.regionIndex];
 	bool ok = false;
+	unsigned long deferredFreeSharedTextPage = 0;
 	/* 按区域后备类型分派补页策略。 */
 	switch ( region.backing.type )
 	{
@@ -1121,8 +1122,27 @@ bool MemoryDescriptor::EnsurePagePresent(unsigned long faultAddress)
 			if ( useSharedText )
 			{
 				unsigned long* sharedPageArray = (unsigned long*)sharedPageArrayConst;
-				sharedPageArray[sharedPageIndex] = newPage;
-				ok = this->ShareTextPage(virtualAddress, newPage, readWrite);
+				unsigned long publishedPage = 0;
+
+				/*
+				 * 共享正文页发布采用“双重检查 + 短临界区”策略：
+				 * 1) 前面的 ResolveTextPhysicalAddress 是无锁快路径；
+				 * 2) 这里关中断后再次检查槽位，保证只有一个发布者写入。
+				 */
+				X86Assembly::CLI();
+				if ( sharedPageArray[sharedPageIndex] == 0 )
+				{
+					sharedPageArray[sharedPageIndex] = newPage;
+					publishedPage = newPage;
+				}
+				else
+				{
+					publishedPage = sharedPageArray[sharedPageIndex];
+					deferredFreeSharedTextPage = newPage;
+				}
+				X86Assembly::STI();
+
+				ok = this->ShareTextPage(virtualAddress, publishedPage, readWrite);
 			}
 			else
 			{
@@ -1141,6 +1161,15 @@ bool MemoryDescriptor::EnsurePagePresent(unsigned long faultAddress)
 	{
 		/* 页表已更新，刷新当前页目录使 CPU 立即可见。 */
 		X86Assembly::FlushCurrentPageDirectory();
+	}
+
+	if ( deferredFreeSharedTextPage != 0 )
+	{
+		/*
+		 * 竞态落败页必须在当前地址空间刷新后再释放，避免 TLB
+		 * 仍缓存临时映射时回收物理页。
+		 */
+		Kernel::Instance().GetUserPageManager().FreePage(deferredFreeSharedTextPage);
 	}
 	return ok;
 }
