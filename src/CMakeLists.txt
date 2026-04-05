@@ -125,7 +125,9 @@ add_custom_command(
           "-DKERNEL_BIN=${OOS_KERNEL_BIN}"
           "-DOUTPUT_FILE=${OOS_KERNEL_SIZE_INC}"
           -P "${OOS_CMAKE_DIR}/WriteKernelSizeInc.cmake"
-  DEPENDS "${OOS_KERNEL_BIN}"
+  DEPENDS
+    "${OOS_KERNEL_BIN}"
+    "${OOS_CMAKE_DIR}/WriteKernelSizeInc.cmake"
   VERBATIM
 )
 

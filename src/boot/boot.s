@@ -2,6 +2,31 @@ org 0x7c00
 
 %include "kernel_size.generated.inc"
 
+%ifndef KERNEL_SIZE_INC_FORMAT_V1
+%error "kernel_size.generated.inc format mismatch; expected KERNEL_SIZE_INC_FORMAT_V1"
+%endif
+
+%ifndef KERNEL_SECTORS
+%error "KERNEL_SECTORS is not defined by kernel_size.generated.inc"
+%endif
+
+%ifndef KERNEL_BYTES
+%error "KERNEL_BYTES is not defined by kernel_size.generated.inc"
+%endif
+
+%if KERNEL_SECTORS <= 0
+%error "KERNEL_SECTORS must be positive"
+%endif
+
+%if ((KERNEL_BYTES + 511) / 512) != KERNEL_SECTORS
+%error "KERNEL_SECTORS/KERNEL_BYTES mismatch in kernel_size.generated.inc"
+%endif
+
+; 防止错误地把字节数当作扇区数写入加载循环（会导致启动期无限读盘）。
+%if KERNEL_SECTORS > 20000
+%error "KERNEL_SECTORS is unreasonably large; check kernel_size.generated.inc generation"
+%endif
+
 ;section .code16
 [BITS 16]
 start:
@@ -39,7 +64,7 @@ _startup:
 		mov es, ax
 		mov ss, ax
 
-		mov	ecx, KERNEL_SIZE 	;cx = 扇区数KERNEL_SIZE，作为loop的次数
+		mov	ecx, KERNEL_SECTORS 	;cx = 扇区数KERNEL_SECTORS，作为loop的次数
 		mov eax, 1				;LBA寻址模式下sector编号从0开始。  #0是引导扇区，#1扇区开始才是kernel的首扇区
 		mov ebx, 0x100000		;目标存放地址从1M处开始，每次loop递增512 bytes
 _load_kernel:
