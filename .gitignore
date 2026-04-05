@@ -2,8 +2,6 @@
 build/
 
 # Bochs runtime outputs.
-bochs/c.img
-bochs/c.img.lock
 bochs/bochsout.txt
 
 # In-tree program/library build outputs.
@@ -14,11 +12,6 @@ src/shell/OBJS/
 
 # Shared VS Code workflow files can stay tracked.
 # Ignore only generated indexes, logs, and machine-local compiler settings.
-.vscode/.cache/
-.vscode/compile_commands.json
-.vscode/configurationCache.log
-.vscode/dryrun.log
-.vscode/targets.log
 .vscode/c_cpp_properties.json
 
 # Tool-side generated outputs and temporary workspaces.

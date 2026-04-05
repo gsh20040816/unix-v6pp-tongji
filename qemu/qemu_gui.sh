@@ -4,7 +4,7 @@ set -euo pipefail
 QEMU_BIN="${QEMU_BIN:-qemu-system-i386}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
-IMG_PATH="${ROOT_DIR}/bochs/c.img"
+IMG_PATH="${ROOT_DIR}/build/c.img"
 
 if [[ ! -f "${IMG_PATH}" ]]; then
   echo "qemu-gui: image not found: ${IMG_PATH}" >&2
