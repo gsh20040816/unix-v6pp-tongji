@@ -127,3 +127,12 @@
   - `gdb-curses`：终端模式 + `gdbstub :1234`
 - `QEMU` 与镜像路径统一绑定 `build/c.img`，与 `CMake image` 目标保持一致。
 - VS Code 任务链路与 `CMake target` 对齐，形成“配置 -> 构建镜像 -> 启动虚拟机”的一致工作流。
+
+### 5. 双区域滚动条
+
+- 当前屏幕支持两个独立滚动区域：`Diagnose` 诊断区与 `CRT` 终端区。
+- 两个区域各自维护历史缓冲与视口，滚动互不影响。
+- 快捷键映射：
+  - `Home/End`：滚动 `Diagnose` 区域。
+  - `PgUp/PgDn`：滚动 `CRT` 区域。
+- 滚动到尾部后会自动回到 `FollowTail` 状态，继续跟随最新输出。
