@@ -160,6 +160,11 @@ if(NOT OOS_USER_PAYLOAD_TARGETS)
   message(FATAL_ERROR "No user payload targets were registered by shell/program modules.")
 endif()
 
+set(OOS_USER_PAYLOAD_OUTPUTS)
+foreach(OOS_USER_PAYLOAD_TARGET IN LISTS OOS_USER_PAYLOAD_TARGETS)
+  list(APPEND OOS_USER_PAYLOAD_OUTPUTS "$<TARGET_FILE:${OOS_USER_PAYLOAD_TARGET}>")
+endforeach()
+
 add_custom_target(oos_user_payload DEPENDS ${OOS_USER_PAYLOAD_TARGETS})
 add_custom_target(oos_fs_tools DEPENDS filescanner fsedit)
 
@@ -178,10 +183,11 @@ add_custom_command(
           "-DOUTPUT_IMG=${OOS_FINAL_IMG}"
           -P "${OOS_CMAKE_DIR}/GenerateDiskImage.cmake"
   DEPENDS
-    oos_boot_bin
-    oos_kernel_bin
-    oos_user_payload
-    oos_fs_tools
+    "${OOS_BOOT_BIN}"
+    "${OOS_KERNEL_BIN}"
+    "$<TARGET_FILE:filescanner>"
+    "$<TARGET_FILE:fsedit>"
+    ${OOS_USER_PAYLOAD_OUTPUTS}
   VERBATIM
 )
 
