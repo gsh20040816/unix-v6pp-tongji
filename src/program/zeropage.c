@@ -16,19 +16,19 @@ static unsigned long AlignUpToPage(unsigned long value)
 static void PrintFlags(unsigned short flags)
 {
 	printf("[");
-	if ( (flags & USER_PAGE_SNAPSHOT_PRESENT) != 0 )
+	if((flags & USER_PAGE_SNAPSHOT_PRESENT) != 0)
 	{
 		printf("P");
 	}
-	if ( (flags & USER_PAGE_SNAPSHOT_RW) != 0 )
+	if((flags & USER_PAGE_SNAPSHOT_RW) != 0)
 	{
 		printf(" RW");
 	}
-	if ( (flags & USER_PAGE_SNAPSHOT_USER) != 0 )
+	if((flags & USER_PAGE_SNAPSHOT_USER) != 0)
 	{
 		printf(" USR");
 	}
-	if ( (flags & USER_PAGE_SNAPSHOT_EXEC) != 0 )
+	if((flags & USER_PAGE_SNAPSHOT_EXEC) != 0)
 	{
 		printf(" X");
 	}
@@ -42,18 +42,18 @@ static int FindPageEntry(unsigned long va, struct user_page_snapshot_entry* out)
 	unsigned short pageIndex = (unsigned short)(va >> 12);
 	int i;
 
-	if ( total < 0 )
+	if(total < 0)
 	{
 		return -1;
 	}
-	if ( total > ZEROPAGE_PTE_BUFFER )
+	if(total > ZEROPAGE_PTE_BUFFER)
 	{
 		total = ZEROPAGE_PTE_BUFFER;
 	}
 
-	for ( i = 0; i < total; ++i )
+	for(i = 0; i < total; ++i)
 	{
-		if ( entries[i].pageIndex == pageIndex )
+		if(entries[i].pageIndex == pageIndex)
 		{
 			*out = entries[i];
 			return 0;
@@ -64,22 +64,22 @@ static int FindPageEntry(unsigned long va, struct user_page_snapshot_entry* out)
 }
 
 static void DumpAddressMapping(const char* tag,
-	const char* name,
-	void* address,
-	struct user_page_snapshot_entry* outEntry)
+							   const char* name,
+							   void* address,
+							   struct user_page_snapshot_entry* outEntry)
 {
 	struct user_page_snapshot_entry entry;
 	unsigned long va = (unsigned long)address;
 
-	if ( FindPageEntry(va, &entry) == 0 )
+	if(FindPageEntry(va, &entry) == 0)
 	{
 		printf("%s pid=%d %s va=%x pfn=%x flags=%x",
-			tag,
-			getpid(),
-			name,
-			(unsigned int)va,
-			entry.pageBaseAddress,
-			entry.flags);
+			   tag,
+			   getpid(),
+			   name,
+			   (unsigned int)va,
+			   entry.pageBaseAddress,
+			   entry.flags);
 		PrintFlags(entry.flags);
 		printf("\n");
 		*outEntry = entry;
@@ -87,50 +87,50 @@ static void DumpAddressMapping(const char* tag,
 	else
 	{
 		printf("%s pid=%d %s va=%x not-resident\n",
-			tag,
-			getpid(),
-			name,
-			(unsigned int)va);
+			   tag,
+			   getpid(),
+			   name,
+			   (unsigned int)va);
 		outEntry->pageBaseAddress = 0;
 		outEntry->flags = 0;
 	}
 }
 
 static void ValidateTransition(const char* name,
-	const struct user_page_snapshot_entry* beforeWrite,
-	const struct user_page_snapshot_entry* afterWrite,
-	int* pass)
+							   const struct user_page_snapshot_entry* beforeWrite,
+							   const struct user_page_snapshot_entry* afterWrite,
+							   int* pass)
 {
-	if ( beforeWrite->pageBaseAddress != USER_ZERO_PAGE_PFN )
+	if(beforeWrite->pageBaseAddress != USER_ZERO_PAGE_PFN)
 	{
 		printf("check failed: %s before-write pfn expected=%x actual=%x\n",
-			name,
-			USER_ZERO_PAGE_PFN,
-			beforeWrite->pageBaseAddress);
+			   name,
+			   USER_ZERO_PAGE_PFN,
+			   beforeWrite->pageBaseAddress);
 		*pass = 0;
 	}
 
-	if ( (beforeWrite->flags & USER_PAGE_SNAPSHOT_RW) != 0 )
+	if((beforeWrite->flags & USER_PAGE_SNAPSHOT_RW) != 0)
 	{
 		printf("check failed: %s before-write should be readonly flags=%x\n",
-			name,
-			beforeWrite->flags);
+			   name,
+			   beforeWrite->flags);
 		*pass = 0;
 	}
 
-	if ( (afterWrite->flags & USER_PAGE_SNAPSHOT_RW) == 0 )
+	if((afterWrite->flags & USER_PAGE_SNAPSHOT_RW) == 0)
 	{
 		printf("check failed: %s after-write should be writable flags=%x\n",
-			name,
-			afterWrite->flags);
+			   name,
+			   afterWrite->flags);
 		*pass = 0;
 	}
 
-	if ( afterWrite->pageBaseAddress == beforeWrite->pageBaseAddress )
+	if(afterWrite->pageBaseAddress == beforeWrite->pageBaseAddress)
 	{
 		printf("check failed: %s after-write pfn should differ from zero page pfn=%x\n",
-			name,
-			afterWrite->pageBaseAddress);
+			   name,
+			   afterWrite->pageBaseAddress);
 		*pass = 0;
 	}
 }
@@ -158,9 +158,9 @@ int main1()
 	g_bssProbe = 99;
 	g_bssPadding[0] = 11;
 	printf("bss-after-write pid=%d value=%d pad0=%d\n",
-		getpid(),
-		g_bssProbe,
-		(int)(unsigned char)g_bssPadding[0]);
+		   getpid(),
+		   g_bssProbe,
+		   (int)(unsigned char)g_bssPadding[0]);
 	DumpAddressMapping("bss-after-write", "g_bssProbe", (void*)&g_bssProbe, &bssAfterWrite);
 
 	/*
@@ -172,7 +172,7 @@ int main1()
 	probePage = alignedBreak + ZEROPAGE_PAGE_SIZE;
 	newBreak = probePage + ZEROPAGE_PAGE_SIZE;
 	growBytes = (int)(newBreak - breakNow);
-	if ( growBytes <= 0 || sbrk(growBytes) <= 0 )
+	if(growBytes <= 0 || sbrk(growBytes) <= 0)
 	{
 		printf("zeropage setup failed: brk grow error\n");
 		exit(1);
@@ -188,15 +188,15 @@ int main1()
 	probeAddress[0] = (unsigned char)(2026 & 0xFF);
 	probeAddress[128] = 7;
 	printf("heap-after-write pid=%d value=%d pad0=%d\n",
-		getpid(),
-		(int)(unsigned char)probeAddress[0],
-		(int)(unsigned char)probeAddress[128]);
+		   getpid(),
+		   (int)(unsigned char)probeAddress[0],
+		   (int)(unsigned char)probeAddress[128]);
 	DumpAddressMapping("heap-after-write", "heapProbe", (void*)probeAddress, &heapAfterWrite);
 
 	ValidateTransition("heapProbe", &heapBeforeWrite, &heapAfterWrite, &pass);
 	ValidateTransition("g_bssProbe", &bssBeforeWrite, &bssAfterWrite, &pass);
 
-	if ( pass )
+	if(pass)
 	{
 		printf("zeropage PASS\n");
 		exit(0);

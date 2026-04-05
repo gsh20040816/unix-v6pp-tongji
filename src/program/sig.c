@@ -15,12 +15,12 @@ int main1(int argc, char* argv[])
 {
 	signal(SIGUSR2, SIGUSR2_Handler);
 	int pid = fork();
-	if( pid == 0 )
+	if(pid == 0)
 	{
 		sleep(50);
-		
+
 		printf("Signal from parent received.\n");
-		
+
 		exit(0x88);
 	}
 	else
@@ -28,13 +28,13 @@ int main1(int argc, char* argv[])
 		sleep(1);
 		printf("Parent: Send #SIGUSR2 to child.\n");
 		int ans = kill(pid, SIGUSR2);
-		if (ans == -1)
+		if(ans == -1)
 			printf("#SIGBRK Sent failed.\n");
-		
+
 		int status;
 		ans = wait(&status);
 		printf("Parent : child process exit [%d],[%d]\n", status, ans);
 	}
-	
+
 	return 1;
 }

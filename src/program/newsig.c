@@ -44,7 +44,6 @@ int main1(int argc, char* argv[])
 }
 */
 
-
 #include <stdio.h>
 #include <sys.h>
 
@@ -55,26 +54,22 @@ int main1(int argc, char* argv[])
 
 	int pid = fork();
 
+	if(pid == 0)
+	{
 
-		if( pid == 0 )
+		while(1)
 		{
-
-			while(1)
-			{
-				printf("Child %s\n",message);
-
-			}
+			printf("Child %s\n", message);
 		}
-		else
+	}
+	else
+	{
+		while(1)
 		{
-			while(1)
-			{
-				printf("Father %s\n",message);
-				//sleep(2);
-			}
+			printf("Father %s\n", message);
+			//sleep(2);
 		}
+	}
 
 	return 1;
 }
-
-

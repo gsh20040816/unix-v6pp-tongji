@@ -26,12 +26,12 @@ int main1(int argc, char* argv[])
 int main1(int argc, char* argv[])
 {
 	int i;
-	int kid,reCode;
+	int kid, reCode;
 
 	printf("PID : %d\n", getpid());
-	for( i = 0; i < 3; i++ )
+	for(i = 0; i < 3; i++)
 	{
-		if(fork()==0)
+		if(fork() == 0)
 			printf("PID : %d\n", getpid());
 		else
 			kid = wait(&reCode);

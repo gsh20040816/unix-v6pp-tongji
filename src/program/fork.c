@@ -7,27 +7,27 @@ static void PrintPteFlags(unsigned short flags)
 {
 	printf("flags=%x[", flags);
 
-	if ( (flags & USER_PAGE_SNAPSHOT_PRESENT) != 0 )
+	if((flags & USER_PAGE_SNAPSHOT_PRESENT) != 0)
 	{
 		printf("P");
 	}
-	if ( (flags & USER_PAGE_SNAPSHOT_RW) != 0 )
+	if((flags & USER_PAGE_SNAPSHOT_RW) != 0)
 	{
 		printf(" RW");
 	}
-	if ( (flags & USER_PAGE_SNAPSHOT_USER) != 0 )
+	if((flags & USER_PAGE_SNAPSHOT_USER) != 0)
 	{
 		printf(" USR");
 	}
-	if ( (flags & USER_PAGE_SNAPSHOT_EXEC) != 0 )
+	if((flags & USER_PAGE_SNAPSHOT_EXEC) != 0)
 	{
 		printf(" X");
 	}
 
-	if ( (flags & (USER_PAGE_SNAPSHOT_PRESENT |
-		USER_PAGE_SNAPSHOT_RW |
-		USER_PAGE_SNAPSHOT_USER |
-		USER_PAGE_SNAPSHOT_EXEC)) == 0 )
+	if((flags & (USER_PAGE_SNAPSHOT_PRESENT |
+				 USER_PAGE_SNAPSHOT_RW |
+				 USER_PAGE_SNAPSHOT_USER |
+				 USER_PAGE_SNAPSHOT_EXEC)) == 0)
 	{
 		printf("none");
 	}
@@ -42,31 +42,31 @@ static void DumpCurrentProcessPageTable(const char* tag)
 	int dumpCount;
 	int i;
 
-	if ( total < 0 )
+	if(total < 0)
 	{
 		printf("%s: getUserPageTable failed\n", tag);
 		return;
 	}
 
 	dumpCount = total;
-	if ( dumpCount > FORK_PTE_BUFFER_SIZE )
+	if(dumpCount > FORK_PTE_BUFFER_SIZE)
 	{
 		dumpCount = FORK_PTE_BUFFER_SIZE;
 	}
 
 	printf("%s: pid=%d total=%d dump=%d\n", tag, getpid(), total, dumpCount);
-	for ( i = 0; i < dumpCount; ++i )
+	for(i = 0; i < dumpCount; ++i)
 	{
 		unsigned int va = ((unsigned int)entries[i].pageIndex) << 12;
 		printf("  [%d] va=%x pfn=%x ",
-			i,
-			va,
-			entries[i].pageBaseAddress);
+			   i,
+			   va,
+			   entries[i].pageBaseAddress);
 		PrintPteFlags(entries[i].flags);
 		printf("\n");
 	}
 
-	if ( total > FORK_PTE_BUFFER_SIZE )
+	if(total > FORK_PTE_BUFFER_SIZE)
 	{
 		printf("  ... truncated ...\n");
 	}
@@ -85,13 +85,13 @@ int main1(int argc, char* argv[])
 	DumpCurrentProcessPageTable("before-fork");
 
 	childPid = fork();
-	if ( childPid < 0 )
+	if(childPid < 0)
 	{
 		printf("fork failed\n");
 		exit(1);
 	}
 
-	if ( childPid == 0 )
+	if(childPid == 0)
 	{
 		printf("In child, pid=%d ppid=%d\n", getpid(), pid);
 		DumpCurrentProcessPageTable("child-after-fork");

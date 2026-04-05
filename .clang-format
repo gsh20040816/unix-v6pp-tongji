@@ -1,0 +1,27 @@
+# Conservative style for this repository:
+# - keep existing tab-oriented indentation
+# - keep Allman braces
+# - avoid aggressive rewrites (comment reflow/include sorting)
+BasedOnStyle: LLVM
+UseTab: Always
+IndentWidth: 4
+TabWidth: 4
+ContinuationIndentWidth: 4
+ColumnLimit: 0
+
+BreakBeforeBraces: Allman
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Never
+
+SpaceBeforeParens: Never
+PointerAlignment: Left
+DerivePointerAlignment: false
+SpacesInParentheses: false
+IndentCaseLabels: false
+IndentPPDirectives: None
+
+SortIncludes: Never
+IncludeBlocks: Preserve
+ReflowComments: false

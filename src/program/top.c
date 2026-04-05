@@ -14,7 +14,7 @@ int main1(int argc, char* argv[])
 	kernelHeapFree = getKernelHeapFreeMemory();
 	kernelPageFree = getKernelPageFreeMemory();
 
-	if ( userFree < 0 || kernelHeapFree < 0 || kernelPageFree < 0 )
+	if(userFree < 0 || kernelHeapFree < 0 || kernelPageFree < 0)
 	{
 		printf("top: query memory failed\n");
 		return 1;
@@ -22,11 +22,11 @@ int main1(int argc, char* argv[])
 
 	printf("top: user free=%d bytes (%d KB)\n", userFree, userFree / 1024);
 	printf("top: kernel heap free=%d bytes (%d KB)\n",
-		kernelHeapFree,
-		kernelHeapFree / 1024);
+		   kernelHeapFree,
+		   kernelHeapFree / 1024);
 	printf("top: kernel page free=%d bytes (%d KB)\n",
-		kernelPageFree,
-		kernelPageFree / 1024);
+		   kernelPageFree,
+		   kernelPageFree / 1024);
 
 	return 0;
 }
