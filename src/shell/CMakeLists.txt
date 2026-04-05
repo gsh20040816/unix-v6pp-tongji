@@ -19,6 +19,9 @@ set(OOS_SHELL_COMPILE_OPTIONS
   -fno-stack-protector
 )
 
+set(OOS_USER_LINKER_SCRIPT "${OOS_SRC_DIR}/lib/User.ld")
+file(RELATIVE_PATH OOS_SHELL_USER_LINKER_SCRIPT_REL "${CMAKE_BINARY_DIR}" "${OOS_USER_LINKER_SCRIPT}")
+
 set(OOS_SHELL_LINK_OPTIONS
   -m32
   -nostdlib
@@ -27,8 +30,9 @@ set(OOS_SHELL_LINK_OPTIONS
   -fno-PIE
   -fno-stack-protector
   -no-pie
+  "-Wl,--build-id=none"
   "-Wl,-m,elf_i386"
-  "-Wl,-T,${OOS_SRC_DIR}/lib/User.ld"
+  "-Wl,-T,${OOS_SHELL_USER_LINKER_SCRIPT_REL}"
   "-Wl,-e,main1"
 )
 

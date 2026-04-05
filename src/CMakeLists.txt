@@ -63,7 +63,10 @@ set_target_properties(kernel PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY "${OOS_TARGET_OBJ_DIR}"
 )
 
-set_property(TARGET kernel APPEND PROPERTY LINK_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Link.ld")
+set(OOS_KERNEL_LINKER_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/Link.ld")
+file(RELATIVE_PATH OOS_KERNEL_LINKER_SCRIPT_REL "${CMAKE_BINARY_DIR}" "${OOS_KERNEL_LINKER_SCRIPT}")
+
+set_property(TARGET kernel APPEND PROPERTY LINK_DEPENDS "${OOS_KERNEL_LINKER_SCRIPT_REL}")
 
 target_link_options(kernel PRIVATE
   -m32
@@ -74,7 +77,7 @@ target_link_options(kernel PRIVATE
   -fno-stack-protector
   -no-pie
   "-Wl,-m,elf_i386"
-  "-Wl,-T,${CMAKE_CURRENT_SOURCE_DIR}/Link.ld"
+  "-Wl,-T,${OOS_KERNEL_LINKER_SCRIPT_REL}"
 )
 
 set(OOS_KERNEL_BIN "${OOS_TARGET_OBJ_DIR}/kernel.bin")
