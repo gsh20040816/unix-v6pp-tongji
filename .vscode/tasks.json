@@ -8,7 +8,9 @@
 				"-S",
 				".",
 				"-B",
-				"build"
+				"build",
+				"-DOOS_KERNEL_DIAGNOSE_TO_DEBUGCON=ON",
+				"-DOOS_KERNEL_TTY_STDIO_SERIAL=ON"
 			],
 			"options": {
 				"cwd": "${workspaceFolder}"
@@ -155,18 +157,42 @@
 		{
 			"type": "shell",
 			"label": "qemu/run",
+			"command": "bash",
+			"args": [
+				"-lc",
+				"mkdir -p build && : > build/qemu-run-diagnose.log && cmake --build build --target qemu -j 2>>build/qemu-run-diagnose.log"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"detail": "在 Linux 本机通过 QEMU 启动 qemu（stdin/stdout，diagnose 走 stderr 并写入 build/qemu-run-diagnose.log）",
+			"dependsOrder": "sequence",
+			"dependsOn": [
+				"cmake/build"
+			],
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"focus": true,
+				"clear": false
+			},
+			"problemMatcher": []
+		},
+		{
+			"type": "shell",
+			"label": "qemu/run-curses",
 			"command": "cmake",
 			"args": [
 				"--build",
 				"build",
 				"--target",
-				"qemu",
+				"qemu-curses",
 				"-j"
 			],
 			"options": {
 				"cwd": "${workspaceFolder}"
 			},
-			"detail": "在 Linux 本机通过 QEMU 启动 qemu（terminal/curses 配置）",
+			"detail": "在 Linux 本机通过 QEMU 启动 qemu（保留原 terminal/curses 运行方式）",
 			"dependsOrder": "sequence",
 			"dependsOn": [
 				"cmake/build"
@@ -182,18 +208,15 @@
 		{
 			"type": "shell",
 			"label": "qemu/debug",
-			"command": "cmake",
+			"command": "bash",
 			"args": [
-				"--build",
-				"build",
-				"--target",
-				"qemu-gdb",
-				"-j"
+				"-lc",
+				"mkdir -p build && : > build/qemu-debug-diagnose.log && cmake --build build --target qemu-gdb -j 2>>build/qemu-debug-diagnose.log"
 			],
 			"options": {
 				"cwd": "${workspaceFolder}"
 			},
-			"detail": "在 Linux 本机通过 QEMU 启动 qemu-gdb（terminal/curses 配置）并等待 gdbstub 可连接",
+			"detail": "在 Linux 本机通过 QEMU 启动 qemu-gdb（stdin/stdout，diagnose 走 stderr 并写入 build/qemu-debug-diagnose.log）并等待 gdbstub 可连接",
 			"dependsOrder": "sequence",
 			"dependsOn": [
 				"cmake/build"

@@ -32,6 +32,16 @@ find_program(OOS_NM_EXECUTABLE NAMES nm REQUIRED)
 find_program(OOS_BOCHS_GDB_EXECUTABLE NAMES bochs-gdb)
 find_program(OOS_QEMU_EXECUTABLE NAMES qemu-system-i386)
 
+option(OOS_KERNEL_DIAGNOSE_TO_DEBUGCON
+  "Mirror kernel Diagnose output to QEMU debugcon ports (0xE9 and 0x402)"
+  OFF
+)
+
+option(OOS_KERNEL_TTY_STDIO_SERIAL
+  "Route kernel TTY input/output through COM1 serial port (for QEMU stdio mode)"
+  OFF
+)
+
 add_subdirectory(tools/v6pp-fs-edit-2022)
 add_subdirectory(src)
 
@@ -128,9 +138,11 @@ function(add_oos_qemu_target TARGET_NAME MODE)
 endfunction()
 
 if(OOS_QEMU_EXECUTABLE)
-  add_oos_qemu_target(qemu curses)
+  add_oos_qemu_target(qemu stdio)
+  add_oos_qemu_target(qemu-curses curses)
   add_oos_qemu_target(qemu-gui gui)
-  add_oos_qemu_target(qemu-gdb gdb-curses)
+  add_oos_qemu_target(qemu-gdb gdb-stdio)
+  add_oos_qemu_target(qemu-gdb-curses gdb-curses)
 else()
-  message(STATUS "qemu-system-i386 executable not found; targets 'qemu', 'qemu-gui' and 'qemu-gdb' are not generated.")
+  message(STATUS "qemu-system-i386 executable not found; targets 'qemu', 'qemu-curses', 'qemu-gui', 'qemu-gdb' and 'qemu-gdb-curses' are not generated.")
 endif()

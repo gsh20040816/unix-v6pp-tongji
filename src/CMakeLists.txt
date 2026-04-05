@@ -27,6 +27,14 @@ add_library(oos_kernel_flags INTERFACE)
 target_include_directories(oos_kernel_flags INTERFACE "${OOS_INCLUDE_DIR}")
 target_compile_options(oos_kernel_flags INTERFACE ${OOS_KERNEL_COMMON_COMPILE_OPTIONS})
 
+if(OOS_KERNEL_DIAGNOSE_TO_DEBUGCON)
+  target_compile_definitions(oos_kernel_flags INTERFACE OOS_KERNEL_DIAGNOSE_TO_DEBUGCON=1)
+endif()
+
+if(OOS_KERNEL_TTY_STDIO_SERIAL)
+  target_compile_definitions(oos_kernel_flags INTERFACE OOS_KERNEL_TTY_STDIO_SERIAL=1)
+endif()
+
 add_subdirectory(boot)
 add_subdirectory(kernel)
 add_subdirectory(machine)

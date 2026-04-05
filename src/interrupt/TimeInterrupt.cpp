@@ -4,6 +4,9 @@
 #include "IOPort.h"
 #include "Chip8259A.h"
 #include "Video.h"
+#include "TTy.h"
+
+extern TTy g_TTy;
 
 int Time::lbolt = 0;
 unsigned int Time::time = 0;
@@ -54,6 +57,10 @@ void Time::Clock( struct pt_regs* regs, struct pt_context* context )
 	User& u = Kernel::Instance().GetUser();
 	ProcessManager& procMgr = Kernel::Instance().GetProcessManager();
 
+#if defined(OOS_KERNEL_TTY_STDIO_SERIAL)
+	g_TTy.PollSerialInput();
+#endif
+
 	/* 系统或用户时间计时，如果先前态为用户态，mode为非零 */
 	if ( (context->xcs & USER_MODE) == USER_MODE )
 	{
@@ -70,21 +77,21 @@ void Time::Clock( struct pt_regs* regs, struct pt_context* context )
 
 	/* 到了一秒末尾，根据先前态决定是否对所有进程重算优先数 */
 	if ( ++Time::lbolt < HZ )
-    	{
-		/* 对主8259A中断控制芯片发送EOI命令。 */
-		    IOPort::OutByte(Chip8259A::MASTER_IO_PORT_1, Chip8259A::EOI);
-        	return;
-    	}
-    else
 	{
-        /* 中断前为核心态，把耗时的计算留在下一次时钟中断再考虑 */
+		/* 对主8259A中断控制芯片发送EOI命令。 */
+		IOPort::OutByte(Chip8259A::MASTER_IO_PORT_1, Chip8259A::EOI);
+		return;
+	}
+	else
+	{
+		/* 中断前为核心态，把耗时的计算留在下一次时钟中断再考虑 */
 		/*if( (context->xcs & USER_MODE) == KERNEL_MODE && current->p_pid != 0)*/
-    	if( current->p_stat == Process::SRUN && (context->xcs & USER_MODE) == KERNEL_MODE )
+		if( current->p_stat == Process::SRUN && (context->xcs & USER_MODE) == KERNEL_MODE )
 		{
 			/* 对主8259A中断控制芯片发送EOI命令。 */
-			    IOPort::OutByte(Chip8259A::MASTER_IO_PORT_1, Chip8259A::EOI);
-        		return;
-   		 }
+			IOPort::OutByte(Chip8259A::MASTER_IO_PORT_1, Chip8259A::EOI);
+			return;
+		}
 
 		/* 以下为一秒末尾，进行耗时的计算过程 */
 		Time::lbolt -= HZ;
@@ -94,8 +101,8 @@ void Time::Clock( struct pt_regs* regs, struct pt_context* context )
 
 		/* 允许中断进入，相当于降低处理机优先级 */
 		X86Assembly::STI();
-	    /* 对主8259A中断控制芯片发送EOI命令。 */
-	    IOPort::OutByte(Chip8259A::MASTER_IO_PORT_1, Chip8259A::EOI);
+		/* 对主8259A中断控制芯片发送EOI命令。 */
+		IOPort::OutByte(Chip8259A::MASTER_IO_PORT_1, Chip8259A::EOI);
 
 
 		if ( Time::time == Time::tout )

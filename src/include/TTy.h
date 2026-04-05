@@ -84,6 +84,9 @@ public:
 	/* 输入字符初步处理程序 */
 	void TTyInput(char ch);
 
+	/* 在串口控制台模式下轮询COM1输入并注入TTY输入队列 */
+	void PollSerialInput();
+
 	/* 输出字符处理程序 */
 	void TTyOutput(char ch);
 

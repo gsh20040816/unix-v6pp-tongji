@@ -20,6 +20,15 @@ case "${QEMU_MODE}" in
   curses)
     DISPLAY_OPT="curses"
     ;;
+  stdio)
+    DISPLAY_OPT="none"
+    EXTRA_ARGS=(
+      -monitor none
+      -serial stdio
+      -parallel none
+      -debugcon "file:/dev/stderr"
+    )
+    ;;
   gui)
     DISPLAY_OPT="gtk"
     ;;
@@ -40,8 +49,19 @@ case "${QEMU_MODE}" in
     EXTRA_ARGS=(-S -gdb tcp::1234)
     echo "Enabled gdbstub on :1234"
     ;;
+  gdb-stdio)
+    DISPLAY_OPT="none"
+    EXTRA_ARGS=(
+      -monitor none
+      -serial stdio
+      -parallel none
+      -debugcon "file:/dev/stderr"
+      -S -gdb tcp::1234
+    )
+    echo "Enabled gdbstub on :1234"
+    ;;
   *)
-    echo "qemu: unsupported QEMU_MODE: ${QEMU_MODE} (supported: curses, gui, headless, gdb-curses)" >&2
+    echo "qemu: unsupported QEMU_MODE: ${QEMU_MODE} (supported: curses, stdio, gui, headless, gdb-curses, gdb-stdio)" >&2
     exit 2
     ;;
 esac

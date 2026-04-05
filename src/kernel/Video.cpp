@@ -1,9 +1,17 @@
 #include "Video.h"
 
+#if defined(OOS_KERNEL_DIAGNOSE_TO_DEBUGCON)
+#include "IOPort.h"
+#endif
+
 namespace
 {
 	static const unsigned long DIAGNOSE_VIDEO_MEMORY_BASE = 0xC00B8000;
 	static const unsigned int DIAGNOSE_DEFAULT_ROWS = 10;
+	#if defined(OOS_KERNEL_DIAGNOSE_TO_DEBUGCON)
+	static const unsigned short QEMU_DEBUGCON_PORT_E9 = 0xE9;
+	static const unsigned short QEMU_DEBUGCON_PORT_402 = 0x402;
+	#endif
 	typedef __builtin_va_list DiagnoseVaList;
 
 	/*
@@ -13,6 +21,16 @@ namespace
 #define DIAGNOSE_VA_START(ap, last) __builtin_va_start(ap, last)
 #define DIAGNOSE_VA_ARG(ap, type) __builtin_va_arg(ap, type)
 #define DIAGNOSE_VA_END(ap) __builtin_va_end(ap)
+
+	static inline void MirrorDiagnoseToDebugCon(char ch)
+	{
+#if defined(OOS_KERNEL_DIAGNOSE_TO_DEBUGCON)
+		IOPort::OutByte(QEMU_DEBUGCON_PORT_E9, (unsigned char)ch);
+		IOPort::OutByte(QEMU_DEBUGCON_PORT_402, (unsigned char)ch);
+#else
+		(void)ch;
+#endif
+	}
 
 }
 
@@ -314,6 +332,7 @@ void Diagnose::NextLine()
 	}
 
 	EnsureHistoryReady();
+	MirrorDiagnoseToDebugCon('\n');
 	m_CurrentLine += 1;
 	if ( m_TotalLines < m_CurrentLine + 1 )
 	{
@@ -345,6 +364,7 @@ void Diagnose::WriteChar(const char ch)
 	}
 
 	m_History[LogicalToHistoryLine(m_CurrentLine)][m_Column] = ch;
+	MirrorDiagnoseToDebugCon(ch);
 
 	if ( !m_IsBrowsing )
 	{

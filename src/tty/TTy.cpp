@@ -3,6 +3,97 @@
 #include "Kernel.h"
 #include "CRT.h"
 
+#if defined(OOS_KERNEL_TTY_STDIO_SERIAL)
+#include "IOPort.h"
+#endif
+
+namespace
+{
+#if defined(OOS_KERNEL_TTY_STDIO_SERIAL)
+	static const unsigned short SERIAL_COM1_BASE = 0x3F8;
+	static const unsigned short SERIAL_DATA_REG = 0;
+	static const unsigned short SERIAL_INTERRUPT_ENABLE_REG = 1;
+	static const unsigned short SERIAL_FIFO_CONTROL_REG = 2;
+	static const unsigned short SERIAL_LINE_CONTROL_REG = 3;
+	static const unsigned short SERIAL_MODEM_CONTROL_REG = 4;
+	static const unsigned short SERIAL_LINE_STATUS_REG = 5;
+	static const unsigned char SERIAL_LSR_DATA_READY = 0x01;
+	static const unsigned char SERIAL_LSR_TX_HOLDING_EMPTY = 0x20;
+	static bool g_SerialInitialized = false;
+
+	static inline unsigned short SerialPort(unsigned short reg)
+	{
+		return SERIAL_COM1_BASE + reg;
+	}
+
+	static void SerialEnsureInitialized()
+	{
+		if ( g_SerialInitialized )
+		{
+			return;
+		}
+
+		IOPort::OutByte(SerialPort(SERIAL_INTERRUPT_ENABLE_REG), 0x00);
+		IOPort::OutByte(SerialPort(SERIAL_LINE_CONTROL_REG), 0x80);
+		IOPort::OutByte(SerialPort(SERIAL_DATA_REG), 0x01);
+		IOPort::OutByte(SerialPort(SERIAL_INTERRUPT_ENABLE_REG), 0x00);
+		IOPort::OutByte(SerialPort(SERIAL_LINE_CONTROL_REG), 0x03);
+		/* 启用FIFO但不清空，避免快速输入在初始化瞬间被丢弃。 */
+		IOPort::OutByte(SerialPort(SERIAL_FIFO_CONTROL_REG), 0x01);
+		IOPort::OutByte(SerialPort(SERIAL_MODEM_CONTROL_REG), 0x0B);
+
+		g_SerialInitialized = true;
+	}
+
+	static bool SerialCanRead()
+	{
+		return (IOPort::InByte(SerialPort(SERIAL_LINE_STATUS_REG)) & SERIAL_LSR_DATA_READY) != 0;
+	}
+
+	static bool SerialCanWrite()
+	{
+		return (IOPort::InByte(SerialPort(SERIAL_LINE_STATUS_REG)) & SERIAL_LSR_TX_HOLDING_EMPTY) != 0;
+	}
+
+	static void SerialWriteRaw(char ch)
+	{
+		int spinLimit = 0x20000;
+		while ( spinLimit-- > 0 )
+		{
+			if ( SerialCanWrite() )
+			{
+				IOPort::OutByte(SerialPort(SERIAL_DATA_REG), (unsigned char)ch);
+				return;
+			}
+		}
+	}
+
+	static void SerialWriteChar(char ch)
+	{
+		if ( ch == '\n' )
+		{
+			SerialWriteRaw('\r');
+		}
+		SerialWriteRaw(ch);
+	}
+
+	static char NormalizeSerialInputChar(char ch)
+	{
+		if ( ch == '\r' )
+		{
+			return '\n';
+		}
+
+		if ( ch == 0x7f )
+		{
+			return '\b';
+		}
+
+		return ch;
+	}
+#endif
+}
+
 /*==============================class TTy_Queue===============================*/
 TTy_Queue::TTy_Queue()
 {
@@ -190,7 +281,38 @@ void TTy::TTyOutput(char ch)
 	if (ch)
 	{
 		this->t_outq.PutChar(ch);
+
+#if defined(OOS_KERNEL_TTY_STDIO_SERIAL)
+		SerialEnsureInitialized();
+		SerialWriteChar(ch);
+#endif
 	}
+}
+
+void TTy::PollSerialInput()
+{
+#if defined(OOS_KERNEL_TTY_STDIO_SERIAL)
+	if ( (this->t_state & TTy::CARR_ON) == 0 )
+	{
+		return;
+	}
+
+	SerialEnsureInitialized();
+
+	int readLimit = 64;
+	while ( readLimit-- > 0 && SerialCanRead() )
+	{
+		char ch = (char)IOPort::InByte(SerialPort(SERIAL_DATA_REG));
+		ch = NormalizeSerialInputChar(ch);
+		if ( ch == 0 )
+		{
+			continue;
+		}
+		this->TTyInput(ch);
+	}
+#else
+	(void)this;
+#endif
 }
 
 void TTy::TTStart()
