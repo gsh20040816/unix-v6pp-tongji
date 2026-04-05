@@ -35,13 +35,10 @@ jobs:
             qemu-system-x86
 
       - name: Configure project
-        run: >-
-          cmake -S . -B build -G Ninja
-          -DOOS_KERNEL_DIAGNOSE_TO_DEBUGCON=ON
-          -DOOS_KERNEL_TTY_STDIO_SERIAL=ON
+        run: cmake --preset dev-ninja
 
       - name: Build image target
-        run: cmake --build build --target image -j"$(nproc)"
+        run: cmake --build --preset image -j"$(nproc)"
 
       - name: Smoke test boot with QEMU
         env:
@@ -50,10 +47,10 @@ jobs:
         run: bash qemu/smoke_boot.sh
 
       - name: Integration test stdio pipe with QEMU
-        run: cmake --build build --target qemu_stdio_pipe_integration -j"$(nproc)"
+        run: cmake --build --preset qemu-stdio-pipe-integration-build -j"$(nproc)"
 
       - name: Run stdio pipe integration test with CTest
-        run: ctest --test-dir build --output-on-failure -R qemu_stdio_pipe_integration
+        run: ctest --preset qemu-stdio-pipe-integration-test
 
       - name: Upload QEMU smoke logs on failure
         if: failure()

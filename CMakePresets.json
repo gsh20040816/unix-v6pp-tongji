@@ -82,6 +82,27 @@
       "targets": [
         "qemu-gui"
       ]
+    },
+    {
+      "name": "qemu-stdio-pipe-integration-build",
+      "configurePreset": "dev-ninja",
+      "targets": [
+        "qemu_stdio_pipe_integration"
+      ]
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "qemu-stdio-pipe-integration-test",
+      "configurePreset": "dev-ninja",
+      "output": {
+        "outputOnFailure": true
+      },
+      "filter": {
+        "include": {
+          "name": "qemu_stdio_pipe_integration"
+        }
+      }
     }
   ]
 }
