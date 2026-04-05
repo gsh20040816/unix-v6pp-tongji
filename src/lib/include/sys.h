@@ -60,6 +60,9 @@ int syncFileSystem();
 /* 写盘并请求系统关机（成功时通常不会返回） */
 int shutdownSystem();
 
+/* Shell启动完成后通知内核输出可抓取就绪标记 */
+int notifyShellReady();
+
 int getPath(char* path);
 
 int getpid();

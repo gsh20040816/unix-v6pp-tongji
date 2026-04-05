@@ -7,6 +7,26 @@
 #include "CRT.h"
 #include "Video.h"
 
+namespace
+{
+	static const unsigned short QEMU_DEBUGCON_PORT = 0xE9;
+	static const char* QEMU_BOOT_READY_MARKER = "OOS_BOOT_SHELL_READY\n";
+
+	static void WriteQemuDebugCon(const char* text)
+	{
+		if ( text == NULL )
+		{
+			return;
+		}
+
+		while ( *text != '\0' )
+		{
+			IOPort::OutByte(QEMU_DEBUGCON_PORT, (unsigned char)(*text));
+			++text;
+		}
+	}
+}
+
 /* 系统调用入口表的定义
  * 参照UNIX V6中sysent.c中对系统调用入口表sysent的定义 @line 2910 
  */
@@ -66,7 +86,7 @@ SystemCallTableEntry SystemCall::m_SystemEntranceTable[SYSTEM_CALL_NUM] =
 	{ 0, &Sys_Shutdown},			/* 51 = shutdown	*/
 	{ 0, &Sys_GetKerHeapMem},		/* 52 = getkerheapmem */
 	{ 0, &Sys_GetKerPageMem},		/* 53 = getkerpagemem */
-	{ 0, &Sys_Nosys	},				/* 54 = nosys	*/
+	{ 0, &Sys_BootReady },			/* 54 = bootready */
 	{ 0, &Sys_Nosys	},				/* 55 = nosys	*/
 	{ 0, &Sys_Nosys	},				/* 56 = nosys	*/
 	{ 0, &Sys_Nosys	},				/* 57= nosys	*/
@@ -804,6 +824,20 @@ int SystemCall::Sys_GetKerPageMem()
 	}
 
 	u.u_ar0[User::EAX] = (int)freeBytes;
+	return 0;	/* GCC likes it ! */
+}
+
+/*	54 = bootready	count = 0	*/
+int SystemCall::Sys_BootReady()
+{
+	User& u = Kernel::Instance().GetUser();
+
+	/* 仅允许1#进程（初始Shell）上报启动就绪，避免普通进程误触发。 */
+	if ( u.u_procp != NULL && u.u_procp->p_pid == 1 )
+	{
+		WriteQemuDebugCon(QEMU_BOOT_READY_MARKER);
+	}
+
 	return 0;	/* GCC likes it ! */
 }
 

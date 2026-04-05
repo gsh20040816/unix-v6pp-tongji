@@ -6,6 +6,7 @@ QEMU_MODE="${QEMU_MODE:-curses}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 IMG_PATH="${ROOT_DIR}/build/c.img"
+QEMU_DEBUGCON_LOG="${QEMU_DEBUGCON_LOG:-${ROOT_DIR}/build/qemu-debugcon.log}"
 
 if [[ ! -f "${IMG_PATH}" ]]; then
   echo "qemu: image not found: ${IMG_PATH}" >&2
@@ -22,13 +23,25 @@ case "${QEMU_MODE}" in
   gui)
     DISPLAY_OPT="gtk"
     ;;
+  headless)
+    DISPLAY_OPT="none"
+    mkdir -p "$(dirname "${QEMU_DEBUGCON_LOG}")"
+    : > "${QEMU_DEBUGCON_LOG}"
+    EXTRA_ARGS=(
+      -monitor none
+      -serial none
+      -parallel none
+      -debugcon "file:${QEMU_DEBUGCON_LOG}"
+      -global isa-debugcon.iobase=0xe9
+    )
+    ;;
   gdb-curses)
     DISPLAY_OPT="curses"
     EXTRA_ARGS=(-S -gdb tcp::1234)
     echo "Enabled gdbstub on :1234"
     ;;
   *)
-    echo "qemu: unsupported QEMU_MODE: ${QEMU_MODE}" >&2
+    echo "qemu: unsupported QEMU_MODE: ${QEMU_MODE} (supported: curses, gui, headless, gdb-curses)" >&2
     exit 2
     ;;
 esac

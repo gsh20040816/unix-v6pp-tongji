@@ -235,7 +235,10 @@ private:
 	/*	53 = getkerpagemem	count = 0	*/
 	static int Sys_GetKerPageMem();
 
-	/*	54 ~ 63 = nosys	count = 0	*/	
+	/*	54 = bootready	count = 0	*/
+	static int Sys_BootReady();
+
+	/*	55 ~ 63 = nosys	count = 0	*/	
 
 private:
 	/*系统调用入口表的声明*/

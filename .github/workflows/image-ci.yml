@@ -31,13 +31,17 @@ jobs:
             gcc \
             g++ \
             gcc-multilib \
-            g++-multilib
+            g++-multilib \
+            qemu-system-x86
 
       - name: Configure project
         run: cmake -S . -B build -G Ninja
 
       - name: Build image target
         run: cmake --build build --target image -j"$(nproc)"
+
+      - name: Smoke test boot with QEMU
+        run: bash qemu/smoke_boot.sh
 
       - name: Generate checksum
         run: |
