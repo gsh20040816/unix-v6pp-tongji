@@ -1,0 +1,55 @@
+name: Build and Deliver Disk Image
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-image:
+    name: Build c.img
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake \
+            ninja-build \
+            nasm \
+            binutils \
+            gcc \
+            g++ \
+            gcc-multilib \
+            g++-multilib
+
+      - name: Configure project
+        run: cmake -S . -B build -G Ninja
+
+      - name: Build image target
+        run: cmake --build build --target image -j"$(nproc)"
+
+      - name: Generate checksum
+        run: |
+          sha256sum build/c.img > build/c.img.sha256
+          ls -lh build/c.img build/c.img.sha256
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cimg-${{ github.ref_name }}-${{ github.run_number }}
+          path: |
+            build/c.img
+            build/c.img.sha256
+          if-no-files-found: error
+          retention-days: 30
