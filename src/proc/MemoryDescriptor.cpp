@@ -1114,6 +1114,7 @@ bool MemoryDescriptor::EnsurePagePresent(unsigned long faultAddress)
 				Kernel::Instance().GetUserPageManager().FreePage(newPage);
 				pageInfo.state = PAGE_STATE_RESERVED;
 				pageInfo.frameAddress = 0;
+				X86Assembly::FlushCurrentPageDirectory();
 				return false;
 			}
 
