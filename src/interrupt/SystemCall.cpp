@@ -11,6 +11,8 @@ namespace
 {
 	static const unsigned short QEMU_DEBUGCON_PORT_E9 = 0xE9;
 	static const unsigned short QEMU_DEBUGCON_PORT_402 = 0x402;
+	static const unsigned short QEMU_DEBUG_EXIT_PORT = 0xF4;
+	static const unsigned char QEMU_DEBUG_EXIT_READY_CODE = 0x10;
 	static const char* QEMU_BOOT_READY_MARKER = "OOS_BOOT_SHELL_READY\n";
 	static bool g_BootReadyReported = false;
 
@@ -842,6 +844,11 @@ int SystemCall::Sys_BootReady()
 	if ( g_BootReadyReported == false )
 	{
 		WriteQemuDebugCon(QEMU_BOOT_READY_MARKER);
+		/*
+		 * 若 QEMU 配置了 isa-debug-exit(iobase=0xF4)，
+		 * 写入值 0x10 会使 QEMU 以退出码 33 结束。
+		 */
+		IOPort::OutByte(QEMU_DEBUG_EXIT_PORT, QEMU_DEBUG_EXIT_READY_CODE);
 		g_BootReadyReported = true;
 	}
 

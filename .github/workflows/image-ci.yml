@@ -43,6 +43,7 @@ jobs:
       - name: Smoke test boot with QEMU
         env:
           QEMU_SMOKE_TIMEOUT_SEC: 30
+          QEMU_SMOKE_READY_EXIT_CODE: 33
         run: bash qemu/smoke_boot.sh
 
       - name: Upload QEMU smoke logs on failure

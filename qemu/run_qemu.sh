@@ -32,7 +32,7 @@ case "${QEMU_MODE}" in
       -serial none
       -parallel none
       -debugcon "file:${QEMU_DEBUGCON_LOG}"
-      -global isa-debugcon.iobase=0xe9
+      -device "isa-debug-exit,iobase=0xf4,iosize=0x04"
     )
     ;;
   gdb-curses)
