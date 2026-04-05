@@ -25,6 +25,12 @@ file(COPY "${FS_PAYLOAD_DIR}/" DESTINATION "${WORKSPACE_DIR}")
 file(COPY_FILE "${BOOT_BIN}" "${WORKSPACE_BOOT}" ONLY_IF_DIFFERENT)
 file(COPY_FILE "${KERNEL_BIN}" "${WORKSPACE_KERNEL}" ONLY_IF_DIFFERENT)
 
+# Keep .gitkeep in source tree for version control, but never pack it into c.img.
+file(GLOB_RECURSE GITKEEP_FILES "${WORKSPACE_DIR}/.gitkeep")
+if(GITKEEP_FILES)
+  file(REMOVE ${GITKEEP_FILES})
+endif()
+
 file(GLOB_RECURSE LEGACY_EXE_FILES "${PROGRAMS_DIR}/*.exe")
 if(LEGACY_EXE_FILES)
   file(REMOVE ${LEGACY_EXE_FILES})
