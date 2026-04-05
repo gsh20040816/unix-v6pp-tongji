@@ -43,20 +43,6 @@ jobs:
       - name: Run QEMU smoke and integration tests with CTest
         run: ctest --preset ci-qemu-tests
 
-      - name: Upload QEMU smoke logs on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: qemu-logs-${{ github.run_number }}
-          path: |
-            build/qemu-smoke-debugcon.log
-            build/qemu-smoke-stdout.log
-            build/qemu-smoke-stderr.log
-            build/qemu-stdio-integration-stdout.log
-            build/qemu-stdio-integration-stderr.log
-          if-no-files-found: warn
-          retention-days: 7
-
       - name: Generate checksum
         run: |
           sha256sum build/c.img > build/c.img.sha256
