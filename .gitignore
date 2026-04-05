@@ -5,8 +5,5 @@ build/
 # Ignore only generated indexes, logs, and machine-local compiler settings.
 .vscode/c_cpp_properties.json
 
-# Legacy tool-side workspace (no longer used by current CMake flow).
-tools/v6pp-fs-edit-2022/workspace/
-
 # OS noise.
 .DS_Store
