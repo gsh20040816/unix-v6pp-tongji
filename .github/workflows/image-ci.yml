@@ -35,7 +35,10 @@ jobs:
             qemu-system-x86
 
       - name: Configure project
-        run: cmake -S . -B build -G Ninja
+        run: >-
+          cmake -S . -B build -G Ninja
+          -DOOS_KERNEL_DIAGNOSE_TO_DEBUGCON=ON
+          -DOOS_KERNEL_TTY_STDIO_SERIAL=ON
 
       - name: Build image target
         run: cmake --build build --target image -j"$(nproc)"
@@ -46,15 +49,23 @@ jobs:
           QEMU_SMOKE_READY_EXIT_CODE: 33
         run: bash qemu/smoke_boot.sh
 
+      - name: Integration test stdio pipe with QEMU
+        run: cmake --build build --target qemu_stdio_pipe_integration -j"$(nproc)"
+
+      - name: Run stdio pipe integration test with CTest
+        run: ctest --test-dir build --output-on-failure -R qemu_stdio_pipe_integration
+
       - name: Upload QEMU smoke logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: qemu-smoke-logs-${{ github.run_number }}
+          name: qemu-logs-${{ github.run_number }}
           path: |
             build/qemu-smoke-debugcon.log
             build/qemu-smoke-stdout.log
             build/qemu-smoke-stderr.log
+            build/qemu-stdio-integration-stdout.log
+            build/qemu-stdio-integration-stderr.log
           if-no-files-found: warn
           retention-days: 7
 

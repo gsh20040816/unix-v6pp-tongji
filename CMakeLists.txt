@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.20)
 
 project(oos LANGUAGES C CXX ASM_NASM)
 
+option(BUILD_TESTING "Build and register CTest tests" ON)
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -44,6 +46,11 @@ option(OOS_KERNEL_TTY_STDIO_SERIAL
 
 add_subdirectory(tools/v6pp-fs-edit-2022)
 add_subdirectory(src)
+
+if(BUILD_TESTING)
+  enable_testing()
+  add_subdirectory(test)
+endif()
 
 set(OOS_BOCHS_CONFIG_DIR "${CMAKE_BINARY_DIR}/bochs-config")
 set(OOS_BOCHSRC_TEMPLATE "${OOS_BOCHS_DIR}/bochsrc_template.bxrc.in")
