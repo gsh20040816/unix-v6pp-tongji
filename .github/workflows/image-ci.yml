@@ -37,20 +37,11 @@ jobs:
       - name: Configure project
         run: cmake --preset dev-ninja
 
-      - name: Build image target
-        run: cmake --build --preset image -j"$(nproc)"
+      - name: Build CI QEMU test targets
+        run: cmake --build --preset ci-qemu-tests-build -j"$(nproc)"
 
-      - name: Smoke test boot with QEMU
-        env:
-          QEMU_SMOKE_TIMEOUT_SEC: 30
-          QEMU_SMOKE_READY_EXIT_CODE: 33
-        run: bash qemu/smoke_boot.sh
-
-      - name: Integration test stdio pipe with QEMU
-        run: cmake --build --preset qemu-stdio-pipe-integration-build -j"$(nproc)"
-
-      - name: Run stdio pipe integration test with CTest
-        run: ctest --preset qemu-stdio-pipe-integration-test
+      - name: Run QEMU smoke and integration tests with CTest
+        run: ctest --preset ci-qemu-tests
 
       - name: Upload QEMU smoke logs on failure
         if: failure()

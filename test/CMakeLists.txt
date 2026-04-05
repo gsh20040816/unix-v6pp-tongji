@@ -13,6 +13,16 @@ set_target_properties(qemu_stdio_pipe_integration PROPERTIES
 )
 
 add_test(
+  NAME qemu_smoke_boot
+  COMMAND bash "${OOS_ROOT_DIR}/qemu/smoke_boot.sh"
+)
+
+set_tests_properties(qemu_smoke_boot PROPERTIES
+  TIMEOUT 120
+  LABELS "smoke;qemu;boot"
+)
+
+add_test(
   NAME qemu_stdio_pipe_integration
   COMMAND "${CMAKE_COMMAND}" -E env
     "QEMU_STDIO_PROMPT_TIMEOUT_SEC=90"

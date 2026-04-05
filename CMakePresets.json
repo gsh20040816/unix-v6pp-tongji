@@ -84,14 +84,31 @@
       ]
     },
     {
-      "name": "qemu-stdio-pipe-integration-build",
+      "name": "ci-qemu-tests-build",
       "configurePreset": "dev-ninja",
       "targets": [
+        "image",
         "qemu_stdio_pipe_integration"
       ]
     }
   ],
   "testPresets": [
+    {
+      "name": "ci-qemu-tests",
+      "configurePreset": "dev-ninja",
+      "environment": {
+        "QEMU_SMOKE_TIMEOUT_SEC": "30",
+        "QEMU_SMOKE_READY_EXIT_CODE": "33"
+      },
+      "output": {
+        "outputOnFailure": true
+      },
+      "filter": {
+        "include": {
+          "label": "qemu"
+        }
+      }
+    },
     {
       "name": "qemu-stdio-pipe-integration-test",
       "configurePreset": "dev-ninja",
