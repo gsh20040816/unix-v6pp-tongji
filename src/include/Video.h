@@ -10,7 +10,7 @@ public:
 	/* static const member */
 	static const unsigned int COLUMNS = 80;
 	static const unsigned short COLOR = 0x0B00;	/* char in bright CYAN */
-	static const unsigned int SCREEN_ROWS = 25;	/* full screen rows */
+	static const unsigned int SCREEN_ROWS = 50;	/* full screen rows */
 	static const unsigned int HISTORY_LINE_COUNT = 512;
 
 public:

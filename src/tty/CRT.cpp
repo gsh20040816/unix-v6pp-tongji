@@ -7,7 +7,7 @@ unsigned int CRT::m_CursorY = 0;
 char* CRT::m_Position = 0;
 char* CRT::m_BeginChar = 0;
 
-unsigned int CRT::ROWS = 15;
+unsigned int CRT::ROWS = 40;
 
 char CRT::m_History[CRT::HISTORY_LINE_COUNT][CRT::COLUMNS];
 unsigned int CRT::m_TotalLines = 1;

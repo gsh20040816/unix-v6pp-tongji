@@ -6,6 +6,22 @@
 #include "DMA.h"
 #include "Chip8259A.h"
 
+namespace
+{
+/*
+ * Bus-Master IDE DMA 对内存区域位置较敏感。
+ * 使用 64KB 对齐的 bounce buffer + PRD 表，避免内核布局变化后
+ * 某些地址组合导致 DMA 传输成功但数据落点异常。
+ */
+static unsigned char g_DmaBounceBuffer[BufferManager::BUFFER_SIZE] __attribute__((aligned(65536)));
+static PRDTable g_DmaPRDTable __attribute__((aligned(65536)));
+
+static unsigned long ToPhysicalAddress(const void* linearAddress)
+{
+	return ((unsigned long)linearAddress) & ~0xC0000000UL;
+}
+}
+
 void ATADriver::ATAHandler(struct pt_regs *reg, struct pt_context *context)
 {
 	Buf* bp;
@@ -18,6 +34,9 @@ void ATADriver::ATAHandler(struct pt_regs *reg, struct pt_context *context)
 	
 	if( atab->d_active == 0 )
 	{
+		/* 可能收到无请求时的残留中断，仍需EOI避免中断线被卡住。 */
+		IOPort::OutByte(Chip8259A::MASTER_IO_PORT_1, Chip8259A::EOI);
+		IOPort::OutByte(Chip8259A::SLAVE_IO_PORT_1, Chip8259A::EOI);
 		return;		/* 没有请求项 */
 	}
 
@@ -30,9 +49,15 @@ void ATADriver::ATAHandler(struct pt_regs *reg, struct pt_context *context)
 		if(++atab->d_errcnt <= 10)
 		{
 			bdev.Start();
+			IOPort::OutByte(Chip8259A::MASTER_IO_PORT_1, Chip8259A::EOI);
+			IOPort::OutByte(Chip8259A::SLAVE_IO_PORT_1, Chip8259A::EOI);
 			return;
 		}
 		bp->b_flags |= Buf::B_ERROR;
+	}
+	else if ((bp->b_flags & Buf::B_READ) == Buf::B_READ)
+	{
+		Utility::IOMove(g_DmaBounceBuffer, bp->b_addr, bp->b_wcount);
 	}
 	
 	atab->d_errcnt = 0;		/* 错误计数器归零 */
@@ -52,61 +77,50 @@ void ATADriver::DevStart(Buf* bp)
 		Utility::Panic("Invalid Buf in DevStart()!");
 	}
 
-	/* 等待控制器较长时间未就绪，表示出错。 */
-	if(ATADriver::IsControllerReady() == 0)
+	if (ATADriver::IsControllerReady() == 0)
 	{
 		Utility::Panic("Disk Hang Up!");
 	}
 
-	short minor = Utility::GetMinor(bp->b_dev);
-
-	/* 构造物理区域描述符表(PRD Table) */
-	PhysicalRegionDescriptor prd;
-	static PRDTable table;
-	
-	/* 传入参数为Buf缓冲区的实际物理地址 */
-	/* 
-	 * 由于进程图像起始地址p_addr所在用户态空间地址小于0xC0000000，
-	 * 所以不能采用对待缓存同样的方法：一律线性地址减去0xC0000000算出实际物理地址:
-	 * prd.SetBaseAddress((unsigned long)bp->b_addr - 0xC0000000); //Oops~
-	 * 而且p_addr中存放的本身就已经是物理地址，所以采取如下方法，有则减之，无则保持。
-	 */
-	prd.SetBaseAddress((unsigned long)bp->b_addr & ~0xC0000000);
-	prd.SetByteCount(bp->b_wcount);
-
-	/* 
-	 * 将构造好的prd描述符放到PRD Table的第0项位置，
-	 * 并且标记为最后一项。(我们这里仅使用一个prd描述符即可。) 
-	 */
-	table.SetPhysicalRegionDescriptor(0, prd, true);
-
-	DMA::Reset();		/* 复位DMA控制器 */
-
-	/* 设置扇区数 */
-	IOPort::OutByte(ATADriver::NSECTOR_PORT, bp->b_wcount / BufferManager::BUFFER_SIZE);
-	/* 设置LBA28寻址模式中磁盘块号的0-7位 */
-	IOPort::OutByte(ATADriver::BLKNO_PORT_1, bp->b_blkno & 0xFF);
-	/* 设置LBA28寻址模式中磁盘块号的8-15位 */
-	IOPort::OutByte(ATADriver::BLKNO_PORT_2, (bp->b_blkno >> 8) & 0xFF);
-	/* 设置LBA28寻址模式中磁盘块号的16-23位 */
-	IOPort::OutByte(ATADriver::BLKNO_PORT_3, (bp->b_blkno >> 16) & 0xFF);
-	/* 设置ATA磁盘工作模式寄存器，以及LBA28中的24-27位 */
-	IOPort::OutByte(ATADriver::MODE_PORT, ATADriver::MODE_IDE | ATADriver::MODE_LBA28 | (minor << 4) | ((bp->b_blkno >> 24) & 0x0F) );
-
-	/* 如果是读操作 */
-	if( (bp->b_flags & Buf::B_READ) == Buf::B_READ )
+	if (bp->b_wcount != BufferManager::BUFFER_SIZE)
 	{
-		/* 告诉磁盘控制器的读、写类型，启动I/O */
-		IOPort::OutByte(ATADriver::CMD_PORT, ATADriver::HD_DMA_READ);
-		
-		/* 告诉DMA控制器的读、写类型，传入PRD Table的物理起始地址，启动一次DMA */
-		DMA::Start(DMA::READ, table.GetPRDTableBaseAddress());
+		bp->b_flags |= Buf::B_ERROR;
+		return;
 	}
-	else	/* 如果是写操作 */
+
+	short minor = Utility::GetMinor(bp->b_dev);
+	int sectorCount = bp->b_wcount / BufferManager::BUFFER_SIZE;
+	bool isRead = ((bp->b_flags & Buf::B_READ) == Buf::B_READ);
+
+	PhysicalRegionDescriptor prd;
+	prd.SetBaseAddress(ToPhysicalAddress(g_DmaBounceBuffer));
+	prd.SetByteCount((unsigned short)bp->b_wcount);
+	g_DmaPRDTable.SetPhysicalRegionDescriptor(0, prd, true);
+
+	if (!isRead)
 	{
+		Utility::IOMove(bp->b_addr, g_DmaBounceBuffer, bp->b_wcount);
+	}
+
+	DMA::Reset();
+
+	IOPort::OutByte(ATADriver::NSECTOR_PORT, sectorCount);
+	IOPort::OutByte(ATADriver::BLKNO_PORT_1, bp->b_blkno & 0xFF);
+	IOPort::OutByte(ATADriver::BLKNO_PORT_2, (bp->b_blkno >> 8) & 0xFF);
+	IOPort::OutByte(ATADriver::BLKNO_PORT_3, (bp->b_blkno >> 16) & 0xFF);
+	IOPort::OutByte(
+		ATADriver::MODE_PORT,
+		ATADriver::MODE_IDE | ATADriver::MODE_LBA28 | (minor << 4) | ((bp->b_blkno >> 24) & 0x0F));
+
+	if (isRead)
+	{
+		DMA::Start(DMA::READ, g_DmaPRDTable.GetPRDTableBaseAddress());
+		IOPort::OutByte(ATADriver::CMD_PORT, ATADriver::HD_DMA_READ);
+	}
+	else
+	{
+		DMA::Start(DMA::WRITE, g_DmaPRDTable.GetPRDTableBaseAddress());
 		IOPort::OutByte(ATADriver::CMD_PORT, ATADriver::HD_DMA_WRITE);
-		
-		DMA::Start(DMA::WRITE, table.GetPRDTableBaseAddress());
 	}
 	return;
 }

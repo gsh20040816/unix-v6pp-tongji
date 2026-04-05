@@ -1,10 +1,17 @@
 org 0x7c00
 
-%include "kernel_size.inc"
+%include "kernel_size.generated.inc"
 
 ;section .code16
 [BITS 16]
 start:
+		; 切换到 VGA 80x50 文本模式（8x8 字形）
+		mov ax, 0x0003
+		int 0x10
+		mov ax, 0x1112
+		xor bx, bx
+		int 0x10
+
 		lgdt [gdtr]
 		
 		cli

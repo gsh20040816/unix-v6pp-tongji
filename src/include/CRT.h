@@ -11,7 +11,7 @@ public:
 	static const unsigned short VIDEO_ADDR_PORT = 0x3d4;	/* 显示控制索引寄存器端口号 */
 	static const unsigned short VIDEO_DATA_PORT = 0x3d5;	/* 显示控制数据寄存器端口号 */
 	
-	/* 屏幕大小为80 * 25 */
+	/* 屏幕大小为80 * 50 */
 	static const unsigned int COLUMNS = 80;
 	static unsigned int ROWS;
 	static const unsigned int HISTORY_LINE_COUNT = 512;

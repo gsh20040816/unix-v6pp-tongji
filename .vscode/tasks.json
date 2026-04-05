@@ -77,7 +77,7 @@
 			"detail": "在 Linux 本机通过 CMake 启动 bochs（nodebug 配置）",
 			"dependsOrder": "sequence",
 			"dependsOn": [
-				"cmake/configure"
+				"cmake/build"
 			],
 			"presentation": {
 				"reveal": "always",
@@ -104,7 +104,7 @@
 			"detail": "在 Linux 本机通过 CMake 启动 bochs-gdb 并等待 gdbstub 可连接",
 			"dependsOrder": "sequence",
 			"dependsOn": [
-				"cmake/configure"
+				"cmake/build"
 			],
 			"presentation": {
 				"reveal": "always",
@@ -142,7 +142,7 @@
 			"detail": "在 Linux 本机通过 CMake 启动 bochs（gui 配置）",
 			"dependsOrder": "sequence",
 			"dependsOn": [
-				"cmake/configure"
+				"cmake/build"
 			],
 			"presentation": {
 				"reveal": "always",
@@ -169,7 +169,7 @@
 			"detail": "在 Linux 本机通过 QEMU 启动 qemu（terminal/curses 配置）",
 			"dependsOrder": "sequence",
 			"dependsOn": [
-				"cmake/configure"
+				"cmake/build"
 			],
 			"presentation": {
 				"reveal": "always",
@@ -196,7 +196,7 @@
 			"detail": "在 Linux 本机通过 QEMU 启动 qemu-gdb（terminal/curses 配置）并等待 gdbstub 可连接",
 			"dependsOrder": "sequence",
 			"dependsOn": [
-				"cmake/configure"
+				"cmake/build"
 			],
 			"presentation": {
 				"reveal": "always",
@@ -234,7 +234,7 @@
 			"detail": "在 Linux 本机通过 QEMU 启动 qemu（gui 配置）",
 			"dependsOrder": "sequence",
 			"dependsOn": [
-				"cmake/configure"
+				"cmake/build"
 			],
 			"presentation": {
 				"reveal": "always",

@@ -21,12 +21,6 @@ private:
 	/* 检查I/O过程中是否有错误发生 */
 	static bool IsError();
 
-	// /* 目前未实现DMA，需要此函数。写操作(读操作不需要此函数)前需要
-	//  * 确定硬盘缓冲区是否准备好接受数据。顺序：磁盘缓冲区就绪 -> 写入
-	//  * 磁盘缓冲区 -> 最终写入目标扇区 -> I/O完成后发出中断。
-	//  */
-	// static int ReadyToTransfer();
-
 	/* static const member */
 public:
 	/* 磁盘寄存器界面I/O端口地址 */

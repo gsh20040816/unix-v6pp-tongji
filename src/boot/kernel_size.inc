@@ -1,1 +1,0 @@
-KERNEL_SIZE equ 208

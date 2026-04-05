@@ -13,6 +13,8 @@ void PhysicalRegionDescriptor::SetBaseAddress(unsigned long phyBaseAddr)
 
 void PhysicalRegionDescriptor::SetByteCount(unsigned short bytes)
 {
+	/* 保留位必须清零，避免PRD第二个dword携带随机脏位。 */
+	this->m_Reserved = 0;
 	/* 将DMA传输字节数的第[15 : 1]位写入PRD相应字段 */
 	this->m_ByteCount = bytes >> 1;
 	/* DMA传输字节数必须是偶数 */
@@ -100,6 +102,16 @@ void DMA::Init()
 				
 				if( find == 1 )
 				{
+					/*
+					 * 显式打开 PCI Command 寄存器中的 I/O Space 与 Bus Master Enable 位，
+					 * 避免某些固件/虚拟机默认未开启导致 DMA 命令完成但不搬运数据。
+					 */
+					unsigned int pciCommand = config[1] & 0xFFFF;
+					pciCommand |= 0x0005; /* bit0: I/O space, bit2: bus master */
+					value = (0x80000000 | (i << 16) | (j << 11) | (k << 8) | (1 << 2));
+					IOPort::OutDWord(cfg_addr_port, value);
+					IOPort::OutDWord(cfg_data_port, pciCommand);
+
 					/* 到这里已经读取了配置空间的全部256字节，取出第0x20 - 0x23字节 */
 					if(config[8] & 0x1)		/* Bit(0)为1表示端口地址为分离的I/O地址空间 */
 					{

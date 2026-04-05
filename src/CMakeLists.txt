@@ -116,7 +116,7 @@ add_custom_target(oos_kernel_sym DEPENDS "${OOS_KERNEL_SYM}")
 add_custom_target(oos_kernel_asm DEPENDS "${OOS_KERNEL_ASM}")
 
 set(OOS_BOOT_GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/boot-generated")
-set(OOS_KERNEL_SIZE_INC "${OOS_BOOT_GENERATED_DIR}/kernel_size.inc")
+set(OOS_KERNEL_SIZE_INC "${OOS_BOOT_GENERATED_DIR}/kernel_size.generated.inc")
 
 add_custom_command(
   OUTPUT "${OOS_KERNEL_SIZE_INC}"
