@@ -121,10 +121,25 @@
 ### 4. 迁移到 `QEMU` 虚拟机
 
 - 新增统一入口脚本 `qemu/run_qemu.sh`，通过 `QEMU_MODE` 切换运行模式。
-- 支持三种模式：
+- 脚本层（`QEMU_MODE`）支持六种模式：
   - `curses`：终端模式
-  - `gui`：图形模式
+  - `stdio`：无图形输出，`stdin/stdout` 串口交互，`diagnose` 走 `stderr`
+  - `gui`：图形模式（`gtk`）
+  - `headless`：无图形无串口，`debugcon` 写入日志并启用 `isa-debug-exit`
   - `gdb-curses`：终端模式 + `gdbstub :1234`
+  - `gdb-stdio`：`stdio` 交互 + `gdbstub :1234`
+- 工程默认生成五个 `CMake target`：
+  - `qemu`（对应 `stdio`）
+  - `qemu-curses`（对应 `curses`）
+  - `qemu-gui`（对应 `gui`）
+  - `qemu-gdb`（对应 `gdb-stdio`）
+  - `qemu-gdb-curses`（对应 `gdb-curses`）
+- VS Code 目前预置四个任务（常用路径）：
+  - `qemu/run`（`qemu` -> `stdio`）
+  - `qemu/run-curses`（`qemu-curses` -> `curses`）
+  - `qemu/gui`（`qemu-gui` -> `gui`）
+  - `qemu/debug`（`qemu-gdb` -> `gdb-stdio`）
+- `headless` 主要用于 CI 冒烟场景，可通过环境变量直接调用脚本启用。
 - `QEMU` 与镜像路径统一绑定 `build/c.img`，与 `CMake image` 目标保持一致。
 - VS Code 任务链路与 `CMake target` 对齐，形成“配置 -> 构建镜像 -> 启动虚拟机”的一致工作流。
 
@@ -136,3 +151,13 @@
   - `Home/End`：滚动 `Diagnose` 区域。
   - `PgUp/PgDn`：滚动 `CRT` 区域。
 - 滚动到尾部后会自动回到 `FollowTail` 状态，继续跟随最新输出。
+
+### 6. `QEMU` `stdio` 交互与 `diagnose` 日志化
+
+- 新增 `QEMU_MODE=stdio` / `QEMU_MODE=gdb-stdio` 运行模式：
+  - 业务交互走 `stdin/stdout`（`-serial stdio`），便于本机终端直接操作 Shell。
+  - 诊断输出走 `stderr`（`-debugcon file:/dev/stderr`），与交互输出分离，减少串扰。
+- VS Code 任务 `qemu/run` 与 `qemu/debug` 会在启动前清空日志并把 `stderr` 追加到：
+  - `build/qemu-run-diagnose.log`
+  - `build/qemu-debug-diagnose.log`
+- 该分流方案让“复现交互问题 + 回看诊断日志”可以同时进行，定位启动和运行期问题更直接。
