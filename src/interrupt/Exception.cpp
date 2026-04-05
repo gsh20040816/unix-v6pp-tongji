@@ -245,30 +245,8 @@ IMPLEMENT_EXCEPTION_HANDLER_ERRCODE(GeneralProtection, "General Protection!", Us
 
 
 //缺页异常(INT 14)  *有出错码*
-// IMPLEMENT_EXCEPTION_ENTRANCE_ERRCODE(PageFaultEntrance, PageFault)
+IMPLEMENT_EXCEPTION_ENTRANCE_ERRCODE(PageFaultEntrance, PageFault)
 //IMPLEMENT_EXCEPTION_HANDLER_ERRCODE(PageFault, "Page Fault!", User::SIGSEGV)
-
-void Exception::PageFaultEntrance()
-{
-	// Diagnose::Write("Page Fault Entrance!\n");
-	// unsigned int cr2;
-	// __asm__ __volatile__(" mov %%cr2, %0":"=r"(cr2) );
-	// Diagnose::Write("CR2=%x\n",cr2);
-
-	SaveContext();			
-							
-	SwitchToKernel();		
-							
-	CallHandler(Exception, PageFault);	
-							
-	RestoreContext();		
-							
-	Leave();				
-
-	__asm__ __volatile__("addl $4, %%esp" ::);
-							
-	InterruptReturn();		
-}
 
 void Exception::PageFault(struct pt_regs* regs, struct pte_context* context)
 {
