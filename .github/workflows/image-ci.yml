@@ -41,7 +41,21 @@ jobs:
         run: cmake --build build --target image -j"$(nproc)"
 
       - name: Smoke test boot with QEMU
+        env:
+          QEMU_SMOKE_TIMEOUT_SEC: 120
         run: bash qemu/smoke_boot.sh
+
+      - name: Upload QEMU smoke logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qemu-smoke-logs-${{ github.run_number }}
+          path: |
+            build/qemu-smoke-debugcon.log
+            build/qemu-smoke-stdout.log
+            build/qemu-smoke-stderr.log
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Generate checksum
         run: |
