@@ -21,6 +21,16 @@ namespace
 	static const unsigned char SERIAL_LSR_TX_HOLDING_EMPTY = 0x20;
 	static bool g_SerialInitialized = false;
 
+	enum SerialEscapeState
+	{
+		SERIAL_ESCAPE_IDLE = 0,
+		SERIAL_ESCAPE_SEEN,
+		SERIAL_ESCAPE_CSI,
+		SERIAL_ESCAPE_SS3
+	};
+
+	static SerialEscapeState g_SerialEscapeState = SERIAL_ESCAPE_IDLE;
+
 	static inline unsigned short SerialPort(unsigned short reg)
 	{
 		return SERIAL_COM1_BASE + reg;
@@ -73,12 +83,64 @@ namespace
 		if ( ch == '\n' )
 		{
 			SerialWriteRaw('\r');
+			SerialWriteRaw('\n');
+			return;
 		}
+
+		if ( ch == '\b' )
+		{
+			/* 串口终端需要 "\b \b" 才能把屏幕上的字符可见擦除。 */
+			SerialWriteRaw('\b');
+			SerialWriteRaw(' ');
+			SerialWriteRaw('\b');
+			return;
+		}
+
 		SerialWriteRaw(ch);
 	}
 
 	static char NormalizeSerialInputChar(char ch)
 	{
+		if ( g_SerialEscapeState == SERIAL_ESCAPE_IDLE )
+		{
+			if ( ch == 0x1b )
+			{
+				/* 吞掉ANSI转义序列起始符，避免方向键序列污染TTY输入。 */
+				g_SerialEscapeState = SERIAL_ESCAPE_SEEN;
+				return 0;
+			}
+		}
+		else if ( g_SerialEscapeState == SERIAL_ESCAPE_SEEN )
+		{
+			if ( ch == '[' )
+			{
+				g_SerialEscapeState = SERIAL_ESCAPE_CSI;
+				return 0;
+			}
+
+			if ( ch == 'O' )
+			{
+				g_SerialEscapeState = SERIAL_ESCAPE_SS3;
+				return 0;
+			}
+
+			/* 非ANSI序列，按普通字符继续处理（会丢弃孤立ESC）。 */
+			g_SerialEscapeState = SERIAL_ESCAPE_IDLE;
+		}
+		else if ( g_SerialEscapeState == SERIAL_ESCAPE_CSI )
+		{
+			if ( ch >= 0x40 && ch <= 0x7e )
+			{
+				g_SerialEscapeState = SERIAL_ESCAPE_IDLE;
+			}
+			return 0;
+		}
+		else if ( g_SerialEscapeState == SERIAL_ESCAPE_SS3 )
+		{
+			g_SerialEscapeState = SERIAL_ESCAPE_IDLE;
+			return 0;
+		}
+
 		if ( ch == '\r' )
 		{
 			return '\n';
