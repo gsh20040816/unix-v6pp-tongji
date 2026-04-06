@@ -39,6 +39,7 @@ public:
 public:
 	SystemCall();
 	~SystemCall();
+	static void ResetBootState();
 
 public:
 	/* 偏移地址存放在IDT[0x80]陷入门中的系统调用入口函数
@@ -234,6 +235,9 @@ private:
 
 	/*	53 = getkerpagemem	count = 0	*/
 	static int Sys_GetKerPageMem();
+
+	/*	55 = reboot	count = 0	*/
+	static int Sys_Reboot();
 
 	/*	54 = bootready	count = 0	*/
 	static int Sys_BootReady();

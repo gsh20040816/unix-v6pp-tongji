@@ -38,6 +38,8 @@ class Utility
 {
 public:
 	static void MemCopy(unsigned long src, unsigned long des, unsigned int count);
+
+	static void MemSet(unsigned long des, unsigned char value, unsigned int count);
 	
 	static int CaluPageNeed(unsigned int memoryneed, unsigned int pagesize);
 

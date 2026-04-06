@@ -79,7 +79,22 @@ ProcessManager::~ProcessManager()
 
 void ProcessManager::Initialize()
 {
-	//nothing to do here
+	Utility::MemSet((unsigned long)this->process, 0, sizeof(this->process));
+	for ( int i = 0; i < ProcessManager::NPROC; ++i )
+	{
+		this->process[i].p_stat = Process::SNULL;
+		this->process[i].p_ppid = -1;
+		this->process[i].p_memory.Attach(&this->process[i]);
+	}
+
+	Utility::MemSet((unsigned long)this->text, 0, sizeof(this->text));
+
+	this->CurPri = 0;
+	this->RunRun = 0;
+	this->ExeCnt = 0;
+	this->SwtchNum = 0;
+	ProcessManager::m_NextUniquePid = 0;
+	g_NewProcTraceCount = 0;
 }
 
 void ProcessManager::SetupProcessZero()

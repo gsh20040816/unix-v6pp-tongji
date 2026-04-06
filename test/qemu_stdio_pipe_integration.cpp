@@ -561,6 +561,7 @@ int main()
 	std::string stderrBuffer;
 	bool ok = true;
 	const std::string copyTarget = "/var/gcopy";
+	const std::string rebootToken = config.token + "_REBOOT";
 
 	ok = ok && WaitForCondition(
 		"shell prompt",
@@ -782,8 +783,93 @@ int main()
 			return ContainsFrom(stdoutBuffer, stdoutCursor, "Directory '/bin':") &&
 				ContainsFrom(stdoutBuffer, stdoutCursor, "echo") &&
 				ContainsFrom(stdoutBuffer, stdoutCursor, "date") &&
+				ContainsFrom(stdoutBuffer, stdoutCursor, "reboot") &&
 				(ContainsFrom(stdoutBuffer, stdoutCursor, "utest") ||
 					ContainsFrom(stdoutBuffer, stdoutCursor, "test"));
+		});
+
+	stdoutCursor = stdoutBuffer.size();
+	size_t stderrCursor = stderrBuffer.size();
+	if ( ok )
+	{
+		if ( !SendCommand(child.stdinFd, "reboot") )
+		{
+			std::cerr << "failed to send reboot command\n";
+			ok = false;
+		}
+	}
+
+	ok = ok && WaitForCondition(
+		"reboot request output",
+		config.cmdTimeoutSec,
+		child,
+		stdoutBuffer,
+		stderrBuffer,
+		stdoutLog,
+		stderrLog,
+		[&]() { return ContainsFrom(stdoutBuffer, stdoutCursor, "Requesting reboot"); });
+
+	ok = ok && WaitForCondition(
+		"shell prompt after reboot",
+		config.promptTimeoutSec,
+		child,
+		stdoutBuffer,
+		stderrBuffer,
+		stdoutLog,
+		stderrLog,
+		[&]() { return HasShellPromptFrom(stdoutBuffer, stdoutCursor); });
+
+	ok = ok && WaitForCondition(
+		"ready marker after reboot",
+		config.promptTimeoutSec,
+		child,
+		stdoutBuffer,
+		stderrBuffer,
+		stdoutLog,
+		stderrLog,
+		[&]() { return ContainsFrom(stderrBuffer, stderrCursor, config.readyMarker); });
+
+	stdoutCursor = stdoutBuffer.size();
+	if ( ok )
+	{
+		if ( !SendCommand(child.stdinFd, "") )
+		{
+			std::cerr << "failed to send sync newline after reboot\n";
+			ok = false;
+		}
+	}
+
+	ok = ok && WaitForCondition(
+		"sync prompt after reboot",
+		config.cmdTimeoutSec,
+		child,
+		stdoutBuffer,
+		stderrBuffer,
+		stdoutLog,
+		stderrLog,
+		[&]() { return HasNextShellPromptFrom(stdoutBuffer, stdoutCursor); });
+
+	stdoutCursor = stdoutBuffer.size();
+	if ( ok )
+	{
+		if ( !SendCommand(child.stdinFd, "echo " + rebootToken) )
+		{
+			std::cerr << "failed to send echo after reboot\n";
+			ok = false;
+		}
+	}
+
+	ok = ok && WaitForCondition(
+		"echo token after reboot",
+		config.cmdTimeoutSec,
+		child,
+		stdoutBuffer,
+		stderrBuffer,
+		stdoutLog,
+		stderrLog,
+		[&]() {
+			return ContainsFrom(stdoutBuffer, stdoutCursor, rebootToken) &&
+				HasShellPromptFrom(stdoutBuffer, stdoutCursor);
 		});
 
 	stdoutCursor = stdoutBuffer.size();

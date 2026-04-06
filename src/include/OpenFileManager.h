@@ -35,6 +35,8 @@ public:
 	OpenFileTable();
 	/* Destructors */
 	~OpenFileTable();
+
+	void Reset();
 	
 	// /* 
 	 // * @comment 根据用户系统调用提供的文件描述符参数fd，
@@ -73,6 +75,8 @@ public:
 	InodeTable();
 	/* Destructors */
 	~InodeTable();
+
+	void Reset();
 	
 	/* 
 	 * @comment 初始化对g_FileSystem对象的引用

@@ -70,6 +70,13 @@ FileSystem::~FileSystem()
 void FileSystem::Initialize()
 {
 	this->m_BufferManager = &Kernel::Instance().GetBufferManager();
+	Utility::MemSet((unsigned long)&g_spb, 0, sizeof(g_spb));
+	for ( int i = 0; i < FileSystem::NMOUNT; ++i )
+	{
+		this->m_Mount[i].m_dev = -1;
+		this->m_Mount[i].m_spb = NULL;
+		this->m_Mount[i].m_inodep = NULL;
+	}
 	this->updlock = 0;
 }
 

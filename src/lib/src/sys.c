@@ -99,6 +99,15 @@ int shutdownSystem()
 	return -1;
 }
 
+int rebootSystem()
+{
+	int res;
+	__asm__ volatile ( "int $0x80":"=a"(res):"a"(55) );
+	if ( res >= 0 )
+		return res;
+	return -1;
+}
+
 int notifyShellReady()
 {
 	int res;

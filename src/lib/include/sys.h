@@ -60,6 +60,9 @@ int syncFileSystem();
 /* 写盘并请求系统关机（成功时通常不会返回） */
 int shutdownSystem();
 
+/* 写盘并请求 BIOS 软重启（成功时通常不会返回） */
+int rebootSystem();
+
 /* Shell启动完成后通知内核输出可抓取就绪标记 */
 int notifyShellReady();
 

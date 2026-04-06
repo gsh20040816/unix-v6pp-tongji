@@ -20,7 +20,10 @@ void FileManager::Initialize()
 
 	this->m_InodeTable = &g_InodeTable;
 	this->m_OpenFileTable = &g_OpenFileTable;
+	this->rootDirInode = NULL;
 
+	this->m_OpenFileTable->Reset();
+	this->m_InodeTable->Reset();
 	this->m_InodeTable->Initialize();
 }
 
@@ -1133,4 +1136,3 @@ DirectoryEntry::~DirectoryEntry()
 {
 	//nothing to do here
 }
-

@@ -17,6 +17,11 @@ OpenFileTable::~OpenFileTable()
 	//nothing to do here
 }
 
+void OpenFileTable::Reset()
+{
+	Utility::MemSet((unsigned long)this->m_File, 0, sizeof(this->m_File));
+}
+
 /*作用：进程打开文件描述符表中找的空闲项  之 下标  写入 u_ar0[EAX]*/
 File* OpenFileTable::FAlloc()
 {
@@ -91,6 +96,20 @@ InodeTable::InodeTable()
 InodeTable::~InodeTable()
 {
 	//nothing to do here
+}
+
+void InodeTable::Reset()
+{
+	Utility::MemSet((unsigned long)this->m_Inode, 0, sizeof(this->m_Inode));
+	for ( int i = 0; i < NINODE; ++i )
+	{
+		this->m_Inode[i].i_dev = -1;
+		this->m_Inode[i].i_number = -1;
+		this->m_Inode[i].i_uid = -1;
+		this->m_Inode[i].i_gid = -1;
+		this->m_Inode[i].i_lastr = -1;
+	}
+	Inode::rablock = 0;
 }
 
 void InodeTable::Initialize()

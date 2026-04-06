@@ -196,6 +196,16 @@ extern "C" void next()
 	PageManager::PHY_MEM_SIZE = memSize * 1024;
 	UserPageManager::USER_PAGE_POOL_SIZE = PageManager::PHY_MEM_SIZE - UserPageManager::USER_PAGE_POOL_START_ADDR;
 
+	/*
+	 * warm reboot 后 RAM 中仍可能保留旧的 ppda/u 区内容，
+	 * 必须先清空 0# 进程对应的这一页，避免旧 fd/信号/错误码污染启动路径。
+	 */
+	Utility::MemSet(
+		ProcessManager::PROCESS_ZERO_PPDA_ADDRESS,
+		0,
+		PageManager::PAGE_SIZE);
+	SystemCall::ResetBootState();
+
 	/* 真正操作系统内核初始化逻辑	 */
 	Kernel::Instance().Initialize();	
 	Kernel::Instance().GetProcessManager().SetupProcessZero();

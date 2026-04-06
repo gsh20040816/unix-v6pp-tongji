@@ -12,6 +12,9 @@ namespace
 	static const unsigned short QEMU_DEBUGCON_PORT_E9 = 0xE9;
 	static const unsigned short QEMU_DEBUGCON_PORT_402 = 0x402;
 	static const unsigned short QEMU_DEBUG_EXIT_PORT = 0xF4;
+	static const unsigned short KEYBOARD_STATUS_PORT = 0x64;
+	static const unsigned short KEYBOARD_COMMAND_PORT = 0x64;
+	static const unsigned short RESET_CONTROL_PORT = 0xCF9;
 	static const unsigned char QEMU_DEBUG_EXIT_READY_CODE = 0x10;
 	static const char* QEMU_BOOT_READY_MARKER = "OOS_BOOT_SHELL_READY\n";
 	static bool g_BootReadyReported = false;
@@ -34,6 +37,41 @@ namespace
 			IOPort::OutByte(QEMU_DEBUGCON_PORT_E9, (unsigned char)(*text));
 			IOPort::OutByte(QEMU_DEBUGCON_PORT_402, (unsigned char)(*text));
 			++text;
+		}
+	}
+
+	static void WaitKeyboardControllerWriteReady()
+	{
+		for ( unsigned int retry = 0; retry < 0x10000; ++retry )
+		{
+			if ( (IOPort::InByte(KEYBOARD_STATUS_PORT) & 0x02) == 0 )
+			{
+				return;
+			}
+		}
+	}
+
+	static void TriggerWarmReboot()
+	{
+		X86Assembly::CLI();
+
+		/*
+		 * 先走传统 8042 键盘控制器复位。
+		 * 该路径会让机器重新从 BIOS 复位向量启动。
+		 */
+		WaitKeyboardControllerWriteReady();
+		IOPort::OutByte(KEYBOARD_COMMAND_PORT, 0xFE);
+
+		/*
+		 * 某些虚拟机对 0xCF9 的复位支持更直接，
+		 * 因此在 8042 没有立刻生效时补一条 full reset。
+		 */
+		IOPort::OutByte(RESET_CONTROL_PORT, 0x02);
+		IOPort::OutByte(RESET_CONTROL_PORT, 0x06);
+
+		for ( ;; )
+		{
+			__asm__ __volatile__("hlt");
 		}
 	}
 }
@@ -98,7 +136,7 @@ SystemCallTableEntry SystemCall::m_SystemEntranceTable[SYSTEM_CALL_NUM] =
 	{ 0, &Sys_GetKerHeapMem},		/* 52 = getkerheapmem */
 	{ 0, &Sys_GetKerPageMem},		/* 53 = getkerpagemem */
 	{ 0, &Sys_BootReady },			/* 54 = bootready */
-	{ 0, &Sys_Nosys	},				/* 55 = nosys	*/
+	{ 0, &Sys_Reboot },				/* 55 = reboot	*/
 	{ 0, &Sys_Nosys	},				/* 56 = nosys	*/
 	{ 0, &Sys_Nosys	},				/* 57= nosys	*/
 	{ 0, &Sys_Nosys	},				/* 58 = nosys	*/
@@ -117,6 +155,11 @@ SystemCall::SystemCall()
 SystemCall::~SystemCall()
 {
 	//nothing to do here
+}
+
+void SystemCall::ResetBootState()
+{
+	g_BootReadyReported = false;
 }
 
 void SystemCall::SystemCallEntrance()
@@ -835,6 +878,14 @@ int SystemCall::Sys_GetKerPageMem()
 	}
 
 	u.u_ar0[User::EAX] = (int)freeBytes;
+	return 0;	/* GCC likes it ! */
+}
+
+/*	55 = reboot	count = 0	*/
+int SystemCall::Sys_Reboot()
+{
+	Kernel::Instance().GetFileSystem().Update();
+	TriggerWarmReboot();
 	return 0;	/* GCC likes it ! */
 }
 

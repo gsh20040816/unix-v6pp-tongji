@@ -16,6 +16,16 @@ void Utility::MemCopy(unsigned long src, unsigned long des, unsigned int count)
 		pdes[i] = psrc[i];
 }
 
+void Utility::MemSet(unsigned long des, unsigned char value, unsigned int count)
+{
+	unsigned char* pdes = (unsigned char*)des;
+
+	for ( unsigned int i = 0; i < count; ++i )
+	{
+		pdes[i] = value;
+	}
+}
+
 int Utility::CaluPageNeed(unsigned int memoryneed, unsigned int pagesize)
 {
 	int pageRequired = memoryneed / pagesize;
