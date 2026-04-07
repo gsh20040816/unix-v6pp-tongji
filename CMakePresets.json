@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 6,
   "cmakeMinimumRequired": {
     "major": 3,
     "minor": 20,
@@ -108,18 +108,26 @@
           "label": "qemu"
         }
       }
-    },
+    }
+  ],
+  "workflowPresets": [
     {
-      "name": "qemu-stdio-pipe-integration-test",
-      "configurePreset": "dev-ninja",
-      "output": {
-        "outputOnFailure": true
-      },
-      "filter": {
-        "include": {
-          "name": "qemu_stdio_pipe_integration"
+      "name": "qemu-tests",
+      "displayName": "Configure + Build + Run qemu tests",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "dev-ninja"
+        },
+        {
+          "type": "build",
+          "name": "ci-qemu-tests-build"
+        },
+        {
+          "type": "test",
+          "name": "ci-qemu-tests"
         }
-      }
+      ]
     }
   ]
 }

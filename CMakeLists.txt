@@ -1,8 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 
 project(oos LANGUAGES C CXX ASM_NASM)
-
-option(BUILD_TESTING "Build and register CTest tests" ON)
+include(CTest)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -62,7 +61,6 @@ add_subdirectory(tools/v6pp-fs-edit-2022)
 add_subdirectory(src)
 
 if(BUILD_TESTING)
-  enable_testing()
   add_subdirectory(test)
 endif()
 
