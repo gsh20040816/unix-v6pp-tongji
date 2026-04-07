@@ -45,7 +45,7 @@ cmake --build --preset qemu-gdb -j
 
 说明：
 
-- 开发目录固定为 `build/`。
+- 开发目录由 `configure preset` 的 `binaryDir` 决定（默认 `build/`）。
 - `.vscode/tasks.json` 已切换到 `--preset` 调用方式，任务与命令行行为保持一致。
 
 ## 物理内存与磁盘占用约定
@@ -96,7 +96,7 @@ cmake --build --preset qemu-gdb -j
 
 ### 4. 磁盘布局表
 
-磁盘镜像统一为 `build/c.img`，几何参数固定为：`20 cylinders` × `16 heads` × `63 sectors/track`，扇区/块大小 `512 bytes`，总大小 `10,321,920 bytes`。
+磁盘镜像统一为 `<binaryDir>/c.img`，几何参数固定为：`20 cylinders` × `16 heads` × `63 sectors/track`，扇区/块大小 `512 bytes`，总大小 `10,321,920 bytes`。
 
 | 区域 | 起始块 | 结束块 | 块数 | 对应功能 |
 |---|---:|---:|---:|---|
@@ -139,9 +139,9 @@ cmake --build --preset qemu-gdb -j
 - 顶层构建统一为 `CMake`：内核、用户程序、文件系统工具、镜像生成都纳入同一依赖图。
 - 镜像生成流水线固定为：
   - 先构建 `boot.bin`、`kernel.bin`、用户程序与 `fs-tools`。
-  - 再由 `GenerateDiskImage.cmake` 组装 `build/c.img`。
+  - 再由 `GenerateDiskImage.cmake` 组装 `<binaryDir>/c.img`。
 - `Bochs` 配置改为模板生成，`nodebug/gdb/gui` 三种模式由同一模板参数化输出。
-- 构建产物目录收敛到 `build/`，便于清理、调试和 CI 复现。
+- 构建产物目录由 `CMakePresets.json` 中 `configure preset` 的 `binaryDir` 统一管理，便于清理、调试和 CI 复现。
 
 ### 4. 迁移到 `QEMU` 虚拟机
 
@@ -165,9 +165,9 @@ cmake --build --preset qemu-gdb -j
   - `qemu/gui`（`qemu-gui` -> `gui`）
   - `qemu/debug`（`qemu-gdb` -> `gdb-stdio`）
 - `headless` 主要用于 CI 冒烟场景，可通过环境变量直接调用脚本启用。
-- `QEMU` 与镜像路径统一绑定 `build/c.img`，与 `CMake image` 目标保持一致。
+- `QEMU` 与镜像路径统一绑定 `<binaryDir>/c.img`，与 `CMake image` 目标保持一致。
 - `bochs/*` 与 `qemu/*` 运行目标会依赖 `image`，按需触发增量构建：
-  - 若 `build/c.img` 及其依赖无变化，仅做检查后直接启动虚拟机。
+  - 若 `<binaryDir>/c.img` 及其依赖无变化，仅做检查后直接启动虚拟机。
   - 若内核/用户程序/镜像内容有变化，会自动更新镜像后再启动。
 - VS Code 运行任务不再额外依赖 `cmake/build`，避免同一次启动里重复触发两次构建链检查。
 
@@ -186,6 +186,6 @@ cmake --build --preset qemu-gdb -j
   - 业务交互走 `stdin/stdout`（`-serial stdio`），便于本机终端直接操作 Shell。
   - 诊断输出走 `stderr`（`-debugcon file:/dev/stderr`），与交互输出分离，减少串扰。
 - VS Code 任务 `qemu/run` 与 `qemu/debug` 会在启动前清空日志并把 `stderr` 追加到：
-  - `build/qemu-run-diagnose.log`
-  - `build/qemu-debug-diagnose.log`
+  - `<binaryDir>/qemu-run-diagnose.log`
+  - `<binaryDir>/qemu-debug-diagnose.log`
 - 该分流方案让“复现交互问题 + 回看诊断日志”可以同时进行，定位启动和运行期问题更直接。

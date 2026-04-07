@@ -23,6 +23,10 @@
 #define OOS_QEMU_STDIO_IT_ROOT_DIR "."
 #endif
 
+#ifndef OOS_QEMU_STDIO_IT_BUILD_DIR
+#define OOS_QEMU_STDIO_IT_BUILD_DIR "."
+#endif
+
 namespace
 {
 	struct Config
@@ -304,7 +308,10 @@ namespace
 		return 255;
 	}
 
-	ChildProcess SpawnQemuStdio(const std::filesystem::path& rootDir, const Config& config)
+	ChildProcess SpawnQemuStdio(
+		const std::filesystem::path& rootDir,
+		const std::filesystem::path& buildDir,
+		const Config& config)
 	{
 		int stdinPipe[2] = { -1, -1 };
 		int stdoutPipe[2] = { -1, -1 };
@@ -360,6 +367,7 @@ namespace
 
 			setenv("QEMU_MODE", "stdio", 1);
 			setenv("QEMU_BIN", config.qemuBin.c_str(), 1);
+			setenv("OOS_BUILD_DIR", buildDir.c_str(), 1);
 
 			std::string scriptPath = (rootDir / "qemu" / "run_qemu.sh").string();
 			execl("/bin/bash", "bash", scriptPath.c_str(), static_cast<char*>(nullptr));
@@ -507,8 +515,8 @@ int main()
 
 	std::filesystem::path rootDir = ReadEnvString("OOS_ROOT_DIR", OOS_QEMU_STDIO_IT_ROOT_DIR);
 	std::filesystem::path runScript = rootDir / "qemu" / "run_qemu.sh";
-	std::filesystem::path imagePath = rootDir / "build" / "c.img";
-	std::filesystem::path buildDir = rootDir / "build";
+	std::filesystem::path buildDir = ReadEnvString("OOS_BUILD_DIR", OOS_QEMU_STDIO_IT_BUILD_DIR);
+	std::filesystem::path imagePath = buildDir / "c.img";
 	std::filesystem::path stdoutLogPath = buildDir / "qemu-stdio-integration-stdout.log";
 	std::filesystem::path stderrLogPath = buildDir / "qemu-stdio-integration-stderr.log";
 
@@ -540,7 +548,7 @@ int main()
 		      << "s cmd_timeout=" << config.cmdTimeoutSec
 		      << "s shutdown_timeout=" << config.shutdownTimeoutSec << "s\n";
 
-	ChildProcess child = SpawnQemuStdio(rootDir, config);
+	ChildProcess child = SpawnQemuStdio(rootDir, buildDir, config);
 	if ( child.pid <= 0 )
 	{
 		return 1;

@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
-BUILD_DIR="${ROOT_DIR}/build"
+BUILD_DIR="${OOS_BUILD_DIR:-${ROOT_DIR}/build}"
 QEMU_BIN_PATH="${QEMU_BIN:-qemu-system-i386}"
 
 TIMEOUT_SEC="${QEMU_SMOKE_TIMEOUT_SEC:-40}"
@@ -22,6 +22,7 @@ fi
 echo "qemu smoke config: mode=headless timeout=${TIMEOUT_SEC}s ready_exit_code=${READY_EXIT_CODE} debugcon=${DEBUGCON_LOG}"
 
 QEMU_MODE=headless \
+OOS_BUILD_DIR="${BUILD_DIR}" \
 QEMU_DEBUGCON_LOG="${DEBUGCON_LOG}" \
 bash "${SCRIPT_DIR}/run_qemu.sh" \
   >"${STDOUT_LOG}" 2>"${STDERR_LOG}" &

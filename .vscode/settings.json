@@ -5,7 +5,6 @@
   "C_Cpp.autocomplete": "disabled",
   "clangd.path": "clangd",
   "clangd.arguments": [
-    "--compile-commands-dir=${workspaceFolder}/build",
     "--background-index",
     "--header-insertion=never",
     "--completion-style=detailed"

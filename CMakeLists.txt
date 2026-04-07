@@ -26,6 +26,16 @@ set(OOS_FS_PROGRAMS_DIR "${OOS_FS_PAYLOAD_DIR}/programs")
 set(OOS_FS_PROGRAMS_BIN_DIR "${OOS_FS_PROGRAMS_DIR}/bin")
 set(OOS_FS_TOOLS_BIN_DIR "${CMAKE_BINARY_DIR}/fs-tools")
 
+# Keep clangd lookup independent from a fixed build directory.
+if(CMAKE_EXPORT_COMPILE_COMMANDS)
+  file(MAKE_DIRECTORY "${OOS_ROOT_DIR}/.vscode")
+  execute_process(
+    COMMAND "${CMAKE_COMMAND}" -E create_symlink
+      "${CMAKE_BINARY_DIR}/compile_commands.json"
+      "${OOS_ROOT_DIR}/.vscode/compile_commands.json"
+  )
+endif()
+
 set(OOS_BOCHS_BXSHARE "/usr/share/bochs" CACHE PATH "Path to Bochs BIOS/share directory")
 
 find_program(OOS_OBJCOPY_EXECUTABLE NAMES objcopy REQUIRED)
@@ -136,6 +146,7 @@ function(add_oos_qemu_target TARGET_NAME MODE)
     COMMAND "${CMAKE_COMMAND}" -E env
             "QEMU_BIN=${OOS_QEMU_EXECUTABLE}"
             "QEMU_MODE=${MODE}"
+            "OOS_BUILD_DIR=${CMAKE_BINARY_DIR}"
             bash "${OOS_QEMU_DIR}/run_qemu.sh"
     WORKING_DIRECTORY "${OOS_ROOT_DIR}"
     DEPENDS image

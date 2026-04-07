@@ -4,6 +4,7 @@ build/
 # Shared VS Code workflow files can stay tracked.
 # Ignore only generated indexes, logs, and machine-local compiler settings.
 .vscode/c_cpp_properties.json
+.vscode/compile_commands.json
 
 # OS noise.
 .DS_Store

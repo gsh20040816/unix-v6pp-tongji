@@ -6,7 +6,7 @@
             "type": "cppdbg",
             "request": "launch",
             "preLaunchTask": "bochs/debug",
-            "program": "${workspaceFolder}/build/objs/kernel",
+            "program": "${command:cmake.buildDirectory}/objs/kernel",
             "cwd": "${workspaceFolder}",
             "MIMode": "gdb",
             "miDebuggerPath": "/usr/bin/gdb",
@@ -27,7 +27,7 @@
             "type": "cppdbg",
             "request": "launch",
             "preLaunchTask": "bochs/debug",
-            "program": "${workspaceFolder}/build/objs/kernel",
+            "program": "${command:cmake.buildDirectory}/objs/kernel",
             "cwd": "${workspaceFolder}",
             "MIMode": "gdb",
             "miDebuggerPath": "/usr/bin/gdb",
@@ -49,7 +49,7 @@
                 },
                 {
                     "description": "Load selected user program symbols at user text base",
-                    "text": "add-symbol-file ${workspaceFolder}/build/fs-payload/programs${input:userSymbolPathFromFsRoot} 0x00401000",
+                    "text": "add-symbol-file ${command:cmake.buildDirectory}/fs-payload/programs${input:userSymbolPathFromFsRoot} 0x00401000",
                     "ignoreFailures": false
                 }
             ]
@@ -59,7 +59,7 @@
             "type": "cppdbg",
             "request": "launch",
             "preLaunchTask": "qemu/debug",
-            "program": "${workspaceFolder}/build/objs/kernel",
+            "program": "${command:cmake.buildDirectory}/objs/kernel",
             "cwd": "${workspaceFolder}",
             "MIMode": "gdb",
             "miDebuggerPath": "/usr/bin/gdb",
@@ -80,7 +80,7 @@
             "type": "cppdbg",
             "request": "launch",
             "preLaunchTask": "qemu/debug",
-            "program": "${workspaceFolder}/build/objs/kernel",
+            "program": "${command:cmake.buildDirectory}/objs/kernel",
             "cwd": "${workspaceFolder}",
             "MIMode": "gdb",
             "miDebuggerPath": "/usr/bin/gdb",
@@ -102,7 +102,7 @@
                 },
                 {
                     "description": "Load selected user program symbols at user text base",
-                    "text": "add-symbol-file ${workspaceFolder}/build/fs-payload/programs${input:userSymbolPathFromFsRoot} 0x00401000",
+                    "text": "add-symbol-file ${command:cmake.buildDirectory}/fs-payload/programs${input:userSymbolPathFromFsRoot} 0x00401000",
                     "ignoreFailures": false
                 }
             ]

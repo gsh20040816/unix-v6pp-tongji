@@ -5,8 +5,9 @@ QEMU_BIN="${QEMU_BIN:-qemu-system-i386}"
 QEMU_MODE="${QEMU_MODE:-curses}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
-IMG_PATH="${ROOT_DIR}/build/c.img"
-QEMU_DEBUGCON_LOG="${QEMU_DEBUGCON_LOG:-${ROOT_DIR}/build/qemu-debugcon.log}"
+BUILD_DIR="${OOS_BUILD_DIR:-${ROOT_DIR}/build}"
+IMG_PATH="${IMG_PATH:-${BUILD_DIR}/c.img}"
+QEMU_DEBUGCON_LOG="${QEMU_DEBUGCON_LOG:-${BUILD_DIR}/qemu-debugcon.log}"
 
 if [[ ! -f "${IMG_PATH}" ]]; then
   echo "qemu: image not found: ${IMG_PATH}" >&2

@@ -37,6 +37,17 @@ jobs:
       - name: Configure project
         run: cmake --preset dev-ninja
 
+      - name: Resolve binary directory from preset cache
+        id: resolve-build-dir
+        run: |
+          BUILD_DIR="$(cmake -N -LA --preset dev-ninja | sed -n 's/^CMAKE_BINARY_DIR:STATIC=//p' | head -n 1)"
+          if [[ -z "${BUILD_DIR}" ]]; then
+            echo "failed to resolve CMAKE_BINARY_DIR from preset dev-ninja" >&2
+            exit 1
+          fi
+          echo "build_dir=${BUILD_DIR}" >> "${GITHUB_OUTPUT}"
+          echo "Resolved build_dir=${BUILD_DIR}"
+
       - name: Build CI QEMU test targets
         run: cmake --build --preset ci-qemu-tests-build -j"$(nproc)"
 
@@ -44,16 +55,18 @@ jobs:
         run: ctest --preset ci-qemu-tests
 
       - name: Generate checksum
+        env:
+          OOS_BUILD_DIR: ${{ steps.resolve-build-dir.outputs.build_dir }}
         run: |
-          sha256sum build/c.img > build/c.img.sha256
-          ls -lh build/c.img build/c.img.sha256
+          sha256sum "${OOS_BUILD_DIR}/c.img" > "${OOS_BUILD_DIR}/c.img.sha256"
+          ls -lh "${OOS_BUILD_DIR}/c.img" "${OOS_BUILD_DIR}/c.img.sha256"
 
       - name: Upload image artifact
         uses: actions/upload-artifact@v4
         with:
           name: cimg-${{ github.ref_name }}-${{ github.run_number }}
           path: |
-            build/c.img
-            build/c.img.sha256
+            ${{ steps.resolve-build-dir.outputs.build_dir }}/c.img
+            ${{ steps.resolve-build-dir.outputs.build_dir }}/c.img.sha256
           if-no-files-found: error
           retention-days: 30

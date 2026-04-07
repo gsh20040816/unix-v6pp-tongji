@@ -139,12 +139,12 @@
 			"command": "bash",
 			"args": [
 				"-lc",
-				"mkdir -p build && : > build/qemu-run-diagnose.log && cmake --build --preset qemu -j 2>>build/qemu-run-diagnose.log"
+				"cmake --preset dev-ninja >/dev/null && BUILD_DIR=\"$(cmake -N -LA --preset dev-ninja 2>/dev/null | awk -F= '/^CMAKE_BINARY_DIR:STATIC=/{print $2; exit}')\" && mkdir -p \"$BUILD_DIR\" && : > \"$BUILD_DIR/qemu-run-diagnose.log\" && cmake --build --preset qemu -j 2>>\"$BUILD_DIR/qemu-run-diagnose.log\""
 			],
 			"options": {
 				"cwd": "${workspaceFolder}"
 			},
-			"detail": "在 Linux 本机通过 QEMU 启动 qemu（stdin/stdout，diagnose 走 stderr 并写入 build/qemu-run-diagnose.log；按需增量构建）",
+			"detail": "在 Linux 本机通过 QEMU 启动 qemu（stdin/stdout，diagnose 走 stderr 并写入当前 CMake binaryDir 下的 qemu-run-diagnose.log；按需增量构建）",
 			"presentation": {
 				"reveal": "always",
 				"panel": "dedicated",
@@ -181,12 +181,12 @@
 			"command": "bash",
 			"args": [
 				"-lc",
-				"mkdir -p build && : > build/qemu-debug-diagnose.log && cmake --build --preset qemu-gdb -j 2>>build/qemu-debug-diagnose.log"
+				"cmake --preset dev-ninja >/dev/null && BUILD_DIR=\"$(cmake -N -LA --preset dev-ninja 2>/dev/null | awk -F= '/^CMAKE_BINARY_DIR:STATIC=/{print $2; exit}')\" && mkdir -p \"$BUILD_DIR\" && : > \"$BUILD_DIR/qemu-debug-diagnose.log\" && cmake --build --preset qemu-gdb -j 2>>\"$BUILD_DIR/qemu-debug-diagnose.log\""
 			],
 			"options": {
 				"cwd": "${workspaceFolder}"
 			},
-			"detail": "在 Linux 本机通过 QEMU 启动 qemu-gdb（stdin/stdout，diagnose 走 stderr 并写入 build/qemu-debug-diagnose.log）并等待 gdbstub 可连接（按需增量构建）",
+			"detail": "在 Linux 本机通过 QEMU 启动 qemu-gdb（stdin/stdout，diagnose 走 stderr 并写入当前 CMake binaryDir 下的 qemu-debug-diagnose.log）并等待 gdbstub 可连接（按需增量构建）",
 			"presentation": {
 				"reveal": "always",
 				"panel": "dedicated",
