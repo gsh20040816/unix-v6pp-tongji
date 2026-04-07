@@ -35,17 +35,7 @@ jobs:
             qemu-system-x86
 
       - name: Configure project
-        id: configure
-        run: |
-          CONFIGURE_LOG="$(cmake --preset dev-ninja 2>&1)"
-          printf '%s\n' "${CONFIGURE_LOG}"
-          BUILD_DIR="$(printf '%s\n' "${CONFIGURE_LOG}" | sed -n 's/^-- Build files have been written to: //p' | tail -n 1)"
-          if [[ -z "${BUILD_DIR}" ]]; then
-            echo "failed to resolve binaryDir from configure output" >&2
-            exit 1
-          fi
-          echo "build_dir=${BUILD_DIR}" >> "${GITHUB_OUTPUT}"
-          echo "Resolved build_dir=${BUILD_DIR}"
+        run: cmake --preset dev-ninja
 
       - name: Build CI QEMU test targets
         run: cmake --build --preset ci-qemu-tests-build -j"$(nproc)"
@@ -54,18 +44,16 @@ jobs:
         run: ctest --preset ci-qemu-tests
 
       - name: Generate checksum
-        env:
-          OOS_BUILD_DIR: ${{ steps.configure.outputs.build_dir }}
         run: |
-          sha256sum "${OOS_BUILD_DIR}/c.img" > "${OOS_BUILD_DIR}/c.img.sha256"
-          ls -lh "${OOS_BUILD_DIR}/c.img" "${OOS_BUILD_DIR}/c.img.sha256"
+          sha256sum build/c.img > build/c.img.sha256
+          ls -lh build/c.img build/c.img.sha256
 
       - name: Upload image artifact
         uses: actions/upload-artifact@v4
         with:
           name: cimg-${{ github.ref_name }}-${{ github.run_number }}
           path: |
-            ${{ steps.configure.outputs.build_dir }}/c.img
-            ${{ steps.configure.outputs.build_dir }}/c.img.sha256
+            build/c.img
+            build/c.img.sha256
           if-no-files-found: error
           retention-days: 30

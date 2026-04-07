@@ -30,6 +30,10 @@ set(OOS_FS_TOOLS_BIN_DIR "${CMAKE_BINARY_DIR}/fs-tools")
 if(CMAKE_EXPORT_COMPILE_COMMANDS)
   file(MAKE_DIRECTORY "${OOS_ROOT_DIR}/.vscode")
   execute_process(
+    COMMAND "${CMAKE_COMMAND}" -E rm -f
+      "${OOS_ROOT_DIR}/.vscode/compile_commands.json"
+  )
+  execute_process(
     COMMAND "${CMAKE_COMMAND}" -E create_symlink
       "${CMAKE_BINARY_DIR}/compile_commands.json"
       "${OOS_ROOT_DIR}/.vscode/compile_commands.json"

@@ -1,23 +1,6 @@
 CompileFlags:
   CompilationDatabase: .vscode
-  Add:
-    - -m32
-    - -march=i386
-    - -mtune=i386
-    - -I./src/include
-    - -I./src/lib/include
 Diagnostics:
   UnusedIncludes: None
----
-If:
-  PathMatch: .*\.cpp
-CompileFlags:
-  Add:
-    - -std=gnu++98
----
-If:
-  PathMatch: .*\.c
-  PathExclude: .*src/boot/support\.c$
-CompileFlags:
-  Add:
-    - -std=gnu89
+  Suppress:
+    - unused-includes
