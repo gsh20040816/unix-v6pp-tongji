@@ -215,6 +215,8 @@ public:
 	bool MaterializeBootstrapStack();
 	/* 为 exec 后的新映像做必要驻留：当前仅预分配用户栈。 */
 	bool MaterializeExecutableImage();
+	/* 将已分配的用户物理页挂接到指定虚拟页，供 exec 等路径复用。 */
+	bool InstallResidentPage(unsigned long virtualAddress, unsigned long physicalAddress);
 	/* 确保 faultAddress 所在页进入 RESIDENT 并完成页表映射。 */
 	bool EnsurePagePresent(unsigned long faultAddress);
 	/* 释放当前所有驻留页；可选择是否释放共享正文页。 */

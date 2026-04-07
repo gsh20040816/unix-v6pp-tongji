@@ -477,15 +477,15 @@ void ProcessManager::Exec()
         return;
     }
 
-	/* 
-	 * 分配内存用于存放用户程序运行需要的参数argc，argv[]，这些参数由exec()系统调用传入，
-	 * 位于进程图像改换前的用户栈中，将参数备份到fakeStack中，然后可以释放原进程图像，
-	 * 分配好新进程图像之后，再将fakeStack中的备份参数拷贝到新进程的用户栈中。
-	 * 注意：这里必须在ConfigureExecutableLayout()之前完成参数备份，否则旧用户栈映射会被清空。
+	/*
+	 * 在释放旧用户栈之前，先把新进程入口栈直接写入一组临时用户物理页。
+	 * 后续新地址空间建立完成后，只需把这些页挂到最终栈虚拟地址即可，
+	 * 不再需要 fakeStack -> 用户栈 的整段复制。
 	 */
-	int allocLength = (parser.StackSize + PageManager::PAGE_SIZE * 2 - 1) >> 13 << 13;
+	unsigned int stackPageCount = BytesToPageCount(parser.StackSize);
+	unsigned long stackBottom = MemoryDescriptor::USER_SPACE_END - parser.StackSize;
 	Diagnose::Write(
-		"Exec ELF layout: entry=%x text=%x/%x data=%x/%x ro=%x/%x bss=%x/%x stack=%x fake=%x\n",
+		"Exec ELF layout: entry=%x text=%x/%x data=%x/%x ro=%x/%x bss=%x/%x stack=%x pages=%d\n",
 		parser.EntryPointAddress,
 		parser.TextAddress,
 		parser.TextSize,
@@ -496,9 +496,10 @@ void ProcessManager::Exec()
 		parser.BssAddress,
 		parser.BssSize,
 		parser.StackSize,
-		allocLength);
-	unsigned char* fakeStack = new unsigned char[allocLength];
-	if ( fakeStack == NULL )
+		stackPageCount);
+
+	unsigned long* stackPages = new unsigned long[stackPageCount];
+	if ( stackPages == NULL )
 	{
 		fileMgr.m_InodeTable->IPut(pInode);
 		if ( this->ExeCnt >= NEXEC )
@@ -509,16 +510,32 @@ void ProcessManager::Exec()
 		u.u_error = User::ENOMEM;
 		return;
 	}
+	ClearPageArray(stackPages, stackPageCount);
 
 	int argc = u.u_arg[1];
 	char** argv = (char **)u.u_arg[2];
+	char** userArgv = NULL;
+	bool stackBuildOk = true;
+	unsigned int esp = MemoryDescriptor::USER_SPACE_END;
+	int length = 0;
+	if ( argc > 0 )
+	{
+		userArgv = new char*[argc];
+		if ( userArgv == NULL )
+		{
+			goto exec_fail_temp_pages;
+		}
+	}
 
-	/* esp定位到栈底 */
-	unsigned int esp = MemoryDescriptor::USER_SPACE_SIZE;
-	/* fakeStack 位于内核堆，直接按线性地址访问。 */
-	unsigned long desAddress = (unsigned long)(fakeStack + allocLength);
-	//unsigned long desAddress = fakeStack + parser.StackSize + 0xC0000000;
-	int length;
+	for ( unsigned int i = 0; i < stackPageCount; ++i )
+	{
+		stackPages[i] = Kernel::Instance().GetUserPageManager().AllocatePage();
+		if ( stackPages[i] == 0 )
+		{
+			goto exec_fail_temp_pages;
+		}
+		Utility::ZeroPage(stackPages[i]);
+	}
 
 	/* 复制argv[]指针数组指向的命令行参数字符串 */
 	for (int i = 0; i < argc; i++ )
@@ -529,46 +546,248 @@ void ProcessManager::Exec()
 		{
 			length++;
 		}
-		desAddress = desAddress - (length + 1);
-		/* 拷贝时将'\0'一起拷贝过去 */
-		Utility::MemCopy((unsigned long)argv[i], desAddress, length + 1);
-		/* 将参数字符串在新进程图像用户栈中的起始位置存入argv[i]，用户栈位于进程逻辑地址空间0x800000的底部 */
 		esp = esp - (length + 1);
-		argv[i] = (char *)esp;
+
+		if ( esp < stackBottom )
+		{
+			stackBuildOk = false;
+			break;
+		}
+
+		unsigned long currentDst = esp;
+		unsigned long currentSrc = (unsigned long)argv[i];
+		unsigned int remaining = length + 1;
+		while ( remaining > 0 )
+		{
+			unsigned long offsetInStack = currentDst - stackBottom;
+			unsigned int pageIndex =
+				(unsigned int)(offsetInStack / PageManager::PAGE_SIZE);
+			if ( pageIndex >= stackPageCount || stackPages[pageIndex] == 0 )
+			{
+				stackBuildOk = false;
+				break;
+			}
+
+			unsigned int offsetInPage =
+				(unsigned int)(offsetInStack % PageManager::PAGE_SIZE);
+			unsigned int chunk = (unsigned int)Utility::Min(
+				(int)remaining,
+				(int)(PageManager::PAGE_SIZE - offsetInPage));
+
+			Utility::CopyToPhysical(stackPages[pageIndex] + offsetInPage,
+				(const void*)currentSrc,
+				chunk);
+
+			currentDst += chunk;
+			currentSrc += chunk;
+			remaining -= chunk;
+		}
+
+		if ( stackBuildOk == false )
+		{
+			break;
+		}
+
+		userArgv[i] = (char *)esp;
 	}
 
 	/*
-	 * 后续存放的是int型数值，这里让用户栈按16字节对齐。
-	 * 关键点：desAddress 与 esp 必须保持固定偏移关系，
-	 * 否则 fakeStack 非页对齐时会把 argc/argv 整体错位。
+	 * 后续存放的是 int 型数值，这里让用户栈按 16 字节对齐。
 	 */
-	unsigned int alignedEsp = esp & 0xFFFFFFF0;
-	unsigned int alignDelta = esp - alignedEsp;
-	desAddress -= alignDelta;
-	esp = alignedEsp;
+	if ( stackBuildOk )
+	{
+		esp &= 0xFFFFFFF0;
 
-	/* 复制argc和argv[] */
-	int endValue = 0;
-	desAddress -= sizeof(endValue);
-	esp -= sizeof(endValue);
-	/* 向用户栈中写入endValue作为argv[]的结束 */
-	Utility::MemCopy((unsigned long)&endValue, desAddress, sizeof(endValue));
+		/* 复制 argc 和 argv[]。 */
+		int endValue = 0;
+		esp -= sizeof(endValue);
+		if ( esp < stackBottom )
+		{
+			stackBuildOk = false;
+		}
+		else
+		{
+			unsigned long currentDst = esp;
+			unsigned long currentSrc = (unsigned long)&endValue;
+			unsigned int remaining = sizeof(endValue);
+			while ( remaining > 0 )
+			{
+				unsigned long offsetInStack = currentDst - stackBottom;
+				unsigned int pageIndex =
+					(unsigned int)(offsetInStack / PageManager::PAGE_SIZE);
+				if ( pageIndex >= stackPageCount || stackPages[pageIndex] == 0 )
+				{
+					stackBuildOk = false;
+					break;
+				}
 
-	desAddress -= argc * sizeof(int);
-	esp -= argc * sizeof(int);
-	/* 写入argv[]的内容 */
-	Utility::MemCopy((unsigned long)argv, desAddress, argc * sizeof(int));
+				unsigned int offsetInPage =
+					(unsigned int)(offsetInStack % PageManager::PAGE_SIZE);
+				unsigned int chunk = (unsigned int)Utility::Min(
+					(int)remaining,
+					(int)(PageManager::PAGE_SIZE - offsetInPage));
 
-	/* 令endValue指向当前栈中argv[]的起始地址，即argv[]入栈完毕后当前栈顶地址 */
-	endValue = esp;
-	desAddress -= sizeof(int);
-	esp -= sizeof(int);
-	Utility::MemCopy((unsigned long)&endValue, desAddress, sizeof(int));
+				Utility::CopyToPhysical(stackPages[pageIndex] + offsetInPage,
+					(const void*)currentSrc,
+					chunk);
 
-	/* 最后入栈argc */
-	desAddress -= sizeof(int);
-	esp -= sizeof(int);
-	Utility::MemCopy((unsigned long)&argc, desAddress, sizeof(int));	/* Done! */
+				currentDst += chunk;
+				currentSrc += chunk;
+				remaining -= chunk;
+			}
+		}
+
+		if ( stackBuildOk )
+		{
+			esp -= argc * sizeof(int);
+			if ( esp < stackBottom )
+			{
+				stackBuildOk = false;
+			}
+			else
+			{
+				unsigned long currentDst = esp;
+				unsigned long currentSrc = (unsigned long)userArgv;
+				unsigned int remaining = argc * sizeof(int);
+				while ( remaining > 0 )
+				{
+					unsigned long offsetInStack = currentDst - stackBottom;
+					unsigned int pageIndex =
+						(unsigned int)(offsetInStack / PageManager::PAGE_SIZE);
+					if ( pageIndex >= stackPageCount || stackPages[pageIndex] == 0 )
+					{
+						stackBuildOk = false;
+						break;
+					}
+
+					unsigned int offsetInPage =
+						(unsigned int)(offsetInStack % PageManager::PAGE_SIZE);
+					unsigned int chunk = (unsigned int)Utility::Min(
+						(int)remaining,
+						(int)(PageManager::PAGE_SIZE - offsetInPage));
+
+					Utility::CopyToPhysical(stackPages[pageIndex] + offsetInPage,
+						(const void*)currentSrc,
+						chunk);
+
+					currentDst += chunk;
+					currentSrc += chunk;
+					remaining -= chunk;
+				}
+			}
+		}
+
+		if ( stackBuildOk )
+		{
+			endValue = esp;
+			esp -= sizeof(int);
+			if ( esp < stackBottom )
+			{
+				stackBuildOk = false;
+			}
+			else
+			{
+				unsigned long currentDst = esp;
+				unsigned long currentSrc = (unsigned long)&endValue;
+				unsigned int remaining = sizeof(int);
+				while ( remaining > 0 )
+				{
+					unsigned long offsetInStack = currentDst - stackBottom;
+					unsigned int pageIndex =
+						(unsigned int)(offsetInStack / PageManager::PAGE_SIZE);
+					if ( pageIndex >= stackPageCount || stackPages[pageIndex] == 0 )
+					{
+						stackBuildOk = false;
+						break;
+					}
+
+					unsigned int offsetInPage =
+						(unsigned int)(offsetInStack % PageManager::PAGE_SIZE);
+					unsigned int chunk = (unsigned int)Utility::Min(
+						(int)remaining,
+						(int)(PageManager::PAGE_SIZE - offsetInPage));
+
+					Utility::CopyToPhysical(stackPages[pageIndex] + offsetInPage,
+						(const void*)currentSrc,
+						chunk);
+
+					currentDst += chunk;
+					currentSrc += chunk;
+					remaining -= chunk;
+				}
+			}
+		}
+
+		if ( stackBuildOk )
+		{
+			esp -= sizeof(int);
+			if ( esp < stackBottom )
+			{
+				stackBuildOk = false;
+			}
+			else
+			{
+				unsigned long currentDst = esp;
+				unsigned long currentSrc = (unsigned long)&argc;
+				unsigned int remaining = sizeof(int);
+				while ( remaining > 0 )
+				{
+					unsigned long offsetInStack = currentDst - stackBottom;
+					unsigned int pageIndex =
+						(unsigned int)(offsetInStack / PageManager::PAGE_SIZE);
+					if ( pageIndex >= stackPageCount || stackPages[pageIndex] == 0 )
+					{
+						stackBuildOk = false;
+						break;
+					}
+
+					unsigned int offsetInPage =
+						(unsigned int)(offsetInStack % PageManager::PAGE_SIZE);
+					unsigned int chunk = (unsigned int)Utility::Min(
+						(int)remaining,
+						(int)(PageManager::PAGE_SIZE - offsetInPage));
+
+					Utility::CopyToPhysical(stackPages[pageIndex] + offsetInPage,
+						(const void*)currentSrc,
+						chunk);
+
+					currentDst += chunk;
+					currentSrc += chunk;
+					remaining -= chunk;
+				}
+			}
+		}
+	}
+
+	if ( stackBuildOk == false || esp < stackBottom )
+	{
+		goto exec_fail_temp_pages;
+	}
+
+	delete [] userArgv;
+	userArgv = NULL;
+	goto exec_stack_ready;
+
+exec_fail_temp_pages:
+	for ( unsigned int i = 0; i < stackPageCount; ++i )
+	{
+		if ( stackPages[i] != 0 )
+		{
+			Kernel::Instance().GetUserPageManager().FreePage(stackPages[i]);
+		}
+	}
+	delete [] userArgv;
+	delete [] stackPages;
+	fileMgr.m_InodeTable->IPut(pInode);
+	if ( this->ExeCnt >= NEXEC )
+	{
+		WakeUpAll((unsigned long)&ExeCnt);
+	}
+	this->ExeCnt--;
+	u.u_error = User::ENOMEM;
+	return;
+
+exec_stack_ready:
 
 	/*
 	 * 先释放旧进程图像，再重建地址空间布局。
@@ -595,16 +814,36 @@ void ProcessManager::Exec()
 			parser.BssSize,
 			parser.StackSize) == false )
 	{
-		delete [] fakeStack;
-		fileMgr.m_InodeTable->IPut(pInode);
-		if ( this->ExeCnt >= NEXEC )
-		{
-			WakeUpAll((unsigned long)&ExeCnt);
-		}
-		this->ExeCnt--;
-		u.u_error = User::ENOMEM;
-		return;
+		goto exec_fail_temp_pages;
 	}
+
+	for ( unsigned int i = 0; i < stackPageCount; ++i )
+	{
+		unsigned long virtualAddress = stackBottom + i * PageManager::PAGE_SIZE;
+		if ( u.u_procp->p_memory.InstallResidentPage(virtualAddress, stackPages[i]) == false )
+		{
+			for ( unsigned int page = 0; page < stackPageCount; ++page )
+			{
+				if ( stackPages[page] != 0 )
+				{
+					Kernel::Instance().GetUserPageManager().FreePage(stackPages[page]);
+				}
+			}
+			delete [] stackPages;
+			u.u_procp->p_memory.ReleaseResidentPages(false);
+			fileMgr.m_InodeTable->IPut(pInode);
+			if ( this->ExeCnt >= NEXEC )
+			{
+				WakeUpAll((unsigned long)&ExeCnt);
+			}
+			this->ExeCnt--;
+			u.u_error = User::ENOMEM;
+			return;
+		}
+		stackPages[i] = 0;
+	}
+	delete [] stackPages;
+	stackPages = NULL;
 
 	pText = NULL;
 	/* 分配一个空闲Text结构，或者和其它进程共享同一正文段 */
@@ -668,7 +907,6 @@ void ProcessManager::Exec()
 			pText->x_daddr = 0;
 			ClearTextPageArray(pText);
 			u.u_procp->p_textp = NULL;
-			delete [] fakeStack;
 			fileMgr.m_InodeTable->IPut(pInode);
 			if ( this->ExeCnt >= NEXEC )
 			{
@@ -710,7 +948,6 @@ void ProcessManager::Exec()
 		}
 		u.u_procp->p_size = ProcessManager::USIZE;
 
-		delete [] fakeStack;
 		fileMgr.m_InodeTable->IPut(pInode);
 		if ( this->ExeCnt >= NEXEC )
 		{
@@ -739,7 +976,6 @@ void ProcessManager::Exec()
 		}
 		u.u_procp->p_size = ProcessManager::USIZE;
 
-		delete [] fakeStack;
 		fileMgr.m_InodeTable->IPut(pInode);
 		if ( this->ExeCnt >= NEXEC )
 		{
@@ -755,13 +991,6 @@ void ProcessManager::Exec()
 
 	/* 从exe文件中依次读入.text段、.data段、.rdata段、.bss段 */
 	parser.Relocate(pInode, sharedText);
-
-	/* 将fakeStack中备份的用户栈参数复制到新进程图像的用户栈中 */
-	//Utility::MemCopy(fakeStack | 0xC0000000, MemoryDescriptor::USER_SPACE_SIZE - parser.StackSize, parser.StackSize);
-	Utility::MemCopy((unsigned long)(fakeStack + allocLength - parser.StackSize),
-		MemoryDescriptor::USER_SPACE_SIZE - parser.StackSize, parser.StackSize);
-	/* 释放用于读入exe文件和备份用户栈参数的内存：mapAddress和fakeStack */
-	delete [] fakeStack;
 
 	/* 
 	  * 将runtime()、SignalHandler()函数拷贝到进程用户态地址空间0x00000000线性地址处，runtime()
@@ -816,6 +1045,7 @@ void ProcessManager::Exec()
 	pContext->eflags = 0x200;	/* 此项是否篡改无关紧要 */
 	pContext->esp = esp;
 	pContext->xss = Machine::USER_DATA_SEGMENT_SELECTOR;
+	return;
 }
 
 Process* ProcessManager::Select ()

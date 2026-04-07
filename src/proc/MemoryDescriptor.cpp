@@ -983,6 +983,38 @@ bool MemoryDescriptor::MaterializeExecutableImage()
 	return true;
 }
 
+bool MemoryDescriptor::InstallResidentPage(unsigned long virtualAddress,
+	unsigned long physicalAddress)
+{
+	if ( this->m_PageInfos == NULL || physicalAddress == 0 )
+	{
+		return false;
+	}
+
+	if ( virtualAddress < USER_SPACE_START ||
+		virtualAddress >= USER_SPACE_END ||
+		(virtualAddress % PageManager::PAGE_SIZE) != 0 )
+	{
+		return false;
+	}
+
+	unsigned int pageIndex = this->AddressToPageIndex(virtualAddress);
+	PageInfo& pageInfo = this->m_PageInfos[pageIndex];
+	if ( pageInfo.regionIndex == 0xffff || pageInfo.state == PAGE_STATE_FREE )
+	{
+		return false;
+	}
+
+	if ( pageInfo.state == PAGE_STATE_RESIDENT )
+	{
+		return pageInfo.frameAddress == physicalAddress;
+	}
+
+	pageInfo.state = PAGE_STATE_RESIDENT;
+	pageInfo.frameAddress = physicalAddress;
+	return true;
+}
+
 bool MemoryDescriptor::EnsurePagePresent(unsigned long faultAddress)
 {
 	if ( this->m_PageInfos == NULL )
