@@ -139,7 +139,7 @@
 			"command": "bash",
 			"args": [
 				"-lc",
-				"cmake --preset dev-ninja >/dev/null && BUILD_DIR=\"$(cmake -N -LA --preset dev-ninja 2>/dev/null | awk -F= '/^CMAKE_BINARY_DIR:STATIC=/{print $2; exit}')\" && mkdir -p \"$BUILD_DIR\" && : > \"$BUILD_DIR/qemu-run-diagnose.log\" && cmake --build --preset qemu -j 2>>\"$BUILD_DIR/qemu-run-diagnose.log\""
+				"CONFIGURE_LOG=\"$(cmake --preset dev-ninja 2>&1)\" && BUILD_DIR=\"$(printf '%s\\n' \"$CONFIGURE_LOG\" | sed -n 's/^-- Build files have been written to: //p' | tail -n 1)\" && [[ -n \"$BUILD_DIR\" ]] && mkdir -p \"$BUILD_DIR\" && : > \"$BUILD_DIR/qemu-run-diagnose.log\" && cmake --build --preset qemu -j 2>>\"$BUILD_DIR/qemu-run-diagnose.log\""
 			],
 			"options": {
 				"cwd": "${workspaceFolder}"
@@ -181,7 +181,7 @@
 			"command": "bash",
 			"args": [
 				"-lc",
-				"cmake --preset dev-ninja >/dev/null && BUILD_DIR=\"$(cmake -N -LA --preset dev-ninja 2>/dev/null | awk -F= '/^CMAKE_BINARY_DIR:STATIC=/{print $2; exit}')\" && mkdir -p \"$BUILD_DIR\" && : > \"$BUILD_DIR/qemu-debug-diagnose.log\" && cmake --build --preset qemu-gdb -j 2>>\"$BUILD_DIR/qemu-debug-diagnose.log\""
+				"CONFIGURE_LOG=\"$(cmake --preset dev-ninja 2>&1)\" && BUILD_DIR=\"$(printf '%s\\n' \"$CONFIGURE_LOG\" | sed -n 's/^-- Build files have been written to: //p' | tail -n 1)\" && [[ -n \"$BUILD_DIR\" ]] && mkdir -p \"$BUILD_DIR\" && : > \"$BUILD_DIR/qemu-debug-diagnose.log\" && cmake --build --preset qemu-gdb -j 2>>\"$BUILD_DIR/qemu-debug-diagnose.log\""
 			],
 			"options": {
 				"cwd": "${workspaceFolder}"
