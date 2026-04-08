@@ -286,7 +286,10 @@ void Process::SStack()
 	User& u = Kernel::Instance().GetUser();
 	MemoryDescriptor& md = u.u_procp->p_memory;
 
-	md.GrowStackByPage();
+	if ( md.GrowStackByPage() == false )
+	{
+		return;
+	}
 	if ( false == md.CheckUserSpace() )
 	{
 		return;   // out of virtual space. fail

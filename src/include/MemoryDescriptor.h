@@ -6,6 +6,7 @@
 #include "INode.h"
 #include "Text.h"
 #include "PageManager.h"
+#include "Vector.h"
 
 class Process;
 
@@ -122,6 +123,21 @@ public:
 		unsigned long validBytes;
 	};
 
+	/* 每个用户虚拟页的元数据。 */
+	struct PageInfo
+	{
+		/* 页状态。 */
+		PageState state;
+		/* 页标记（PageFlags）。 */
+		unsigned int flags;
+		/* 所属区域索引，0xffff 表示无效。 */
+		unsigned short regionIndex;
+		/* 当前映射的物理页帧地址（RESIDENT 时有效）。 */
+		unsigned long frameAddress;
+		/* 相对后备窗口起点的偏移，用于按需回填。 */
+		unsigned long backingOffset;
+	};
+
 	/* 连续虚拟地址区域描述。 */
 	struct Region
 	{
@@ -137,21 +153,12 @@ public:
 		RegionType type;
 		/* 区域后备信息。 */
 		BackingStore backing;
-	};
-
-	/* 每个用户虚拟页的元数据。 */
-	struct PageInfo
-	{
-		/* 页状态。 */
-		PageState state;
-		/* 页标记（PageFlags）。 */
-		unsigned int flags;
-		/* 所属区域索引，0xffff 表示无效。 */
-		unsigned short regionIndex;
-		/* 当前映射的物理页帧地址（RESIDENT 时有效）。 */
-		unsigned long frameAddress;
-		/* 相对后备窗口起点的偏移，用于按需回填。 */
-		unsigned long backingOffset;
+		/*
+		 * 固定大小区域直接用定长数组，避免额外容量管理；
+		 * heap/stack 这类单向增长区域改用 Vector，扩展时只改本区域元数据。
+		 */
+		PageInfo* fixedPageInfos;
+		Vector<PageInfo> dynamicPageInfos;
 	};
 
 	/* 导出用户驻留页信息时使用的轻量快照结构。 */
@@ -235,7 +242,7 @@ public:
 	/* 调整堆顶（brk）：支持收缩和扩展，按页更新保留态。 */
 	bool SetHeapBreak(unsigned long newBreak);
 	/* 将栈底向下扩展一页，并把新页标记为 RESERVED。 */
-	void GrowStackByPage();
+	bool GrowStackByPage();
 
 	/* 获取页目录指针。 */
 	PageDirectory* GetPageDirectoryPointer() const;
@@ -282,8 +289,14 @@ private:
 
 	/* 重置布局相关成员为初始状态。 */
 	void ResetLayout();
+	/* 释放全部 Region 持有的 PageInfo 存储。 */
+	void ReleaseRegionPageInfos();
+	/* 释放单个 Region 的 PageInfo 存储。 */
+	void ReleaseRegionPageInfos(Region& region);
 	/* 清空所有 PageInfo 项。 */
 	void ClearPageInfos();
+	/* 将单个 PageInfo 重置为空闲状态。 */
+	void ClearPageInfo(PageInfo& pageInfo);
 	/* 清空进程私有页表项。 */
 	void ClearPageTables();
 	/* 清空页目录项（仅自有页目录场景）。 */
@@ -297,7 +310,7 @@ private:
 				   unsigned int flags,
 				   BackingType backingType);
 	/* 将区域覆盖的页全部标记为 RESERVED 并写入 backingOffset。 */
-	void ReservePagesForRegion(unsigned int regionIndex);
+	bool ReservePagesForRegion(unsigned int regionIndex);
 	/* 分配一个用户物理页并清零后映射到 virtualAddress。 */
 	bool AllocateZeroedPage(unsigned long virtualAddress);
 	/* 将 BACKING_ZERO 页只读映射到全局零页，并纳入 COW 追踪。 */
@@ -312,6 +325,25 @@ private:
 	void FreePageInfo(PageInfo& pageInfo, bool releaseSharedText);
 	/* 按 PageInfo 扫描并恢复所有 RESIDENT 页的页表映射。 */
 	void RemapResidentPages();
+	/* 固定区域与单向增长区域共用的 PageInfo 访问 helper。 */
+	PageInfo* GetPageInfo(Region* region, unsigned int pageOffset);
+	const PageInfo* GetPageInfo(const Region* region, unsigned int pageOffset) const;
+	/* 按虚拟地址定位所属 Region 和对应 PageInfo。 */
+	PageInfo* GetPageInfoByAddress(unsigned long address, Region** region);
+	const PageInfo* GetPageInfoByAddress(unsigned long address,
+		const Region** region) const;
+	/* 计算地址在某个 Region 内的页偏移。 */
+	unsigned int GetRegionPageOffset(const Region& region, unsigned long address) const;
+	/* 将 Region 内页偏移还原成虚拟页起始地址。 */
+	unsigned long GetRegionPageAddress(const Region& region, unsigned int pageOffset) const;
+	/* 获取当前 Region 覆盖的页数。 */
+	unsigned int GetRegionPageCount(const Region& region) const;
+	/* 标记是否为 heap/stack 这类单向增长 Region。 */
+	bool IsDynamicPageInfoRegion(RegionType type) const;
+	/* 初始化单个 RESERVED PageInfo。 */
+	void InitializeReservedPageInfo(PageInfo& pageInfo,
+		unsigned int regionIndex,
+		unsigned int pageOffset);
 
 	/* 虚拟地址转用户页索引。 */
 	unsigned int AddressToPageIndex(unsigned long address) const;
@@ -331,8 +363,6 @@ private:
 	PageTable* m_UserPageTableArray;
 	/* 区域表。 */
 	Region* m_Regions;
-	/* 用户页元数据表。 */
-	PageInfo* m_PageInfos;
 	/* 是否使用内核地址空间（true 时不拥有私有资源）。 */
 	bool m_UsesKernelAddressSpace;
 

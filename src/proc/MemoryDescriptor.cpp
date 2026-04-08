@@ -137,7 +137,6 @@ MemoryDescriptor::MemoryDescriptor()
 	this->m_PageDirectory = NULL;
 	this->m_UserPageTableArray = NULL;
 	this->m_Regions = NULL;
-	this->m_PageInfos = NULL;
 	this->m_UsesKernelAddressSpace = false;
 	this->Reset();
 }
@@ -164,6 +163,7 @@ void MemoryDescriptor::Reset()
 
 void MemoryDescriptor::ResetLayout()
 {
+	this->ReleaseRegionPageInfos();
 	this->m_RegionCount = 0;
 	this->m_EntryPoint = 0;
 	this->m_HeapBase = 0;
@@ -187,24 +187,178 @@ void MemoryDescriptor::ResetLayout()
 		this->m_Regions[i].backing.text = NULL;
 		this->m_Regions[i].backing.fileOffset = 0;
 		this->m_Regions[i].backing.validBytes = 0;
+		this->m_Regions[i].fixedPageInfos = NULL;
 	}
 }
 
-void MemoryDescriptor::ClearPageInfos()
+void MemoryDescriptor::ReleaseRegionPageInfos()
 {
-	if ( this->m_PageInfos == NULL )
+	if ( this->m_Regions == NULL )
 	{
 		return;
 	}
 
-	for ( unsigned int i = 0; i < USER_PAGE_COUNT; ++i )
+	for ( unsigned int i = 0; i < this->m_RegionCount; ++i )
 	{
-		this->m_PageInfos[i].state = PAGE_STATE_FREE;
-		this->m_PageInfos[i].flags = PAGE_FLAG_NONE;
-		this->m_PageInfos[i].regionIndex = 0xffff;
-		this->m_PageInfos[i].frameAddress = 0;
-		this->m_PageInfos[i].backingOffset = 0;
+		this->ReleaseRegionPageInfos(this->m_Regions[i]);
 	}
+}
+
+void MemoryDescriptor::ReleaseRegionPageInfos(Region& region)
+{
+	if ( region.fixedPageInfos != NULL )
+	{
+		delete [] region.fixedPageInfos;
+		region.fixedPageInfos = NULL;
+	}
+
+	region.dynamicPageInfos.release();
+}
+
+void MemoryDescriptor::ClearPageInfo(PageInfo& pageInfo)
+{
+	pageInfo.state = PAGE_STATE_FREE;
+	pageInfo.flags = PAGE_FLAG_NONE;
+	pageInfo.regionIndex = 0xffff;
+	pageInfo.frameAddress = 0;
+	pageInfo.backingOffset = 0;
+}
+
+void MemoryDescriptor::ClearPageInfos()
+{
+	if ( this->m_Regions == NULL )
+	{
+		return;
+	}
+
+	for ( unsigned int regionIndex = 0; regionIndex < this->m_RegionCount; ++regionIndex )
+	{
+		Region& region = this->m_Regions[regionIndex];
+		unsigned int pageCount = this->GetRegionPageCount(region);
+		for ( unsigned int pageOffset = 0; pageOffset < pageCount; ++pageOffset )
+		{
+			PageInfo* pageInfo = this->GetPageInfo(&region, pageOffset);
+			if ( pageInfo != NULL )
+			{
+				this->ClearPageInfo(*pageInfo);
+			}
+		}
+	}
+}
+
+bool MemoryDescriptor::IsDynamicPageInfoRegion(RegionType type) const
+{
+	return type == REGION_HEAP || type == REGION_STACK;
+}
+
+unsigned int MemoryDescriptor::GetRegionPageCount(const Region& region) const
+{
+	if ( region.end <= region.start )
+	{
+		return 0;
+	}
+
+	return (unsigned int)((region.end - region.start) / PageManager::PAGE_SIZE);
+}
+
+unsigned int MemoryDescriptor::GetRegionPageOffset(const Region& region,
+	unsigned long address) const
+{
+	return (unsigned int)((AlignDown(address) - region.start) / PageManager::PAGE_SIZE);
+}
+
+unsigned long MemoryDescriptor::GetRegionPageAddress(const Region& region,
+	unsigned int pageOffset) const
+{
+	return region.start + pageOffset * PageManager::PAGE_SIZE;
+}
+
+MemoryDescriptor::PageInfo* MemoryDescriptor::GetPageInfo(Region* region,
+	unsigned int pageOffset)
+{
+	if ( region == NULL )
+	{
+		return NULL;
+	}
+
+	unsigned int pageCount = this->GetRegionPageCount(*region);
+	if ( pageOffset >= pageCount )
+	{
+		return NULL;
+	}
+
+	if ( this->IsDynamicPageInfoRegion(region->type) == false )
+	{
+		return region->fixedPageInfos == NULL ? NULL : &region->fixedPageInfos[pageOffset];
+	}
+
+	if ( region->dynamicPageInfos.size() != pageCount )
+	{
+		return NULL;
+	}
+
+	if ( region->flags & PAGE_FLAG_GROWSDOWN )
+	{
+		return &region->dynamicPageInfos[pageCount - 1 - pageOffset];
+	}
+
+	return &region->dynamicPageInfos[pageOffset];
+}
+
+const MemoryDescriptor::PageInfo* MemoryDescriptor::GetPageInfo(const Region* region,
+	unsigned int pageOffset) const
+{
+	return const_cast<MemoryDescriptor*>(this)->GetPageInfo(
+		const_cast<Region*>(region), pageOffset);
+}
+
+MemoryDescriptor::PageInfo* MemoryDescriptor::GetPageInfoByAddress(
+	unsigned long address,
+	Region** region)
+{
+	Region* foundRegion = this->FindRegion(address);
+	if ( region != NULL )
+	{
+		*region = foundRegion;
+	}
+
+	if ( foundRegion == NULL )
+	{
+		return NULL;
+	}
+
+	return this->GetPageInfo(foundRegion,
+		this->GetRegionPageOffset(*foundRegion, address));
+}
+
+const MemoryDescriptor::PageInfo* MemoryDescriptor::GetPageInfoByAddress(
+	unsigned long address,
+	const Region** region) const
+{
+	const Region* foundRegion = this->FindRegion(address);
+	if ( region != NULL )
+	{
+		*region = foundRegion;
+	}
+
+	if ( foundRegion == NULL )
+	{
+		return NULL;
+	}
+
+	return this->GetPageInfo(foundRegion,
+		this->GetRegionPageOffset(*foundRegion, address));
+}
+
+void MemoryDescriptor::InitializeReservedPageInfo(PageInfo& pageInfo,
+	unsigned int regionIndex,
+	unsigned int pageOffset)
+{
+	pageInfo.state = PAGE_STATE_RESERVED;
+	pageInfo.flags = this->m_Regions[regionIndex].flags;
+	pageInfo.regionIndex = (unsigned short)regionIndex;
+	pageInfo.frameAddress = 0;
+	pageInfo.backingOffset = pageOffset * PageManager::PAGE_SIZE;
 }
 
 void MemoryDescriptor::ClearPageTables()
@@ -290,15 +444,6 @@ void MemoryDescriptor::Initialize()
 		}
 	}
 
-	if ( this->m_PageInfos == NULL )
-	{
-		this->m_PageInfos = new PageInfo[USER_PAGE_COUNT];
-		if ( this->m_PageInfos == NULL )
-		{
-			Utility::Panic("Out of kernel memory for page infos");
-		}
-	}
-
 	this->Reset();
 }
 
@@ -311,7 +456,6 @@ void MemoryDescriptor::Release()
 		this->m_PageDirectory = NULL;
 		this->m_UserPageTableArray = NULL;
 		this->m_Regions = NULL;
-		this->m_PageInfos = NULL;
 		this->m_UsesKernelAddressSpace = false;
 		this->ResetLayout();
 		this->ClearPageInfos();
@@ -334,14 +478,9 @@ void MemoryDescriptor::Release()
 
 	if ( this->m_Regions != NULL )
 	{
+		this->ReleaseRegionPageInfos();
 		delete [] this->m_Regions;
 		this->m_Regions = NULL;
-	}
-
-	if ( this->m_PageInfos != NULL )
-	{
-		delete [] this->m_PageInfos;
-		this->m_PageInfos = NULL;
 	}
 
 	this->ResetLayout();
@@ -354,7 +493,6 @@ void MemoryDescriptor::UseKernelAddressSpace(PageDirectory* pageDirectory)
 	this->m_PageDirectory = pageDirectory;
 	this->m_UserPageTableArray = NULL;
 	this->m_Regions = NULL;
-	this->m_PageInfos = NULL;
 	this->m_UsesKernelAddressSpace = true;
 	this->ResetLayout();
 	this->ClearPageInfos();
@@ -373,20 +511,52 @@ void MemoryDescriptor::CloneFrom(const MemoryDescriptor& other)
 	this->m_RegionCount = other.m_RegionCount;
 	for ( unsigned int i = 0; i < other.m_RegionCount; ++i )
 	{
-		this->m_Regions[i] = other.m_Regions[i];
-	}
+		this->m_Regions[i].start = other.m_Regions[i].start;
+		this->m_Regions[i].end = other.m_Regions[i].end;
+		this->m_Regions[i].prot = other.m_Regions[i].prot;
+		this->m_Regions[i].flags = other.m_Regions[i].flags;
+		this->m_Regions[i].type = other.m_Regions[i].type;
+		this->m_Regions[i].backing = other.m_Regions[i].backing;
+		this->m_Regions[i].fixedPageInfos = NULL;
+		this->m_Regions[i].dynamicPageInfos.release();
 
-	for ( unsigned int i = 0; i < USER_PAGE_COUNT; ++i )
-	{
-		/*
-		 * 仅继承布局与后备信息，不继承对方页帧。
-		 * 由 CloneResidentPagesFrom 决定是否复制/共享物理页。
-		 */
-		this->m_PageInfos[i].state = other.m_PageInfos[i].state == PAGE_STATE_FREE ? PAGE_STATE_FREE : PAGE_STATE_RESERVED;
-		this->m_PageInfos[i].flags = other.m_PageInfos[i].flags;
-		this->m_PageInfos[i].regionIndex = other.m_PageInfos[i].regionIndex;
-		this->m_PageInfos[i].frameAddress = 0;
-		this->m_PageInfos[i].backingOffset = other.m_PageInfos[i].backingOffset;
+		unsigned int pageCount = other.GetRegionPageCount(other.m_Regions[i]);
+		if ( this->IsDynamicPageInfoRegion(this->m_Regions[i].type) )
+		{
+			if ( this->m_Regions[i].dynamicPageInfos.resize(pageCount) == false )
+			{
+				Utility::Panic("Out of kernel memory for dynamic region page infos");
+			}
+		}
+		else if ( pageCount != 0 )
+		{
+			this->m_Regions[i].fixedPageInfos = new PageInfo[pageCount];
+			if ( this->m_Regions[i].fixedPageInfos == NULL )
+			{
+				Utility::Panic("Out of kernel memory for fixed region page infos");
+			}
+		}
+
+		for ( unsigned int pageOffset = 0; pageOffset < pageCount; ++pageOffset )
+		{
+			PageInfo* dstPageInfo = this->GetPageInfo(&this->m_Regions[i], pageOffset);
+			const PageInfo* srcPageInfo = other.GetPageInfo(&other.m_Regions[i], pageOffset);
+			if ( dstPageInfo == NULL || srcPageInfo == NULL )
+			{
+				Utility::Panic("CloneFrom page info layout mismatch");
+			}
+
+			/*
+			 * 仅继承布局与后备信息，不继承对方页帧。
+			 * 由 CloneResidentPagesFrom 决定是否复制/共享物理页。
+			 */
+			dstPageInfo->state =
+				srcPageInfo->state == PAGE_STATE_FREE ? PAGE_STATE_FREE : PAGE_STATE_RESERVED;
+			dstPageInfo->flags = srcPageInfo->flags;
+			dstPageInfo->regionIndex = srcPageInfo->regionIndex;
+			dstPageInfo->frameAddress = 0;
+			dstPageInfo->backingOffset = srcPageInfo->backingOffset;
+		}
 	}
 
 	this->ClearPageTables();
@@ -398,7 +568,7 @@ void MemoryDescriptor::CloneFrom(const MemoryDescriptor& other)
 
 bool MemoryDescriptor::CloneResidentPagesFrom(const MemoryDescriptor& other)
 {
-	if ( this->m_PageInfos == NULL || this->m_UserPageTableArray == NULL )
+	if ( this->m_Regions == NULL || this->m_UserPageTableArray == NULL )
 	{
 		return false;
 	}
@@ -406,64 +576,75 @@ bool MemoryDescriptor::CloneResidentPagesFrom(const MemoryDescriptor& other)
 	UserPageManager& userPageManager = Kernel::Instance().GetUserPageManager();
 	bool parentPteUpdated = false;
 
-	for ( unsigned int i = 0; i < USER_PAGE_COUNT; ++i )
+	for ( unsigned int regionIndex = 0; regionIndex < other.m_RegionCount; ++regionIndex )
 	{
-		if ( other.m_PageInfos == NULL || other.m_PageInfos[i].state != PAGE_STATE_RESIDENT )
+		const Region& region = other.m_Regions[regionIndex];
+		unsigned int pageCount = other.GetRegionPageCount(region);
+
+		for ( unsigned int pageOffset = 0; pageOffset < pageCount; ++pageOffset )
 		{
-			continue;
+			const PageInfo* srcPage = other.GetPageInfo(&region, pageOffset);
+			if ( srcPage == NULL || srcPage->state != PAGE_STATE_RESIDENT )
+			{
+				continue;
+			}
+
+			PageInfo* dstPage = this->GetPageInfo(&this->m_Regions[regionIndex], pageOffset);
+			if ( dstPage == NULL )
+			{
+				return false;
+			}
+			unsigned long virtualAddress =
+				other.GetRegionPageAddress(region, pageOffset);
+			unsigned int pageIndex = this->AddressToPageIndex(virtualAddress);
+
+			if ( region.type == REGION_RUNTIME )
+			{
+				/* runtime 低地址页固定映射到物理 0（历史兼容语义）。 */
+				dstPage->state = PAGE_STATE_RESIDENT;
+				dstPage->frameAddress = 0;
+				this->MapPage(0, 0, true);
+				continue;
+			}
+
+			if ( region.backing.type == BACKING_SHARED_TEXT ||
+				(region.prot & PROT_WRITE) == 0 )
+			{
+				/* fork 仅复制可写页；共享正文与其余只读页统一保留为 RESERVED。 */
+				dstPage->state = PAGE_STATE_RESERVED;
+				dstPage->frameAddress = 0;
+				continue;
+			}
+
+			if ( srcPage->frameAddress == 0 )
+			{
+				return false;
+			}
+
+			unsigned int tableIndex =
+				pageIndex / PageTable::ENTRY_CNT_PER_PAGETABLE;
+			unsigned int entryIndex =
+				pageIndex % PageTable::ENTRY_CNT_PER_PAGETABLE;
+			PageTable* parentTable = other.GetUserPageTableByIndex(tableIndex);
+			if ( parentTable == NULL ||
+				parentTable->m_Entrys[entryIndex].m_Present == 0 )
+			{
+				return false;
+			}
+
+			if ( userPageManager.ShareAsCopyOnWrite(srcPage->frameAddress) == false )
+			{
+				return false;
+			}
+
+			parentTable->m_Entrys[entryIndex].m_ReadWriter = 0;
+			parentPteUpdated = true;
+
+			dstPage->state = PAGE_STATE_RESIDENT;
+			dstPage->frameAddress = srcPage->frameAddress;
+			/* fork 后父子先共享只读页，首次写入时由 COW 分裂。 */
+			this->MapPage(virtualAddress, srcPage->frameAddress, false);
 		}
-
-		PageInfo& dstPage = this->m_PageInfos[i];
-		const PageInfo& srcPage = other.m_PageInfos[i];
-		const Region& region = other.m_Regions[srcPage.regionIndex];
-		unsigned long virtualAddress = USER_SPACE_START + i * PageManager::PAGE_SIZE;
-
-		if ( region.type == REGION_RUNTIME )
-		{
-			/* runtime 低地址页固定映射到物理 0（历史兼容语义）。 */
-			dstPage.state = PAGE_STATE_RESIDENT;
-			dstPage.frameAddress = 0;
-			this->MapPage(0, 0, true);
-			continue;
-		}
-
-		if ( region.backing.type == BACKING_SHARED_TEXT ||
-			(region.prot & PROT_WRITE) == 0 )
-		{
-			/* fork 仅复制可写页；共享正文与其余只读页统一保留为 RESERVED。 */
-			dstPage.state = PAGE_STATE_RESERVED;
-			dstPage.frameAddress = 0;
-			continue;
-		}
-
-		if ( srcPage.frameAddress == 0 )
-		{
-			return false;
-		}
-
-		unsigned int tableIndex =
-			i / PageTable::ENTRY_CNT_PER_PAGETABLE;
-		unsigned int entryIndex =
-			i % PageTable::ENTRY_CNT_PER_PAGETABLE;
-		PageTable* parentTable = other.GetUserPageTableByIndex(tableIndex);
-		if ( parentTable == NULL ||
-			parentTable->m_Entrys[entryIndex].m_Present == 0 )
-		{
-			return false;
-		}
-
-		if ( userPageManager.ShareAsCopyOnWrite(srcPage.frameAddress) == false )
-		{
-			return false;
-		}
-
-		parentTable->m_Entrys[entryIndex].m_ReadWriter = 0;
-		parentPteUpdated = true;
-
-		dstPage.state = PAGE_STATE_RESIDENT;
-		dstPage.frameAddress = srcPage.frameAddress;
-		/* fork 后父子先共享只读页，首次写入时由 COW 分裂。 */
-		this->MapPage(virtualAddress, srcPage.frameAddress, false);
 	}
 
 	if ( parentPteUpdated )
@@ -480,7 +661,7 @@ void MemoryDescriptor::ConfigureExecFileBacking(unsigned long virtualBase,
 	unsigned long fileSize,
 	Inode* inode)
 {
-	if ( this->m_Regions == NULL || this->m_PageInfos == NULL )
+	if ( this->m_Regions == NULL )
 	{
 		return;
 	}
@@ -502,19 +683,23 @@ void MemoryDescriptor::ConfigureExecFileBacking(unsigned long virtualBase,
 			continue;
 		}
 
-		unsigned int startPage = this->AddressToPageIndex(region.start);
-		unsigned int endPage = this->AddressToPageIndex(region.end - 1);
-		for ( unsigned int pageIndex = startPage; pageIndex <= endPage; ++pageIndex )
+		unsigned int pageCount = this->GetRegionPageCount(region);
+		for ( unsigned int pageOffset = 0; pageOffset < pageCount; ++pageOffset )
 		{
-			unsigned long pageStart =
-				USER_SPACE_START + pageIndex * PageManager::PAGE_SIZE;
+			PageInfo* pageInfo = this->GetPageInfo(&region, pageOffset);
+			if ( pageInfo == NULL )
+			{
+				continue;
+			}
+
+			unsigned long pageStart = this->GetRegionPageAddress(region, pageOffset);
 			if ( pageStart < virtualBase )
 			{
-				this->m_PageInfos[pageIndex].backingOffset = 0;
+				pageInfo->backingOffset = 0;
 			}
 			else
 			{
-				this->m_PageInfos[pageIndex].backingOffset = pageStart - virtualBase;
+				pageInfo->backingOffset = pageStart - virtualBase;
 			}
 		}
 	}
@@ -800,7 +985,10 @@ bool MemoryDescriptor::HandlePageFault(unsigned long faultAddress,
 			return false;
 		}
 
-		this->GrowStackByPage();
+		if ( this->GrowStackByPage() == false )
+		{
+			return false;
+		}
 		region = this->FindRegion(faultAddress);
 	}
 
@@ -814,7 +1002,7 @@ bool MemoryDescriptor::HandlePageFault(unsigned long faultAddress,
 
 bool MemoryDescriptor::HandleCopyOnWriteFault(unsigned long faultAddress)
 {
-	if ( this->m_PageInfos == NULL )
+	if ( this->m_Regions == NULL )
 	{
 		return false;
 	}
@@ -825,20 +1013,21 @@ bool MemoryDescriptor::HandleCopyOnWriteFault(unsigned long faultAddress)
 		return false;
 	}
 
+	Region* region = NULL;
+	PageInfo* pageInfo = this->GetPageInfoByAddress(virtualAddress, &region);
+	if ( region == NULL || pageInfo == NULL ||
+		pageInfo->state != PAGE_STATE_RESIDENT || pageInfo->regionIndex == 0xffff )
+	{
+		return false;
+	}
+
+	if ( (region->prot & PROT_WRITE) == 0 ||
+		region->backing.type == BACKING_SHARED_TEXT )
+	{
+		return false;
+	}
+
 	unsigned int pageIndex = this->AddressToPageIndex(virtualAddress);
-	PageInfo& pageInfo = this->m_PageInfos[pageIndex];
-	if ( pageInfo.state != PAGE_STATE_RESIDENT || pageInfo.regionIndex == 0xffff )
-	{
-		return false;
-	}
-
-	const Region& region = this->m_Regions[pageInfo.regionIndex];
-	if ( (region.prot & PROT_WRITE) == 0 ||
-		region.backing.type == BACKING_SHARED_TEXT )
-	{
-		return false;
-	}
-
 	unsigned int tableIndex =
 		pageIndex / PageTable::ENTRY_CNT_PER_PAGETABLE;
 	unsigned int entryIndex =
@@ -855,7 +1044,7 @@ bool MemoryDescriptor::HandleCopyOnWriteFault(unsigned long faultAddress)
 		return false;
 	}
 
-	unsigned long oldPage = pageInfo.frameAddress;
+	unsigned long oldPage = pageInfo->frameAddress;
 	if ( oldPage == 0 )
 	{
 		return false;
@@ -889,7 +1078,7 @@ bool MemoryDescriptor::HandleCopyOnWriteFault(unsigned long faultAddress)
 	/* 仍有多个副本，执行真正的 COW 分裂。 */
 	Utility::CopyPage(oldPage, newPage);
 	userPageManager.ReleaseCopyOnWriteRef(oldPage);
-	pageInfo.frameAddress = newPage;
+	pageInfo->frameAddress = newPage;
 	this->MapPage(virtualAddress, newPage, true);
 	userPageManager.ClearCopyOnWriteRef(newPage);
 	X86Assembly::FlushCurrentPageDirectory();
@@ -936,9 +1125,14 @@ bool MemoryDescriptor::MaterializeBootstrapStack()
 	}
 
 	/* 引导阶段仍保留 runtime 页的立即映射，避免早期路径缺页依赖。 */
-	unsigned int runtimePageIndex = this->AddressToPageIndex(0);
-	this->m_PageInfos[runtimePageIndex].state = PAGE_STATE_RESIDENT;
-	this->m_PageInfos[runtimePageIndex].frameAddress = 0;
+	Region* runtime = this->FindRegionByType(REGION_RUNTIME);
+	PageInfo* runtimePageInfo = this->GetPageInfo(runtime, 0);
+	if ( runtimePageInfo == NULL )
+	{
+		return false;
+	}
+	runtimePageInfo->state = PAGE_STATE_RESIDENT;
+	runtimePageInfo->frameAddress = 0;
 	this->MapPage(0, 0, true);
 	return true;
 }
@@ -949,12 +1143,16 @@ bool MemoryDescriptor::MaterializeExecutableImage()
 	 * Exec 阶段保持 runtime 低地址页立即映射，避免 0# 用户页表共享语义下
 	 * 的跨进程映射污染；其余区域维持按需缺页补页。
 	 */
-	const Region* runtime = this->FindRegionByType(REGION_RUNTIME);
+	Region* runtime = this->FindRegionByType(REGION_RUNTIME);
 	if ( runtime != NULL )
 	{
-		unsigned int runtimePageIndex = this->AddressToPageIndex(runtime->start);
-		this->m_PageInfos[runtimePageIndex].state = PAGE_STATE_RESIDENT;
-		this->m_PageInfos[runtimePageIndex].frameAddress = 0;
+		PageInfo* runtimePageInfo = this->GetPageInfo(runtime, 0);
+		if ( runtimePageInfo == NULL )
+		{
+			return false;
+		}
+		runtimePageInfo->state = PAGE_STATE_RESIDENT;
+		runtimePageInfo->frameAddress = 0;
 		this->MapPage(runtime->start, 0, true);
 	}
 
@@ -986,7 +1184,7 @@ bool MemoryDescriptor::MaterializeExecutableImage()
 bool MemoryDescriptor::InstallResidentPage(unsigned long virtualAddress,
 	unsigned long physicalAddress)
 {
-	if ( this->m_PageInfos == NULL || physicalAddress == 0 )
+	if ( this->m_Regions == NULL || physicalAddress == 0 )
 	{
 		return false;
 	}
@@ -998,47 +1196,53 @@ bool MemoryDescriptor::InstallResidentPage(unsigned long virtualAddress,
 		return false;
 	}
 
-	unsigned int pageIndex = this->AddressToPageIndex(virtualAddress);
-	PageInfo& pageInfo = this->m_PageInfos[pageIndex];
-	if ( pageInfo.regionIndex == 0xffff || pageInfo.state == PAGE_STATE_FREE )
+	Region* region = NULL;
+	PageInfo* pageInfo = this->GetPageInfoByAddress(virtualAddress, &region);
+	if ( region == NULL || pageInfo == NULL ||
+		pageInfo->regionIndex == 0xffff || pageInfo->state == PAGE_STATE_FREE )
 	{
 		return false;
 	}
 
-	if ( pageInfo.state == PAGE_STATE_RESIDENT )
+	if ( pageInfo->state == PAGE_STATE_RESIDENT )
 	{
-		return pageInfo.frameAddress == physicalAddress;
+		return pageInfo->frameAddress == physicalAddress;
 	}
 
-	pageInfo.state = PAGE_STATE_RESIDENT;
-	pageInfo.frameAddress = physicalAddress;
+	pageInfo->state = PAGE_STATE_RESIDENT;
+	pageInfo->frameAddress = physicalAddress;
 	return true;
 }
 
 bool MemoryDescriptor::EnsurePagePresent(unsigned long faultAddress)
 {
-	if ( this->m_PageInfos == NULL )
+	if ( this->m_Regions == NULL )
 	{
 		return false;
 	}
 
 	unsigned long virtualAddress = AlignDown(faultAddress);
-	unsigned int pageIndex = this->AddressToPageIndex(virtualAddress);
-	PageInfo& pageInfo = this->m_PageInfos[pageIndex];
-	if ( pageInfo.state == PAGE_STATE_RESIDENT )
-	{
-		return true;
-	}
-	if ( pageInfo.state != PAGE_STATE_RESERVED || pageInfo.regionIndex == 0xffff )
+	Region* region = NULL;
+	PageInfo* pageInfo = this->GetPageInfoByAddress(virtualAddress, &region);
+	if ( region == NULL || pageInfo == NULL )
 	{
 		return false;
 	}
 
-	const Region& region = this->m_Regions[pageInfo.regionIndex];
+	if ( pageInfo->state == PAGE_STATE_RESIDENT )
+	{
+		return true;
+	}
+	if ( pageInfo->state != PAGE_STATE_RESERVED || pageInfo->regionIndex == 0xffff )
+	{
+		return false;
+	}
+
+	unsigned int pageIndex = this->AddressToPageIndex(virtualAddress);
 	bool ok = false;
 	unsigned long deferredFreeSharedTextPage = 0;
 	/* 按区域后备类型分派补页策略。 */
-	switch ( region.backing.type )
+	switch ( region->backing.type )
 	{
 	case BACKING_ZERO:
 		ok = this->MapZeroPageForCopyOnWrite(virtualAddress);
@@ -1050,7 +1254,7 @@ bool MemoryDescriptor::EnsurePagePresent(unsigned long faultAddress)
 	case BACKING_SHARED_TEXT:
 	case BACKING_EXEC_FILE:
 		{
-			bool useSharedText = (region.backing.type == BACKING_SHARED_TEXT);
+			bool useSharedText = (region->backing.type == BACKING_SHARED_TEXT);
 			unsigned int tableIndex =
 				pageIndex / PageTable::ENTRY_CNT_PER_PAGETABLE;
 			unsigned int entryIndex =
@@ -1061,7 +1265,7 @@ bool MemoryDescriptor::EnsurePagePresent(unsigned long faultAddress)
 				return false;
 			}
 
-			bool readWrite = (region.prot & PROT_WRITE) != 0;
+			bool readWrite = (region->prot & PROT_WRITE) != 0;
 			if ( readWrite == false &&
 				table->m_Entrys[entryIndex].m_ReadWriter != 0 )
 			{
@@ -1089,7 +1293,7 @@ bool MemoryDescriptor::EnsurePagePresent(unsigned long faultAddress)
 				Text* text = this->m_Owner->p_textp;
 				inode = text->x_iptr;
 				if ( ResolveTextStorage(text,
-						region.type,
+						region->type,
 						sharedPageArrayConst,
 						maxPageCount,
 						fileOffsetBase,
@@ -1099,15 +1303,15 @@ bool MemoryDescriptor::EnsurePagePresent(unsigned long faultAddress)
 				}
 
 				sharedPageIndex =
-					(unsigned int)(pageInfo.backingOffset / PageManager::PAGE_SIZE);
+					(unsigned int)(pageInfo->backingOffset / PageManager::PAGE_SIZE);
 				if ( sharedPageIndex >= maxPageCount )
 				{
 					return false;
 				}
 
 				hasSharedResident = ResolveTextPhysicalAddress(text,
-					region.type,
-					pageInfo.backingOffset,
+					region->type,
+					pageInfo->backingOffset,
 					textPhysicalAddress);
 				if ( hasSharedResident )
 				{
@@ -1117,9 +1321,9 @@ bool MemoryDescriptor::EnsurePagePresent(unsigned long faultAddress)
 			}
 			else
 			{
-				fileOffsetBase = region.backing.fileOffset;
-				fileSize = region.backing.validBytes;
-				inode = region.backing.inode;
+				fileOffsetBase = region->backing.fileOffset;
+				fileSize = region->backing.validBytes;
+				inode = region->backing.inode;
 				if ( inode == NULL && this->m_Owner != NULL &&
 					this->m_Owner->p_textp != NULL )
 				{
@@ -1141,7 +1345,7 @@ bool MemoryDescriptor::EnsurePagePresent(unsigned long faultAddress)
 			if ( ReadFileBackedPage(inode,
 					virtualAddress,
 					fileOffsetBase,
-					pageInfo.backingOffset,
+					pageInfo->backingOffset,
 					fileSize) == false )
 			{
 				table->m_Entrys[entryIndex].m_Present = 0;
@@ -1149,8 +1353,8 @@ bool MemoryDescriptor::EnsurePagePresent(unsigned long faultAddress)
 				table->m_Entrys[entryIndex].m_UserSupervisor = 1;
 				table->m_Entrys[entryIndex].m_PageBaseAddress = 0;
 				Kernel::Instance().GetUserPageManager().FreePage(newPage);
-				pageInfo.state = PAGE_STATE_RESERVED;
-				pageInfo.frameAddress = 0;
+				pageInfo->state = PAGE_STATE_RESERVED;
+				pageInfo->frameAddress = 0;
 				X86Assembly::FlushCurrentPageDirectory();
 				return false;
 			}
@@ -1182,8 +1386,8 @@ bool MemoryDescriptor::EnsurePagePresent(unsigned long faultAddress)
 			}
 			else
 			{
-				pageInfo.state = PAGE_STATE_RESIDENT;
-				pageInfo.frameAddress = newPage;
+				pageInfo->state = PAGE_STATE_RESIDENT;
+				pageInfo->frameAddress = newPage;
 				this->MapPage(virtualAddress, newPage, readWrite);
 				ok = true;
 			}
@@ -1212,14 +1416,23 @@ bool MemoryDescriptor::EnsurePagePresent(unsigned long faultAddress)
 
 void MemoryDescriptor::ReleaseResidentPages(bool releaseSharedText)
 {
-	if ( this->m_PageInfos == NULL )
+	if ( this->m_Regions == NULL )
 	{
 		return;
 	}
 
-	for ( unsigned int i = 0; i < USER_PAGE_COUNT; ++i )
+	for ( unsigned int regionIndex = 0; regionIndex < this->m_RegionCount; ++regionIndex )
 	{
-		this->FreePageInfo(this->m_PageInfos[i], releaseSharedText);
+		Region& region = this->m_Regions[regionIndex];
+		unsigned int pageCount = this->GetRegionPageCount(region);
+		for ( unsigned int pageOffset = 0; pageOffset < pageCount; ++pageOffset )
+		{
+			PageInfo* pageInfo = this->GetPageInfo(&region, pageOffset);
+			if ( pageInfo != NULL )
+			{
+				this->FreePageInfo(*pageInfo, releaseSharedText);
+			}
+		}
 	}
 	this->ClearPageTables();
 }
@@ -1277,7 +1490,7 @@ unsigned int MemoryDescriptor::ExportResidentUserPages(
 	UserPageSnapshotEntry* entries,
 	unsigned int maxEntries) const
 {
-	if ( this->m_PageInfos == NULL )
+	if ( this->m_Regions == NULL )
 	{
 		return 0;
 	}
@@ -1285,48 +1498,53 @@ unsigned int MemoryDescriptor::ExportResidentUserPages(
 	unsigned int total = 0;
 	unsigned int written = 0;
 
-	for ( unsigned int pageIndex = 0; pageIndex < USER_PAGE_COUNT; ++pageIndex )
+	for ( unsigned int regionIndex = 0; regionIndex < this->m_RegionCount; ++regionIndex )
 	{
-		if ( this->m_PageInfos[pageIndex].state != PAGE_STATE_RESIDENT )
+		const Region& region = this->m_Regions[regionIndex];
+		unsigned int pageCount = this->GetRegionPageCount(region);
+		for ( unsigned int pageOffset = 0; pageOffset < pageCount; ++pageOffset )
 		{
-			continue;
-		}
-
-		unsigned int tableIndex =
-			pageIndex / PageTable::ENTRY_CNT_PER_PAGETABLE;
-		unsigned int entryIndex =
-			pageIndex % PageTable::ENTRY_CNT_PER_PAGETABLE;
-		PageTable* table = this->GetUserPageTableByIndex(tableIndex);
-		if ( table == NULL || table->m_Entrys[entryIndex].m_Present == 0 )
-		{
-			continue;
-		}
-
-		if ( entries != NULL && written < maxEntries )
-		{
-			unsigned short execFlag = 0;
-			if ( this->m_PageInfos[pageIndex].regionIndex != 0xffff )
+			const PageInfo* pageInfo = this->GetPageInfo(&region, pageOffset);
+			if ( pageInfo == NULL || pageInfo->state != PAGE_STATE_RESIDENT )
 			{
-				const Region& region =
-					this->m_Regions[this->m_PageInfos[pageIndex].regionIndex];
-				if ( (region.prot & PROT_EXEC) != 0 )
+				continue;
+			}
+
+			unsigned long virtualAddress =
+				this->GetRegionPageAddress(region, pageOffset);
+			unsigned int pageIndex = this->AddressToPageIndex(virtualAddress);
+			unsigned int tableIndex =
+				pageIndex / PageTable::ENTRY_CNT_PER_PAGETABLE;
+			unsigned int entryIndex =
+				pageIndex % PageTable::ENTRY_CNT_PER_PAGETABLE;
+			PageTable* table = this->GetUserPageTableByIndex(tableIndex);
+			if ( table == NULL || table->m_Entrys[entryIndex].m_Present == 0 )
+			{
+				continue;
+			}
+
+			if ( entries != NULL && written < maxEntries )
+			{
+				unsigned short execFlag = 0;
+				if ( pageInfo->regionIndex != 0xffff &&
+					(region.prot & PROT_EXEC) != 0 )
 				{
 					execFlag = 0x8;
 				}
+
+				entries[written].pageIndex = (unsigned short)pageIndex;
+				entries[written].flags =
+					(table->m_Entrys[entryIndex].m_Present ? 0x1 : 0) |
+					(table->m_Entrys[entryIndex].m_ReadWriter ? 0x2 : 0) |
+					(table->m_Entrys[entryIndex].m_UserSupervisor ? 0x4 : 0) |
+					execFlag;
+				entries[written].pageBaseAddress =
+					table->m_Entrys[entryIndex].m_PageBaseAddress;
+				++written;
 			}
 
-			entries[written].pageIndex = (unsigned short)pageIndex;
-			entries[written].flags =
-				(table->m_Entrys[entryIndex].m_Present ? 0x1 : 0) |
-				(table->m_Entrys[entryIndex].m_ReadWriter ? 0x2 : 0) |
-				(table->m_Entrys[entryIndex].m_UserSupervisor ? 0x4 : 0) |
-				execFlag;
-			entries[written].pageBaseAddress =
-				table->m_Entrys[entryIndex].m_PageBaseAddress;
-			++written;
+			++total;
 		}
-
-		++total;
 	}
 
 	return total;
@@ -1353,66 +1571,88 @@ bool MemoryDescriptor::SetHeapBreak(unsigned long newBreak)
 	}
 
 	unsigned long oldEnd = heap->end;
-	if ( alignedBreak < oldEnd )
+	unsigned int oldPageCount = this->GetRegionPageCount(*heap);
+	heap->end = alignedBreak;
+	this->m_HeapBreak = alignedBreak;
+	unsigned int newPageCount = this->GetRegionPageCount(*heap);
+
+	if ( newPageCount < oldPageCount )
 	{
 		/* 收缩堆：释放已驻留页并清空对应 PageInfo。 */
-		for ( unsigned long va = alignedBreak; va < oldEnd; va += PageManager::PAGE_SIZE )
+		for ( unsigned int pageOffset = newPageCount; pageOffset < oldPageCount; ++pageOffset )
 		{
-			unsigned int pageIndex = this->AddressToPageIndex(va);
-			this->FreePageInfo(this->m_PageInfos[pageIndex], false);
-			this->m_PageInfos[pageIndex].state = PAGE_STATE_FREE;
-			this->m_PageInfos[pageIndex].regionIndex = 0xffff;
-			this->m_PageInfos[pageIndex].backingOffset = 0;
+			PageInfo* pageInfo = this->GetPageInfo(heap, pageOffset);
+			if ( pageInfo != NULL )
+			{
+				this->FreePageInfo(*pageInfo, false);
+				this->ClearPageInfo(*pageInfo);
+			}
+		}
+		if ( heap->dynamicPageInfos.resize(newPageCount) == false )
+		{
+			return false;
 		}
 	}
 
-	unsigned long oldAlignedEnd = AlignUp(oldEnd);
-	heap->end = alignedBreak;
-	this->m_HeapBreak = alignedBreak;
-
-	if ( alignedBreak > oldAlignedEnd )
+	if ( newPageCount > oldPageCount )
 	{
 		/* 扩展堆：只保留页元数据，不立即分配物理页。 */
-		unsigned int startPage = this->AddressToPageIndex(oldAlignedEnd);
-		unsigned int endPage = this->AddressToPageIndex(alignedBreak - 1);
-		for ( unsigned int i = startPage; i <= endPage; ++i )
+		if ( heap->dynamicPageInfos.resize(newPageCount) == false )
 		{
-			this->m_PageInfos[i].state = PAGE_STATE_RESERVED;
-			this->m_PageInfos[i].flags = heap->flags;
-			this->m_PageInfos[i].regionIndex = (unsigned short)(heap - this->m_Regions);
-			this->m_PageInfos[i].frameAddress = 0;
-			this->m_PageInfos[i].backingOffset =
-				(i - this->AddressToPageIndex(heap->start)) * PageManager::PAGE_SIZE;
+			heap->end = oldEnd;
+			this->m_HeapBreak = oldEnd;
+			return false;
+		}
+
+		unsigned int regionIndex = (unsigned int)(heap - this->m_Regions);
+		for ( unsigned int pageOffset = oldPageCount; pageOffset < newPageCount; ++pageOffset )
+		{
+			PageInfo* pageInfo = this->GetPageInfo(heap, pageOffset);
+			if ( pageInfo == NULL )
+			{
+				return false;
+			}
+			this->InitializeReservedPageInfo(*pageInfo, regionIndex, pageOffset);
 		}
 	}
 
 	return true;
 }
 
-void MemoryDescriptor::GrowStackByPage()
+bool MemoryDescriptor::GrowStackByPage()
 {
 	Region* stack = this->FindRegionByType(REGION_STACK);
 	if ( stack == NULL )
 	{
-		return;
+		return false;
 	}
 
+	unsigned int oldPageCount = this->GetRegionPageCount(*stack);
 	unsigned long newStart = stack->start - PageManager::PAGE_SIZE;
 	stack->start = newStart;
-
-	if ( this->m_PageInfos == NULL )
+	unsigned int newPageCount = this->GetRegionPageCount(*stack);
+	if ( this->m_Regions == NULL || newPageCount != oldPageCount + 1 )
 	{
-		return;
+		return false;
+	}
+
+	if ( stack->dynamicPageInfos.resize(newPageCount) == false )
+	{
+		stack->start += PageManager::PAGE_SIZE;
+		return false;
 	}
 
 	unsigned int regionIndex = (unsigned int)(stack - this->m_Regions);
-	unsigned int newPageIndex = this->AddressToPageIndex(newStart);
+	PageInfo* newPageInfo = this->GetPageInfo(stack, 0);
+	if ( newPageInfo == NULL )
+	{
+		stack->dynamicPageInfos.resize(oldPageCount);
+		stack->start += PageManager::PAGE_SIZE;
+		return false;
+	}
 	/* 扩栈仅登记为 RESERVED，首次访问时再由 EnsurePagePresent 分配物理页。 */
-	this->m_PageInfos[newPageIndex].state = PAGE_STATE_RESERVED;
-	this->m_PageInfos[newPageIndex].flags = stack->flags;
-	this->m_PageInfos[newPageIndex].regionIndex = (unsigned short)regionIndex;
-	this->m_PageInfos[newPageIndex].frameAddress = 0;
-	this->m_PageInfos[newPageIndex].backingOffset = 0;
+	this->InitializeReservedPageInfo(*newPageInfo, regionIndex, 0);
+	return true;
 }
 
 PageDirectory* MemoryDescriptor::GetPageDirectoryPointer() const
@@ -1579,52 +1819,89 @@ bool MemoryDescriptor::AddRegion(RegionType type,
 	this->m_Regions[idx].backing.text = NULL;
 	this->m_Regions[idx].backing.fileOffset = 0;
 	this->m_Regions[idx].backing.validBytes = end - start;
+	this->m_Regions[idx].fixedPageInfos = NULL;
+	this->m_Regions[idx].dynamicPageInfos.release();
 	if ( start != end )
 	{
-		this->ReservePagesForRegion(idx);
+		if ( this->ReservePagesForRegion(idx) == false )
+		{
+			this->ReleaseRegionPageInfos(this->m_Regions[idx]);
+			--this->m_RegionCount;
+			this->m_Regions[idx].start = 0;
+			this->m_Regions[idx].end = 0;
+			this->m_Regions[idx].prot = 0;
+			this->m_Regions[idx].flags = 0;
+			this->m_Regions[idx].type = REGION_INVALID;
+			this->m_Regions[idx].backing.type = BACKING_NONE;
+			this->m_Regions[idx].backing.inode = NULL;
+			this->m_Regions[idx].backing.text = NULL;
+			this->m_Regions[idx].backing.fileOffset = 0;
+			this->m_Regions[idx].backing.validBytes = 0;
+			return false;
+		}
 	}
 	return true;
 }
 
-void MemoryDescriptor::ReservePagesForRegion(unsigned int regionIndex)
+bool MemoryDescriptor::ReservePagesForRegion(unsigned int regionIndex)
 {
-	if ( this->m_PageInfos == NULL )
+	if ( this->m_Regions == NULL || regionIndex >= this->m_RegionCount )
 	{
-		return;
+		return false;
 	}
 
-	const Region& region = this->m_Regions[regionIndex];
-	unsigned int startPage = this->AddressToPageIndex(region.start);
-	unsigned int endPage = this->AddressToPageIndex(region.end - 1);
-
-	for ( unsigned int i = startPage; i <= endPage; ++i )
+	Region& region = this->m_Regions[regionIndex];
+	unsigned int pageCount = this->GetRegionPageCount(region);
+	if ( pageCount == 0 )
 	{
-		if ( this->m_PageInfos[i].state == PAGE_STATE_RESIDENT &&
-			this->m_PageInfos[i].regionIndex == regionIndex )
+		return true;
+	}
+
+	if ( this->IsDynamicPageInfoRegion(region.type) )
+	{
+		if ( region.dynamicPageInfos.resize(pageCount) == false )
 		{
-			/* 已驻留页保留现状，只更新标记。 */
-			this->m_PageInfos[i].flags = region.flags;
-			continue;
+			return false;
+		}
+	}
+	else
+	{
+		region.fixedPageInfos = new PageInfo[pageCount];
+		if ( region.fixedPageInfos == NULL )
+		{
+			return false;
+		}
+	}
+
+	for ( unsigned int pageOffset = 0; pageOffset < pageCount; ++pageOffset )
+	{
+		PageInfo* pageInfo = this->GetPageInfo(&region, pageOffset);
+		if ( pageInfo == NULL )
+		{
+			return false;
 		}
 
-		/* 未驻留页进入 RESERVED，等待缺页按需物化。 */
-		this->m_PageInfos[i].state = PAGE_STATE_RESERVED;
-		this->m_PageInfos[i].flags = region.flags;
-		this->m_PageInfos[i].regionIndex = regionIndex;
-		this->m_PageInfos[i].frameAddress = 0;
-		this->m_PageInfos[i].backingOffset = (i - startPage) * PageManager::PAGE_SIZE;
+		this->InitializeReservedPageInfo(*pageInfo, regionIndex, pageOffset);
 	}
+
+	return true;
 }
 
 bool MemoryDescriptor::AllocateZeroedPage(unsigned long virtualAddress)
 {
-	unsigned int pageIndex = this->AddressToPageIndex(virtualAddress);
-	PageInfo& pageInfo = this->m_PageInfos[pageIndex];
-	const Region& region = this->m_Regions[pageInfo.regionIndex];
-	if ( pageInfo.state == PAGE_STATE_RESIDENT )
+	Region* region = NULL;
+	PageInfo* pageInfo = this->GetPageInfoByAddress(virtualAddress, &region);
+	if ( region == NULL || pageInfo == NULL )
+	{
+		return false;
+	}
+
+	if ( pageInfo->state == PAGE_STATE_RESIDENT )
 	{
 		return true;
 	}
+
+	unsigned int pageIndex = this->AddressToPageIndex(virtualAddress);
 
 	unsigned long newPage = Kernel::Instance().GetUserPageManager().AllocatePage();
 	if ( newPage == 0 )
@@ -1634,10 +1911,10 @@ bool MemoryDescriptor::AllocateZeroedPage(unsigned long virtualAddress)
 
 	/* 分配后立即清零，避免泄露旧页内容到用户空间。 */
 	Utility::ZeroPage(newPage);
-	pageInfo.state = PAGE_STATE_RESIDENT;
-	pageInfo.frameAddress = newPage;
+	pageInfo->state = PAGE_STATE_RESIDENT;
+	pageInfo->frameAddress = newPage;
 
-	bool readWrite = (region.prot & PROT_WRITE) != 0;
+	bool readWrite = (region->prot & PROT_WRITE) != 0;
 	if ( readWrite == false )
 	{
 		/*
@@ -1659,19 +1936,24 @@ bool MemoryDescriptor::AllocateZeroedPage(unsigned long virtualAddress)
 
 bool MemoryDescriptor::MapZeroPageForCopyOnWrite(unsigned long virtualAddress)
 {
-	if ( this->m_PageInfos == NULL )
+	if ( this->m_Regions == NULL )
 	{
 		return false;
 	}
 
-	unsigned int pageIndex = this->AddressToPageIndex(virtualAddress);
-	PageInfo& pageInfo = this->m_PageInfos[pageIndex];
-	if ( pageInfo.state == PAGE_STATE_RESIDENT )
+	Region* region = NULL;
+	PageInfo* pageInfo = this->GetPageInfoByAddress(virtualAddress, &region);
+	if ( region == NULL || pageInfo == NULL )
+	{
+		return false;
+	}
+
+	if ( pageInfo->state == PAGE_STATE_RESIDENT )
 	{
 		return true;
 	}
 
-	if ( pageInfo.state != PAGE_STATE_RESERVED || pageInfo.regionIndex == 0xffff )
+	if ( pageInfo->state != PAGE_STATE_RESERVED || pageInfo->regionIndex == 0xffff )
 	{
 		return false;
 	}
@@ -1683,8 +1965,8 @@ bool MemoryDescriptor::MapZeroPageForCopyOnWrite(unsigned long virtualAddress)
 		return false;
 	}
 
-	pageInfo.state = PAGE_STATE_RESIDENT;
-	pageInfo.frameAddress = zeroPage;
+	pageInfo->state = PAGE_STATE_RESIDENT;
+	pageInfo->frameAddress = zeroPage;
 	/* BACKING_ZERO 初次映射保持只读，后续写访问进入 COW 分裂。 */
 	this->MapPage(virtualAddress, zeroPage, false);
 	return true;
@@ -1694,10 +1976,15 @@ bool MemoryDescriptor::ShareTextPage(unsigned long virtualAddress,
 	unsigned long textPhysicalAddress,
 	bool readWrite)
 {
-	unsigned int pageIndex = this->AddressToPageIndex(virtualAddress);
-	PageInfo& pageInfo = this->m_PageInfos[pageIndex];
-	pageInfo.state = PAGE_STATE_RESIDENT;
-	pageInfo.frameAddress = textPhysicalAddress;
+	Region* region = NULL;
+	PageInfo* pageInfo = this->GetPageInfoByAddress(virtualAddress, &region);
+	if ( region == NULL || pageInfo == NULL )
+	{
+		return false;
+	}
+
+	pageInfo->state = PAGE_STATE_RESIDENT;
+	pageInfo->frameAddress = textPhysicalAddress;
 	/* 共享页不分配新物理内存，只建立页表映射。 */
 	this->MapPage(virtualAddress, textPhysicalAddress, readWrite);
 	return true;
@@ -1739,32 +2026,38 @@ void MemoryDescriptor::FreePageInfo(PageInfo& pageInfo, bool releaseSharedText)
 
 void MemoryDescriptor::RemapResidentPages()
 {
-	if ( this->m_PageInfos == NULL )
+	if ( this->m_Regions == NULL )
 	{
 		return;
 	}
 
-	for ( unsigned int i = 0; i < USER_PAGE_COUNT; ++i )
+	for ( unsigned int regionIndex = 0; regionIndex < this->m_RegionCount; ++regionIndex )
 	{
-		if ( this->m_PageInfos[i].state != PAGE_STATE_RESIDENT ||
-			this->m_PageInfos[i].regionIndex == 0xffff )
+		Region& region = this->m_Regions[regionIndex];
+		unsigned int pageCount = this->GetRegionPageCount(region);
+		for ( unsigned int pageOffset = 0; pageOffset < pageCount; ++pageOffset )
 		{
-			continue;
-		}
-
-		const Region& region = this->m_Regions[this->m_PageInfos[i].regionIndex];
-		unsigned long virtualAddress = USER_SPACE_START + i * PageManager::PAGE_SIZE;
-		bool readWrite = (region.prot & PROT_WRITE) != 0;
-		if ( readWrite )
-		{
-			UserPageManager& userPageManager = Kernel::Instance().GetUserPageManager();
-			if ( userPageManager.GetCopyOnWriteRefCount(this->m_PageInfos[i].frameAddress) != 0 )
+			PageInfo* pageInfo = this->GetPageInfo(&region, pageOffset);
+			if ( pageInfo == NULL || pageInfo->state != PAGE_STATE_RESIDENT ||
+				pageInfo->regionIndex == 0xffff )
 			{
-				readWrite = false;
+				continue;
 			}
-		}
 
-		this->MapPage(virtualAddress, this->m_PageInfos[i].frameAddress, readWrite);
+			unsigned long virtualAddress =
+				this->GetRegionPageAddress(region, pageOffset);
+			bool readWrite = (region.prot & PROT_WRITE) != 0;
+			if ( readWrite )
+			{
+				UserPageManager& userPageManager = Kernel::Instance().GetUserPageManager();
+				if ( userPageManager.GetCopyOnWriteRefCount(pageInfo->frameAddress) != 0 )
+				{
+					readWrite = false;
+				}
+			}
+
+			this->MapPage(virtualAddress, pageInfo->frameAddress, readWrite);
+		}
 	}
 }
 
