@@ -38,10 +38,8 @@ static unsigned int daysBeforeMonth[13] = {	0xFFFFFFFF/* Unused */,
 static unsigned int daysInMonth[13] = {	0xFFFFFFFF/* Unused */, 
 											31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 											
-static int weekdayNumber[7] = {4/*Thrusday*/, 5, 6, 7, 1, 2, 3};
-
 static char* weekdayName[8] = { "NOT Used", "SUN", "MON", "TUE", 
-								"WED", "THUR", "FRI", "SAT"};
+								"WED", "THU", "FRI", "SAT"};
 								
 static char* monthName[13] = {"NOT Used",	"Jan", "Feb", "Mar", "Apr", "May", "Jun",
 										"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};

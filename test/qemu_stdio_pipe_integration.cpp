@@ -510,11 +510,7 @@ int main()
 		ReadEnvString("QEMU_BIN", "qemu-system-i386"),
 		ReadEnvString("QEMU_STDIO_READY_MARKER", "OOS_BOOT_SHELL_READY"),
 		"__QEMU_STDIO_PIPE_OK__",
-		/*
-		 * 内核 date 命令当前会输出形如 "(NOT Used)" 的占位后缀，
-		 * 这里仅校验日期时间主体与括号结构，不再把括号内容写死为 3 字母时区。
-		 */
-		std::regex("[0-9]{1,2}-[A-Za-z]{3}-[0-9]{4} [0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}\\([^\\)]*\\)")
+		std::regex("[0-9]{1,2}-[A-Za-z]{3}-[0-9]{4} [0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}\\([A-Za-z]{3}\\)")
 	};
 
 	std::filesystem::path rootDir = ReadEnvString("OOS_ROOT_DIR", OOS_QEMU_STDIO_IT_ROOT_DIR);
