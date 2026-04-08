@@ -2,6 +2,7 @@
 #include "Assembly.h"
 #include "Kernel.h"
 #include "CRT.h"
+#include "User.h"
 
 #if defined(OOS_KERNEL_TTY_STDIO_SERIAL)
 #include "IOPort.h"
@@ -308,6 +309,11 @@ void TTy::TTyInput(char ch)
 //		ch += 'a' - 'A';
 //	}
 
+	if ( this->HandleSignalChar(ch) )
+	{
+		return;
+	}
+
 	/* 将输入字符放入原始字符缓存队列 */
 	this->t_rawq.PutChar(ch);
 
@@ -324,6 +330,42 @@ void TTy::TTyInput(char ch)
 		this->TTyOutput(ch);
 		this->TTStart();
 	}
+}
+
+bool TTy::HandleSignalChar(char ch)
+{
+	int signal = User::SIGNUL;
+
+	switch ( (unsigned char)ch )
+	{
+	case (unsigned char)TTy::CINTR:
+		signal = User::SIGINT;
+		break;
+	case (unsigned char)TTy::CQUIT:
+		signal = User::SIGQUIT;
+		break;
+	default:
+		return false;
+	}
+
+	this->FlushTTy();
+
+	ProcessManager& procMgr = Kernel::Instance().GetProcessManager();
+	for ( int i = 0; i < ProcessManager::NPROC; ++i )
+	{
+		Process& proc = procMgr.process[i];
+		if ( proc.p_pid <= 1 )
+		{
+			continue;
+		}
+		if ( proc.p_ttyp != this )
+		{
+			continue;
+		}
+		proc.PSignal(signal);
+	}
+
+	return true;
 }
 
 void TTy::TTyOutput(char ch)
@@ -475,5 +517,4 @@ char TTy::CPass()
 	//u.u_IOParam.m_Offset++;
 	return ch;
 }
-
 

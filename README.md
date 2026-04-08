@@ -191,6 +191,7 @@ cmake --build --preset qemu-gdb -j
 - 新增 `QEMU_MODE=stdio` / `QEMU_MODE=gdb-stdio` 运行模式：
   - 业务交互走 `stdin/stdout`（`-serial stdio`），便于本机终端直接操作 Shell。
   - 诊断输出走 `stderr`（`-debugcon file:/dev/stderr`），与交互输出分离，减少串扰。
+  - 当连接真实终端时，宿主 `Ctrl+C` / `Ctrl+\` 会透传到虚拟机；若需要直接终止宿主侧 QEMU，请使用 `Ctrl+]`。
 - VS Code 任务 `qemu/run` 与 `qemu/debug` 会在启动前清空日志并把 `stderr` 追加到：
   - `<binaryDir>/qemu-run-diagnose.log`
   - `<binaryDir>/qemu-debug-diagnose.log`

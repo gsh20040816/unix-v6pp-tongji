@@ -430,6 +430,11 @@ namespace
 		return WriteAll(fd, line);
 	}
 
+	bool SendControlByte(int fd, char ch)
+	{
+		return WriteAll(fd, std::string_view(&ch, 1));
+	}
+
 	bool ContainsFrom(const std::string& text, size_t start, const std::string& needle)
 	{
 		if ( start > text.size() )
@@ -650,6 +655,86 @@ int main()
 		stdoutLog,
 		stderrLog,
 		[&]() { return ContainsFrom(stdoutBuffer, stdoutCursor, "Welcome to Unix V6++!"); });
+
+	stdoutCursor = stdoutBuffer.size();
+	if ( ok )
+	{
+		if ( !SendCommand(child.stdinFd, "sigTest") )
+		{
+			std::cerr << "failed to send sigTest command\n";
+			ok = false;
+		}
+	}
+
+	ok = ok && WaitForCondition(
+		"sigTest sleep message",
+		config.cmdTimeoutSec,
+		child,
+		stdoutBuffer,
+		stderrBuffer,
+		stdoutLog,
+		stderrLog,
+		[&]() { return ContainsFrom(stdoutBuffer, stdoutCursor, "Getting into sleep."); });
+
+	size_t sigintCursor = stdoutBuffer.size();
+	if ( ok )
+	{
+		if ( !SendControlByte(child.stdinFd, 0x03) )
+		{
+			std::cerr << "failed to send Ctrl+C to sigTest\n";
+			ok = false;
+		}
+	}
+
+	ok = ok && WaitForCondition(
+		"shell prompt after Ctrl+C",
+		config.cmdTimeoutSec,
+		child,
+		stdoutBuffer,
+		stderrBuffer,
+		stdoutLog,
+		stderrLog,
+		[&]() { return HasShellPromptFrom(stdoutBuffer, sigintCursor); });
+
+	stdoutCursor = stdoutBuffer.size();
+	if ( ok )
+	{
+		if ( !SendCommand(child.stdinFd, "sigTest") )
+		{
+			std::cerr << "failed to send sigTest command for Ctrl+\\\\ test\n";
+			ok = false;
+		}
+	}
+
+	ok = ok && WaitForCondition(
+		"sigTest sleep message before Ctrl+\\\\",
+		config.cmdTimeoutSec,
+		child,
+		stdoutBuffer,
+		stderrBuffer,
+		stdoutLog,
+		stderrLog,
+		[&]() { return ContainsFrom(stdoutBuffer, stdoutCursor, "Getting into sleep."); });
+
+	size_t sigquitCursor = stdoutBuffer.size();
+	if ( ok )
+	{
+		if ( !SendControlByte(child.stdinFd, 0x1c) )
+		{
+			std::cerr << "failed to send Ctrl+\\\\ to sigTest\n";
+			ok = false;
+		}
+	}
+
+	ok = ok && WaitForCondition(
+		"shell prompt after Ctrl+\\\\",
+		config.cmdTimeoutSec,
+		child,
+		stdoutBuffer,
+		stderrBuffer,
+		stdoutLog,
+		stderrLog,
+		[&]() { return HasShellPromptFrom(stdoutBuffer, sigquitCursor); });
 
 	stdoutCursor = stdoutBuffer.size();
 	if ( ok )

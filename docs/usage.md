@@ -135,6 +135,12 @@ cmake --build --preset qemu -j
 - 通过 `stdin/stdout` 提供串口交互，适合在终端里直接使用系统 Shell
 - 将诊断输出分流到 `stderr`
 
+对于 `stdio` / `gdb-stdio` 模式：
+
+- 宿主终端里的 `Ctrl+C` 会透传为串口字节 `0x03`，交给虚拟机内核处理
+- 宿主终端里的 `Ctrl+\` 会透传为串口字节 `0x1c`，交给虚拟机内核处理
+- 若需要从宿主侧直接终止当前 QEMU 任务，请使用 `Ctrl+]`
+
 如果你使用 VS Code，也推荐直接使用仓库已配置好的任务：
 
 - `qemu/run`：默认运行入口，采用 `stdin/stdout`
@@ -164,6 +170,8 @@ QEMU_MODE=stdio OOS_BUILD_DIR="$PWD/build" bash qemu/run_qemu.sh
 - `headless`
 - `gdb-curses`
 - `gdb-stdio`
+
+当脚本以 `stdio` / `gdb-stdio` 模式连接真实 TTY 时，也会临时改写宿主终端的 `intr/quit` 控制键，把 `Ctrl+C` 和 `Ctrl+\` 透传给客体，并保留 `Ctrl+]` 作为宿主侧终止当前 QEMU 任务的快捷键。
 
 #### 3. 使用 Bochs 运行
 

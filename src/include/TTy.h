@@ -52,7 +52,8 @@ public:
 	static const char CERASE = '\b';	/* 定义擦除键 */
 	static const char CEOT = 0x04;		/* 文件结束符 */
 	static const char CKILL = 0x15;
-	static const char CINTR = 0x7f;
+	static const char CINTR = 0x03;
+	static const char CQUIT = 0x1c;
 	static const char GET_ERROR = -1;
 
 	/* modes (t_flags设置) */
@@ -83,6 +84,9 @@ public:
 
 	/* 输入字符初步处理程序 */
 	void TTyInput(char ch);
+
+	/* 处理终端控制字符对应的信号语义，返回true表示字符已消费 */
+	bool HandleSignalChar(char ch);
 
 	/* 在串口控制台模式下轮询COM1输入并注入TTY输入队列 */
 	void PollSerialInput();

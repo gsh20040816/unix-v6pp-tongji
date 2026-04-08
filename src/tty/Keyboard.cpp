@@ -262,32 +262,17 @@ ScanCodeTranslate(unsigned char scanCode, int expand)
 
 			if ( (Mode & M_LCTRL) || (Mode & M_RCTRL) )	/* 按下ctrl进行转意 */
 			{
-				if('c' ==  ch)  /* ctrl+c --> SIGINT信号，送给除 sched、shell 之外的所有进程 */
-				{
-					ch = 0;
-
-					/* FLush终端 */
-					TTy* pTTy = Kernel::Instance().GetDeviceManager().GetCharDevice(DeviceManager::TTYDEV).m_TTy;
-					if ( NULL != pTTy )
-					{
-						pTTy->FlushTTy();
-					}
-
-					ProcessManager& procMgr = Kernel::Instance().GetProcessManager();
-					for ( int killed = 0; killed < ProcessManager::NPROC ; killed ++ )
-						if ( procMgr.process[killed].p_pid > 1)
-							procMgr.process[killed].PSignal(User::SIGINT);
-				}
-				else
-				{
-					ch -= 'a';
-				    ch++;	/* 转义从0x1 开始*/
-				}
+				ch -= 'a';
+			    ch++;	/* 转义从0x1 开始*/
 			}
 			else if ( bReverse )
 			{
 				ch += 'A' - 'a';
 			}
+		}
+		else if ( ((Mode & M_LCTRL) || (Mode & M_RCTRL)) && (ch == '\\' || ch == '|') )
+		{
+			ch = TTy::CQUIT;
 		}
 	}
 	else if ( scanCode < 0x58 )
@@ -310,4 +295,3 @@ ScanCodeTranslate(unsigned char scanCode, int expand)
 
 	return ch;
 }
-
