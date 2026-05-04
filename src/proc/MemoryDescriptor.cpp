@@ -157,6 +157,18 @@ namespace
 	}
 }
 
+MemoryDescriptor::PageInfo::PageInfo()
+{
+	this->state = MemoryDescriptor::PAGE_STATE_FREE;
+	this->flags = MemoryDescriptor::PAGE_FLAG_NONE;
+	this->regionIndex = 0xffff;
+	this->frameAddress = 0;
+	this->backingOffset = 0;
+	this->rmap = NULL;
+	this->rmapAttached = false;
+	this->swapSlot = SwapManager::INVALID_SWAP_SLOT;
+}
+
 MemoryDescriptor::MemoryDescriptor()
 {
 	this->m_Owner = NULL;
@@ -232,6 +244,16 @@ void MemoryDescriptor::ReleaseRegionPageInfos()
 
 void MemoryDescriptor::ReleaseRegionPageInfos(Region& region)
 {
+	unsigned int pageCount = this->GetRegionPageCount(region);
+	for ( unsigned int pageOffset = 0; pageOffset < pageCount; ++pageOffset )
+	{
+		PageInfo* pageInfo = this->GetPageInfo(&region, pageOffset);
+		if ( pageInfo != NULL )
+		{
+			this->ReleasePageInfoRmap(*pageInfo);
+		}
+	}
+
 	if ( region.fixedPageInfos != NULL )
 	{
 		delete [] region.fixedPageInfos;
@@ -241,18 +263,33 @@ void MemoryDescriptor::ReleaseRegionPageInfos(Region& region)
 	region.dynamicPageInfos.release();
 }
 
+void MemoryDescriptor::ReleasePageInfoRmap(PageInfo& pageInfo)
+{
+	if ( pageInfo.rmapAttached )
+	{
+		if ( pageInfo.rmap == NULL || pageInfo.frameAddress == 0 )
+		{
+			Utility::Panic("Invalid attached reverse map");
+		}
+		this->DetachFrame(pageInfo, true, true, true);
+	}
+
+	if ( pageInfo.rmap != NULL )
+	{
+		delete pageInfo.rmap;
+		pageInfo.rmap = NULL;
+	}
+	pageInfo.rmapAttached = false;
+}
+
 void MemoryDescriptor::ClearPageInfo(PageInfo& pageInfo)
 {
+	this->ReleasePageInfoRmap(pageInfo);
 	pageInfo.state = PAGE_STATE_FREE;
 	pageInfo.flags = PAGE_FLAG_NONE;
 	pageInfo.regionIndex = 0xffff;
 	pageInfo.frameAddress = 0;
 	pageInfo.backingOffset = 0;
-	pageInfo.rmap.owner = NULL;
-	pageInfo.rmap.virtualPageIndex = 0;
-	pageInfo.rmap.debugPid = -1;
-	List::Init(&pageInfo.rmap.frameNode);
-	pageInfo.rmapAttached = false;
 	pageInfo.swapSlot = SwapManager::INVALID_SWAP_SLOT;
 }
 
@@ -391,10 +428,13 @@ void MemoryDescriptor::InitializeReservedPageInfo(PageInfo& pageInfo,
 	pageInfo.regionIndex = (unsigned short)regionIndex;
 	pageInfo.frameAddress = 0;
 	pageInfo.backingOffset = pageOffset * PageManager::PAGE_SIZE;
-	pageInfo.rmap.owner = NULL;
-	pageInfo.rmap.virtualPageIndex = 0;
-	pageInfo.rmap.debugPid = -1;
-	List::Init(&pageInfo.rmap.frameNode);
+	if ( pageInfo.rmap != NULL )
+	{
+		pageInfo.rmap->owner = NULL;
+		pageInfo.rmap->virtualPageIndex = 0;
+		pageInfo.rmap->debugPid = -1;
+		List::Init(&pageInfo.rmap->frameNode);
+	}
 	pageInfo.rmapAttached = false;
 	pageInfo.swapSlot = SwapManager::INVALID_SWAP_SLOT;
 }
@@ -596,10 +636,7 @@ void MemoryDescriptor::CloneFrom(const MemoryDescriptor& other)
 			dstPageInfo->regionIndex = srcPageInfo->regionIndex;
 			dstPageInfo->frameAddress = 0;
 			dstPageInfo->backingOffset = srcPageInfo->backingOffset;
-			dstPageInfo->rmap.owner = NULL;
-			dstPageInfo->rmap.virtualPageIndex = 0;
-			dstPageInfo->rmap.debugPid = -1;
-			List::Init(&dstPageInfo->rmap.frameNode);
+			dstPageInfo->rmap = NULL;
 			dstPageInfo->rmapAttached = false;
 			dstPageInfo->swapSlot = srcPageInfo->state == PAGE_STATE_SWAPPED ?
 				srcPageInfo->swapSlot : SwapManager::INVALID_SWAP_SLOT;
@@ -1729,9 +1766,8 @@ bool MemoryDescriptor::SetHeapBreak(unsigned long newBreak)
 
 	unsigned long oldEnd = heap->end;
 	unsigned int oldPageCount = this->GetRegionPageCount(*heap);
-	heap->end = alignedBreak;
-	this->m_HeapBreak = alignedBreak;
-	unsigned int newPageCount = this->GetRegionPageCount(*heap);
+	unsigned int newPageCount =
+		(unsigned int)((alignedBreak - heap->start) / PageManager::PAGE_SIZE);
 
 	if ( newPageCount < oldPageCount )
 	{
@@ -1749,11 +1785,15 @@ bool MemoryDescriptor::SetHeapBreak(unsigned long newBreak)
 		{
 			return false;
 		}
+		heap->end = alignedBreak;
+		this->m_HeapBreak = alignedBreak;
 	}
 
 	if ( newPageCount > oldPageCount )
 	{
 		/* 扩展堆：只保留页元数据，不立即分配物理页。 */
+		heap->end = alignedBreak;
+		this->m_HeapBreak = alignedBreak;
 		if ( heap->dynamicPageInfos.resize(newPageCount) == false )
 		{
 			heap->end = oldEnd;
@@ -1771,6 +1811,12 @@ bool MemoryDescriptor::SetHeapBreak(unsigned long newBreak)
 			}
 			this->InitializeReservedPageInfo(*pageInfo, regionIndex, pageOffset);
 		}
+	}
+
+	if ( newPageCount == oldPageCount )
+	{
+		heap->end = alignedBreak;
+		this->m_HeapBreak = alignedBreak;
 	}
 
 	return true;
@@ -2356,7 +2402,16 @@ bool MemoryDescriptor::AttachFrame(unsigned long virtualAddress,
 		this->DetachFrame(*pageInfo, true, true, true);
 	}
 
-	UserPageManager::ReverseMapEntry* rmap = &pageInfo->rmap;
+	if ( pageInfo->rmap == NULL )
+	{
+		pageInfo->rmap = new UserPageManager::ReverseMapEntry;
+		if ( pageInfo->rmap == NULL )
+		{
+			return false;
+		}
+	}
+
+	UserPageManager::ReverseMapEntry* rmap = pageInfo->rmap;
 	rmap->owner = this;
 	rmap->virtualPageIndex = (unsigned short)this->AddressToPageIndex(AlignDown(virtualAddress));
 	rmap->debugPid = this->m_Owner == NULL ? -1 : this->m_Owner->p_pid;
@@ -2382,6 +2437,11 @@ void MemoryDescriptor::DetachFrame(PageInfo& pageInfo,
 	bool resetToReserved,
 	bool freeFrameIfUnmapped)
 {
+	if ( pageInfo.rmapAttached && pageInfo.rmap == NULL )
+	{
+		Utility::Panic("Attached PageInfo missing reverse map");
+	}
+
 	if ( pageInfo.rmapAttached == false || pageInfo.frameAddress == 0 )
 	{
 		if ( clearPte && pageInfo.regionIndex != 0xffff )
@@ -2400,7 +2460,7 @@ void MemoryDescriptor::DetachFrame(PageInfo& pageInfo,
 
 	UserPageManager& userPageManager = Kernel::Instance().GetUserPageManager();
 	unsigned long oldFrame = pageInfo.frameAddress;
-	UserPageManager::ReverseMapEntry* rmap = &pageInfo.rmap;
+	UserPageManager::ReverseMapEntry* rmap = pageInfo.rmap;
 	unsigned int residentSwapSlot = pageInfo.swapSlot;
 	if ( clearPte )
 	{
@@ -2414,7 +2474,7 @@ void MemoryDescriptor::DetachFrame(PageInfo& pageInfo,
 	}
 
 	pageInfo.rmapAttached = false;
-	pageInfo.rmap.owner = NULL;
+	pageInfo.rmap->owner = NULL;
 	pageInfo.frameAddress = 0;
 	pageInfo.swapSlot = SwapManager::INVALID_SWAP_SLOT;
 	if ( resetToReserved )

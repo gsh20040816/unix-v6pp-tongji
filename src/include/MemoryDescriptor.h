@@ -130,6 +130,7 @@ public:
 	/* 每个用户虚拟页的元数据。 */
 	struct PageInfo
 	{
+		PageInfo();
 		/* 页状态。 */
 		PageState state;
 		/* 页标记（PageFlags）。 */
@@ -140,8 +141,8 @@ public:
 		unsigned long frameAddress;
 		/* 相对后备窗口起点的偏移，用于按需回填。 */
 		unsigned long backingOffset;
-		/* 当前驻留映射在物理页反向映射链中的结点，生命周期跟随 PageInfo。 */
-		UserPageManager::ReverseMapEntry rmap;
+		/* 当前驻留映射在物理页反向映射链中的结点，地址不能随 PageInfo 搬迁。 */
+		UserPageManager::ReverseMapEntry* rmap;
 		/* rmap 当前是否挂在某个物理页的反向映射链上。 */
 		bool rmapAttached;
 		/* PAGE_STATE_SWAPPED 时记录 swap slot。 */
@@ -318,6 +319,8 @@ private:
 	void ClearPageInfos();
 	/* 将单个 PageInfo 重置为空闲状态。 */
 	void ClearPageInfo(PageInfo& pageInfo);
+	/* 释放 PageInfo 持有的反向映射结点。 */
+	void ReleasePageInfoRmap(PageInfo& pageInfo);
 	/* 清空进程私有页表项。 */
 	void ClearPageTables();
 	/* 清空页目录项（仅自有页目录场景）。 */
