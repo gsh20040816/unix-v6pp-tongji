@@ -88,7 +88,8 @@
       "configurePreset": "dev-ninja",
       "targets": [
         "image",
-        "qemu_stdio_pipe_integration"
+        "qemu_stdio_pipe_integration",
+        "qemu_swapstress_integration"
       ]
     }
   ],
