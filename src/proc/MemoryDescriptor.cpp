@@ -11,8 +11,7 @@ namespace
 {
 	static bool ResolveTextStorage(const Text* text,
 		MemoryDescriptor::RegionType regionType,
-		const unsigned long*& pageArray,
-		unsigned int& maxPageCount,
+		const Vector<unsigned long>*& pageVector,
 		unsigned long& fileOffset,
 		unsigned long& fileSize)
 	{
@@ -23,8 +22,7 @@ namespace
 
 		if ( regionType == MemoryDescriptor::REGION_CODE )
 		{
-			pageArray = text->x_addr;
-			maxPageCount = Text::MAX_TEXT_PAGE_COUNT;
+			pageVector = &text->x_addr;
 			fileOffset = text->x_fileoff;
 			fileSize = text->x_filesz;
 			return true;
@@ -32,8 +30,37 @@ namespace
 
 		if ( regionType == MemoryDescriptor::REGION_RODATA )
 		{
-			pageArray = text->x_roaddr;
-			maxPageCount = Text::MAX_RODATA_PAGE_COUNT;
+			pageVector = &text->x_roaddr;
+			fileOffset = text->x_rofileoff;
+			fileSize = text->x_rofilesz;
+			return true;
+		}
+
+		return false;
+	}
+
+	static bool ResolveTextStorage(Text* text,
+		MemoryDescriptor::RegionType regionType,
+		Vector<unsigned long>*& pageVector,
+		unsigned long& fileOffset,
+		unsigned long& fileSize)
+	{
+		if ( text == NULL )
+		{
+			return false;
+		}
+
+		if ( regionType == MemoryDescriptor::REGION_CODE )
+		{
+			pageVector = &text->x_addr;
+			fileOffset = text->x_fileoff;
+			fileSize = text->x_filesz;
+			return true;
+		}
+
+		if ( regionType == MemoryDescriptor::REGION_RODATA )
+		{
+			pageVector = &text->x_roaddr;
 			fileOffset = text->x_rofileoff;
 			fileSize = text->x_rofilesz;
 			return true;
@@ -44,7 +71,7 @@ namespace
 
 	/*
 	 * 将 Text 后备偏移解析为物理地址。
-	 * 注意：Text 物理页地址改为 x_addr[] 离散存放，不能再按单基址连续计算。
+	 * 注意：Text 物理页地址按页离散存放，不能再按单基址连续计算。
 	 */
 	static bool ResolveTextPhysicalAddress(const Text* text,
 		MemoryDescriptor::RegionType regionType,
@@ -59,32 +86,30 @@ namespace
 		unsigned int pageIndex =
 			(unsigned int)(backingOffset / PageManager::PAGE_SIZE);
 
-		const unsigned long* pageArray = NULL;
-		unsigned int maxPageCount = 0;
+		const Vector<unsigned long>* pageVector = NULL;
 		unsigned long ignoredFileOffset = 0;
 		unsigned long ignoredFileSize = 0;
 		if ( ResolveTextStorage(text,
 				regionType,
-				pageArray,
-				maxPageCount,
+				pageVector,
 				ignoredFileOffset,
 				ignoredFileSize) == false )
 		{
 			return false;
 		}
 
-		if ( pageIndex >= maxPageCount )
+		if ( pageIndex >= pageVector->size() )
 		{
 			return false;
 		}
 
-		if ( pageArray[pageIndex] == 0 )
+		if ( (*pageVector)[pageIndex] == 0 )
 		{
 			return false;
 		}
 
 		textPhysicalAddress =
-			pageArray[pageIndex] + (backingOffset % PageManager::PAGE_SIZE);
+			(*pageVector)[pageIndex] + (backingOffset % PageManager::PAGE_SIZE);
 		return true;
 	}
 
@@ -1412,8 +1437,7 @@ bool MemoryDescriptor::EnsurePagePresent(unsigned long faultAddress)
 			unsigned long fileSize = 0;
 			Inode* inode = NULL;
 
-			const unsigned long* sharedPageArrayConst = NULL;
-			unsigned int maxPageCount = 0;
+			Vector<unsigned long>* sharedPageVector = NULL;
 			unsigned int sharedPageIndex = 0;
 			unsigned long textPhysicalAddress = 0;
 			bool hasSharedResident = false;
@@ -1429,8 +1453,7 @@ bool MemoryDescriptor::EnsurePagePresent(unsigned long faultAddress)
 				inode = text->x_iptr;
 				if ( ResolveTextStorage(text,
 						region->type,
-						sharedPageArrayConst,
-						maxPageCount,
+						sharedPageVector,
 						fileOffsetBase,
 						fileSize) == false )
 				{
@@ -1439,7 +1462,7 @@ bool MemoryDescriptor::EnsurePagePresent(unsigned long faultAddress)
 
 				sharedPageIndex =
 					(unsigned int)(pageInfo->backingOffset / PageManager::PAGE_SIZE);
-				if ( sharedPageIndex >= maxPageCount )
+				if ( sharedPageIndex >= sharedPageVector->size() )
 				{
 					return false;
 				}
@@ -1496,7 +1519,6 @@ bool MemoryDescriptor::EnsurePagePresent(unsigned long faultAddress)
 
 			if ( useSharedText )
 			{
-				unsigned long* sharedPageArray = (unsigned long*)sharedPageArrayConst;
 				unsigned long publishedPage = 0;
 
 				/*
@@ -1505,14 +1527,14 @@ bool MemoryDescriptor::EnsurePagePresent(unsigned long faultAddress)
 				 * 2) 这里关中断后再次检查槽位，保证只有一个发布者写入。
 				 */
 				X86Assembly::CLI();
-				if ( sharedPageArray[sharedPageIndex] == 0 )
+				if ( (*sharedPageVector)[sharedPageIndex] == 0 )
 				{
-					sharedPageArray[sharedPageIndex] = newPage;
+					(*sharedPageVector)[sharedPageIndex] = newPage;
 					publishedPage = newPage;
 				}
 				else
 				{
-					publishedPage = sharedPageArray[sharedPageIndex];
+					publishedPage = (*sharedPageVector)[sharedPageIndex];
 					deferredFreeSharedTextPage = newPage;
 				}
 				X86Assembly::STI();
@@ -1883,12 +1905,12 @@ bool MemoryDescriptor::EvictPageToReserved(unsigned short virtualPageIndex)
 		unsigned int sharedPageIndex =
 			(unsigned int)(pageInfo->backingOffset / PageManager::PAGE_SIZE);
 		if ( region->type == REGION_CODE &&
-			sharedPageIndex < Text::MAX_TEXT_PAGE_COUNT )
+			sharedPageIndex < this->m_Owner->p_textp->x_addr.size() )
 		{
 			this->m_Owner->p_textp->x_addr[sharedPageIndex] = 0;
 		}
 		if ( region->type == REGION_RODATA &&
-			sharedPageIndex < Text::MAX_RODATA_PAGE_COUNT )
+			sharedPageIndex < this->m_Owner->p_textp->x_roaddr.size() )
 		{
 			this->m_Owner->p_textp->x_roaddr[sharedPageIndex] = 0;
 		}

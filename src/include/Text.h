@@ -2,6 +2,7 @@
 #define TEXT_H
 
 #include "INode.h"
+#include "Vector.h"
 
 /*
  * @comment 对应Unixv6中 struct text结构
@@ -12,9 +13,6 @@
 class Text
 {
 public:
-	static const unsigned int MAX_TEXT_PAGE_COUNT = 10;
-	static const unsigned int MAX_RODATA_PAGE_COUNT = 10;
-
 	Text();
 	~Text();
 
@@ -29,10 +27,15 @@ public:
 	 */
 	void XFree();
 
+	/* 重置 Text 元数据；调用者必须先处理 inode 引用和已驻留共享页。 */
+	void Reset();
+	bool ResizePageVectors(unsigned int textPageCount, unsigned int rodataPageCount);
+	void ClearPageVectors();
+
 public:
 	int				x_daddr;	/* 兼容旧结构保留字段，非交换模式不使用 */
-	unsigned long	x_addr[MAX_TEXT_PAGE_COUNT];	/* 代码正文段每一页的物理地址，以字节为单位 */
-	unsigned long	x_roaddr[MAX_RODATA_PAGE_COUNT];	/* 只读数据段共享页物理地址，以字节为单位 */
+	Vector<unsigned long> x_addr;	/* 代码正文段每一页的物理地址，以字节为单位 */
+	Vector<unsigned long> x_roaddr;	/* 只读数据段共享页物理地址，以字节为单位 */
 	unsigned int	x_size;		/* 代码段长度，以字节为单位 */
 	unsigned int	x_rosize;	/* 可共享只读数据段长度，以字节为单位 */
 	unsigned long	x_fileoff;	/* 代码段在可执行文件中的起始偏移 */
@@ -45,4 +48,3 @@ public:
 };
 
 #endif
-

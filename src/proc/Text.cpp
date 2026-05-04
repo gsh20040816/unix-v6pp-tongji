@@ -5,6 +5,16 @@
 
 Text::Text()
 {
+	this->Reset();
+}
+
+Text::~Text()
+{
+	//nothing to do here
+}
+
+void Text::Reset()
+{
 	this->x_daddr = 0;
 	this->x_size = 0;
 	this->x_rosize = 0;
@@ -15,19 +25,40 @@ Text::Text()
 	this->x_iptr = NULL;
 	this->x_count = 0;
 	this->x_ccount = 0;
-	for ( unsigned int i = 0; i < Text::MAX_TEXT_PAGE_COUNT; ++i )
+	this->x_addr.release();
+	this->x_roaddr.release();
+}
+
+bool Text::ResizePageVectors(unsigned int textPageCount, unsigned int rodataPageCount)
+{
+	if ( this->x_addr.resize(textPageCount) == false )
+	{
+		this->x_addr.release();
+		this->x_roaddr.release();
+		return false;
+	}
+
+	if ( this->x_roaddr.resize(rodataPageCount) == false )
+	{
+		this->x_addr.release();
+		this->x_roaddr.release();
+		return false;
+	}
+
+	this->ClearPageVectors();
+	return true;
+}
+
+void Text::ClearPageVectors()
+{
+	for ( unsigned int i = 0; i < this->x_addr.size(); ++i )
 	{
 		this->x_addr[i] = 0;
 	}
-	for ( unsigned int i = 0; i < Text::MAX_RODATA_PAGE_COUNT; ++i )
+	for ( unsigned int i = 0; i < this->x_roaddr.size(); ++i )
 	{
 		this->x_roaddr[i] = 0;
 	}
-}
-
-Text::~Text()
-{
-	//nothing to do here
 }
 
 void Text::XccDec()
@@ -42,7 +73,7 @@ void Text::XccDec()
 		{
 			unsigned int pageCount =
 				(this->x_size + PageManager::PAGE_SIZE - 1) / PageManager::PAGE_SIZE;
-			if ( pageCount > Text::MAX_TEXT_PAGE_COUNT )
+			if ( pageCount > this->x_addr.size() )
 			{
 				Utility::Panic("Text page count overflow");
 			}
@@ -63,7 +94,7 @@ void Text::XccDec()
 		{
 			unsigned int roPageCount =
 				(this->x_rosize + PageManager::PAGE_SIZE - 1) / PageManager::PAGE_SIZE;
-			if ( roPageCount > Text::MAX_RODATA_PAGE_COUNT )
+			if ( roPageCount > this->x_roaddr.size() )
 			{
 				Utility::Panic("Rodata page count overflow");
 			}
@@ -89,21 +120,6 @@ void Text::XFree()
 	if ( --this->x_count == 0 )
 	{
 		Kernel::Instance().GetFileManager().m_InodeTable->IPut(this->x_iptr);
-		this->x_iptr = NULL;
-		this->x_size = 0;
-		this->x_rosize = 0;
-		this->x_fileoff = 0;
-		this->x_filesz = 0;
-		this->x_rofileoff = 0;
-		this->x_rofilesz = 0;
-		this->x_daddr = 0;
-		for ( unsigned int i = 0; i < Text::MAX_TEXT_PAGE_COUNT; ++i )
-		{
-			this->x_addr[i] = 0;
-		}
-		for ( unsigned int i = 0; i < Text::MAX_RODATA_PAGE_COUNT; ++i )
-		{
-			this->x_roaddr[i] = 0;
-		}
+		this->Reset();
 	}
 }

@@ -23,23 +23,12 @@ namespace
 		return (unsigned int)((size + PageManager::PAGE_SIZE - 1) / PageManager::PAGE_SIZE);
 	}
 
-	static void ClearPageArray(unsigned long pages[], unsigned int maxPageCount)
+	static void ClearPageArray(unsigned long pages[], unsigned int pageCount)
 	{
-		for ( unsigned int i = 0; i < maxPageCount; ++i )
+		for ( unsigned int i = 0; i < pageCount; ++i )
 		{
 			pages[i] = 0;
 		}
-	}
-
-	static void ClearTextPageArray(Text* text)
-	{
-		if ( text == NULL )
-		{
-			return;
-		}
-
-		ClearPageArray(text->x_addr, Text::MAX_TEXT_PAGE_COUNT);
-		ClearPageArray(text->x_roaddr, Text::MAX_RODATA_PAGE_COUNT);
 	}
 
 	static void DumpProcBrief(const char* tag, Process* p)
@@ -87,7 +76,10 @@ void ProcessManager::Initialize()
 		this->process[i].p_memory.Attach(&this->process[i]);
 	}
 
-	Utility::MemSet((unsigned long)this->text, 0, sizeof(this->text));
+	for ( int i = 0; i < ProcessManager::NTEXT; ++i )
+	{
+		this->text[i].Reset();
+	}
 
 	this->CurPri = 0;
 	this->RunRun = 0;
@@ -890,22 +882,12 @@ exec_stack_ready:
 		/* text/rodata 仅登记共享页槽位与文件元数据，物理页在缺页时按需分配并回填。 */
 		unsigned int textPageCount = BytesToPageCount(pText->x_size);
 		unsigned int rodataPageCount = BytesToPageCount(pText->x_rosize);
-		if ( textPageCount > Text::MAX_TEXT_PAGE_COUNT ||
-			rodataPageCount > Text::MAX_RODATA_PAGE_COUNT )
+		if ( pText->ResizePageVectors(textPageCount, rodataPageCount) == false )
 		{
-			Diagnose::Write("Exec shared text/rodata too large: text=%d/%d ro=%d/%d\n",
-				textPageCount, Text::MAX_TEXT_PAGE_COUNT,
-				rodataPageCount, Text::MAX_RODATA_PAGE_COUNT);
-			pText->x_ccount = 0;
-			pText->x_count = 0;
-			pText->x_size = 0;
-			pText->x_rosize = 0;
-			pText->x_fileoff = 0;
-			pText->x_filesz = 0;
-			pText->x_rofileoff = 0;
-			pText->x_rofilesz = 0;
-			pText->x_daddr = 0;
-			ClearTextPageArray(pText);
+			Diagnose::Write("Exec shared text/rodata vector allocation failed: text=%d ro=%d\n",
+				textPageCount,
+				rodataPageCount);
+			pText->Reset();
 			u.u_procp->p_textp = NULL;
 			fileMgr.m_InodeTable->IPut(pInode);
 			if ( this->ExeCnt >= NEXEC )
@@ -913,11 +895,9 @@ exec_stack_ready:
 				WakeUpAll((unsigned long)&ExeCnt);
 			}
 			this->ExeCnt--;
-			u.u_error = User::ENOEXEC;
+			u.u_error = User::ENOMEM;
 			return;
 		}
-
-		ClearTextPageArray(pText);
 
 		pInode->i_count++;
 		pText->x_iptr = pInode;
@@ -962,7 +942,7 @@ exec_stack_ready:
 	Diagnose::Write("Process %x, p_addr %x, x_addr0 %x, p_size %x, x_size %x\n",
 			u.u_procp->p_pid,
 			u.u_procp->p_addr,
-			u.u_procp->p_textp->x_addr[0],
+			u.u_procp->p_textp->x_addr.empty() ? 0 : u.u_procp->p_textp->x_addr[0],
 			u.u_procp->p_size,
 			u.u_procp->p_textp->x_size);
 
