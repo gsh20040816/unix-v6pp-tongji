@@ -1128,10 +1128,26 @@ bool MemoryDescriptor::HandleCopyOnWriteFault(unsigned long faultAddress)
 		return true;
 	}
 
+	unsigned short oldFrameFlags = userPageManager.GetFrameFlags(oldPage);
+	bool pinnedOldPage = (oldFrameFlags & UserPageManager::FRAME_FLAG_PINNED) != 0;
+	if ( pinnedOldPage == false )
+	{
+		userPageManager.SetFrameFlags(oldPage,
+			oldFrameFlags | UserPageManager::FRAME_FLAG_PINNED);
+	}
+
 	unsigned long newPage = userPageManager.AllocatePage();
 	if ( newPage == 0 )
 	{
+		if ( pinnedOldPage == false )
+		{
+			userPageManager.SetFrameFlags(oldPage, oldFrameFlags);
+		}
 		return false;
+	}
+	if ( pinnedOldPage == false )
+	{
+		userPageManager.SetFrameFlags(oldPage, oldFrameFlags);
 	}
 
 	/* 仍有多个副本，执行真正的 COW 分裂。 */
@@ -2384,7 +2400,8 @@ void MemoryDescriptor::DetachFrame(PageInfo& pageInfo,
 		pageInfo.state = PAGE_STATE_RESERVED;
 	}
 
-	if ( freeFrameIfUnmapped && userPageManager.GetFrameMapCount(oldFrame) == 0 )
+	if ( freeFrameIfUnmapped && userPageManager.GetFrameMapCount(oldFrame) == 0 &&
+		(userPageManager.GetFrameFlags(oldFrame) & UserPageManager::FRAME_FLAG_PINNED) == 0 )
 	{
 		if ( userPageManager.IsZeroPage(oldFrame) == false )
 		{

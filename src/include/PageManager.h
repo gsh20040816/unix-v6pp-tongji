@@ -13,7 +13,7 @@ public:
 	
 	/* static const member */
 	static const unsigned int PAGE_SIZE = 0x1000;					/* 物理内存页大小 */
-	static const unsigned int MAX_BITMAP_PAGE_COUNT = 0x8000;	/* bitmap 最多跟踪 32768 页 (128MB) */
+	static const unsigned int MAX_BITMAP_PAGE_COUNT = 0x1c00;	/* bitmap 最多跟踪 7168 页，匹配当前 32MB 配置 */
 	static const unsigned int BITMAP_WORD_BITS = sizeof(unsigned long) * 8;
 	static const unsigned int BITMAP_WORD_COUNT =
 		(MAX_BITMAP_PAGE_COUNT + BITMAP_WORD_BITS - 1) / BITMAP_WORD_BITS;
@@ -141,6 +141,7 @@ public:
 private:
 	bool ShouldReclaimBeforeAllocate(unsigned long pageCount) const;
 	bool ReclaimOneFrame();
+	void ReleaseReclaimPin(unsigned long pageIndex);
 
 private:
 	FrameInfo m_FrameInfo[PageManager::MAX_BITMAP_PAGE_COUNT];

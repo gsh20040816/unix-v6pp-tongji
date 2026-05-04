@@ -642,10 +642,20 @@ bool UserPageManager::ReclaimOneFrame()
 		{
 			return false;
 		}
+
+		frame.flags |= FRAME_FLAG_PINNED;
 		if ( Kernel::Instance().GetSwapManager().WritePage(slot, physicalAddress) == false )
 		{
 			Kernel::Instance().GetSwapManager().FreeSlot(slot);
+			this->ReleaseReclaimPin(pageIndex);
 			return false;
+		}
+
+		if ( frame.mapCount == 0 )
+		{
+			Kernel::Instance().GetSwapManager().FreeSlot(slot);
+			this->ReleaseReclaimPin(pageIndex);
+			return true;
 		}
 
 		unsigned int evictedCount = 0;
@@ -664,13 +674,36 @@ bool UserPageManager::ReclaimOneFrame()
 					Kernel::Instance().GetSwapManager().SetSlotReferenceCount(slot,
 						evictedCount);
 				}
+				this->ReleaseReclaimPin(pageIndex);
 				return false;
 			}
 			++evictedCount;
 		}
+		Kernel::Instance().GetSwapManager().SetSlotReferenceCount(slot,
+			evictedCount);
+		this->ReleaseReclaimPin(pageIndex);
 		X86Assembly::FlushCurrentPageDirectory();
 		return true;
 	}
 
 	return false;
+}
+
+void UserPageManager::ReleaseReclaimPin(unsigned long pageIndex)
+{
+	if ( pageIndex >= this->GetTotalPageCount() )
+	{
+		return;
+	}
+
+	FrameInfo& frame = this->m_FrameInfo[pageIndex];
+	frame.flags &= ~FRAME_FLAG_PINNED;
+	if ( frame.mapCount == 0 )
+	{
+		unsigned long physicalAddress = this->GetPageAddressByIndex(pageIndex);
+		if ( this->IsZeroPage(physicalAddress) == false )
+		{
+			this->FreePage(physicalAddress);
+		}
+	}
 }
