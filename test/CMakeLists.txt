@@ -13,6 +13,18 @@ set_target_properties(qemu_stdio_pipe_integration PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/test"
 )
 
+add_executable(kernel_list_unit
+  kernel_list_unit.cpp
+)
+
+target_include_directories(kernel_list_unit PRIVATE "${OOS_INCLUDE_DIR}")
+target_compile_features(kernel_list_unit PRIVATE cxx_std_17)
+target_compile_options(kernel_list_unit PRIVATE -Wall -Wextra -Wpedantic)
+
+set_target_properties(kernel_list_unit PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/test"
+)
+
 add_test(
   NAME qemu_smoke_boot
   COMMAND "${CMAKE_COMMAND}" -E env
@@ -23,6 +35,15 @@ add_test(
 set_tests_properties(qemu_smoke_boot PROPERTIES
   TIMEOUT 120
   LABELS "smoke;qemu;boot"
+)
+
+add_test(
+  NAME kernel_list_unit
+  COMMAND "$<TARGET_FILE:kernel_list_unit>"
+)
+
+set_tests_properties(kernel_list_unit PROPERTIES
+  LABELS "unit;kernel;list"
 )
 
 add_test(
