@@ -28,6 +28,7 @@ DeviceManager g_DeviceManager;
  */
 FileSystem g_FileSystem;
 FileManager g_FileManager;
+SwapManager g_SwapManager;
 
 Kernel::Kernel()
 {
@@ -100,12 +101,22 @@ void Kernel::InitFileSystem()
 	Diagnose::Write("OK.\n");
 }
 
+void Kernel::InitSwap()
+{
+	this->m_SwapManager = &g_SwapManager;
+
+	Diagnose::Write("Initialize Swap...");
+	this->GetSwapManager().Initialize();
+	Diagnose::Write("OK.\n");
+}
+
 void Kernel::Initialize()
 {
 	InitMemory();
 	InitProcess();
 	InitBuffer();
 	InitFileSystem();
+	InitSwap();
 }
 
 KernelPageManager& Kernel::GetKernelPageManager()
@@ -146,6 +157,11 @@ FileSystem& Kernel::GetFileSystem()
 FileManager& Kernel::GetFileManager()
 {
 	return *(this->m_FileManager);
+}
+
+SwapManager& Kernel::GetSwapManager()
+{
+	return *(this->m_SwapManager);
 }
 
 User& Kernel::GetUser()

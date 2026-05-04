@@ -5,6 +5,7 @@
 #include "Utility.h"
 #include "Video.h"
 #include "Assembly.h"
+#include "SwapManager.h"
 
 namespace
 {
@@ -222,6 +223,12 @@ void MemoryDescriptor::ClearPageInfo(PageInfo& pageInfo)
 	pageInfo.regionIndex = 0xffff;
 	pageInfo.frameAddress = 0;
 	pageInfo.backingOffset = 0;
+	pageInfo.rmap.owner = NULL;
+	pageInfo.rmap.virtualPageIndex = 0;
+	pageInfo.rmap.debugPid = -1;
+	List::Init(&pageInfo.rmap.frameNode);
+	pageInfo.rmapAttached = false;
+	pageInfo.swapSlot = SwapManager::INVALID_SWAP_SLOT;
 }
 
 void MemoryDescriptor::ClearPageInfos()
@@ -359,6 +366,12 @@ void MemoryDescriptor::InitializeReservedPageInfo(PageInfo& pageInfo,
 	pageInfo.regionIndex = (unsigned short)regionIndex;
 	pageInfo.frameAddress = 0;
 	pageInfo.backingOffset = pageOffset * PageManager::PAGE_SIZE;
+	pageInfo.rmap.owner = NULL;
+	pageInfo.rmap.virtualPageIndex = 0;
+	pageInfo.rmap.debugPid = -1;
+	List::Init(&pageInfo.rmap.frameNode);
+	pageInfo.rmapAttached = false;
+	pageInfo.swapSlot = SwapManager::INVALID_SWAP_SLOT;
 }
 
 void MemoryDescriptor::ClearPageTables()
@@ -551,13 +564,28 @@ void MemoryDescriptor::CloneFrom(const MemoryDescriptor& other)
 			 * 由 CloneResidentPagesFrom 决定是否复制/共享物理页。
 			 */
 			dstPageInfo->state =
-				srcPageInfo->state == PAGE_STATE_FREE ? PAGE_STATE_FREE : PAGE_STATE_RESERVED;
+				srcPageInfo->state == PAGE_STATE_FREE ? PAGE_STATE_FREE :
+				srcPageInfo->state == PAGE_STATE_SWAPPED ? PAGE_STATE_SWAPPED :
+				PAGE_STATE_RESERVED;
 			dstPageInfo->flags = srcPageInfo->flags;
 			dstPageInfo->regionIndex = srcPageInfo->regionIndex;
 			dstPageInfo->frameAddress = 0;
 			dstPageInfo->backingOffset = srcPageInfo->backingOffset;
+			dstPageInfo->rmap.owner = NULL;
+			dstPageInfo->rmap.virtualPageIndex = 0;
+			dstPageInfo->rmap.debugPid = -1;
+			List::Init(&dstPageInfo->rmap.frameNode);
+			dstPageInfo->rmapAttached = false;
+			dstPageInfo->swapSlot = srcPageInfo->state == PAGE_STATE_SWAPPED ?
+				srcPageInfo->swapSlot : SwapManager::INVALID_SWAP_SLOT;
+			if ( dstPageInfo->state == PAGE_STATE_SWAPPED &&
+				dstPageInfo->swapSlot != SwapManager::INVALID_SWAP_SLOT )
+			{
+				Kernel::Instance().GetSwapManager().AddSlotReference(
+					dstPageInfo->swapSlot);
+			}
+			}
 		}
-	}
 
 	this->ClearPageTables();
 	if ( this->m_UsesKernelAddressSpace == false )
@@ -640,10 +668,37 @@ bool MemoryDescriptor::CloneResidentPagesFrom(const MemoryDescriptor& other)
 			parentTable->m_Entrys[entryIndex].m_ReadWriter = 0;
 			parentPteUpdated = true;
 
+			unsigned int residentSwapSlot = srcPage->swapSlot;
+			SwapManager& swapManager = Kernel::Instance().GetSwapManager();
+			if ( residentSwapSlot != SwapManager::INVALID_SWAP_SLOT )
+			{
+				swapManager.AddSlotReference(residentSwapSlot);
+			}
+
 			dstPage->state = PAGE_STATE_RESIDENT;
-			dstPage->frameAddress = srcPage->frameAddress;
 			/* fork 后父子先共享只读页，首次写入时由 COW 分裂。 */
-			this->MapPage(virtualAddress, srcPage->frameAddress, false);
+			if ( this->AttachFrame(virtualAddress,
+					srcPage->frameAddress,
+					false,
+					UserPageManager::FRAME_FLAG_COW) == false )
+			{
+				if ( residentSwapSlot != SwapManager::INVALID_SWAP_SLOT )
+				{
+					swapManager.ReleaseSlotReference(residentSwapSlot);
+				}
+				return false;
+			}
+			if ( residentSwapSlot != SwapManager::INVALID_SWAP_SLOT )
+			{
+				if ( swapManager.RegisterResident(residentSwapSlot,
+						srcPage->frameAddress) == false )
+				{
+					this->DetachFrame(*dstPage, true, true, true);
+					swapManager.ReleaseSlotReference(residentSwapSlot);
+					return false;
+				}
+				dstPage->swapSlot = residentSwapSlot;
+			}
 		}
 	}
 
@@ -1052,7 +1107,9 @@ bool MemoryDescriptor::HandleCopyOnWriteFault(unsigned long faultAddress)
 
 	UserPageManager& userPageManager = Kernel::Instance().GetUserPageManager();
 	unsigned short refCount = userPageManager.GetCopyOnWriteRefCount(oldPage);
-	if ( refCount == 0 )
+	bool frameMarkedCow =
+		(userPageManager.GetFrameFlags(oldPage) & UserPageManager::FRAME_FLAG_COW) != 0;
+	if ( refCount == 0 && frameMarkedCow == false )
 	{
 		/* 非 COW 页但可写区被只读映射，直接恢复 RW。 */
 		table->m_Entrys[entryIndex].m_ReadWriter = 1;
@@ -1065,6 +1122,8 @@ bool MemoryDescriptor::HandleCopyOnWriteFault(unsigned long faultAddress)
 		/* 最后一个副本，无需拷贝，直接提权并退出 COW。 */
 		table->m_Entrys[entryIndex].m_ReadWriter = 1;
 		userPageManager.ClearCopyOnWriteRef(oldPage);
+		userPageManager.SetFrameFlags(oldPage,
+			userPageManager.GetFrameFlags(oldPage) & ~UserPageManager::FRAME_FLAG_COW);
 		X86Assembly::FlushCurrentPageDirectory();
 		return true;
 	}
@@ -1077,9 +1136,15 @@ bool MemoryDescriptor::HandleCopyOnWriteFault(unsigned long faultAddress)
 
 	/* 仍有多个副本，执行真正的 COW 分裂。 */
 	Utility::CopyPage(oldPage, newPage);
-	userPageManager.ReleaseCopyOnWriteRef(oldPage);
-	pageInfo->frameAddress = newPage;
-	this->MapPage(virtualAddress, newPage, true);
+	this->DetachFrame(*pageInfo, true, true, true);
+	if ( this->AttachFrame(virtualAddress,
+			newPage,
+			true,
+			UserPageManager::FRAME_FLAG_NONE) == false )
+	{
+		userPageManager.FreePage(newPage);
+		return false;
+	}
 	userPageManager.ClearCopyOnWriteRef(newPage);
 	X86Assembly::FlushCurrentPageDirectory();
 	return true;
@@ -1202,16 +1267,17 @@ bool MemoryDescriptor::InstallResidentPage(unsigned long virtualAddress,
 		pageInfo->regionIndex == 0xffff || pageInfo->state == PAGE_STATE_FREE )
 	{
 		return false;
-	}
+		}
 
 	if ( pageInfo->state == PAGE_STATE_RESIDENT )
 	{
 		return pageInfo->frameAddress == physicalAddress;
 	}
 
-	pageInfo->state = PAGE_STATE_RESIDENT;
-	pageInfo->frameAddress = physicalAddress;
-	return true;
+	return this->AttachFrame(virtualAddress,
+		physicalAddress,
+		(region->prot & PROT_WRITE) != 0,
+		UserPageManager::FRAME_FLAG_NONE);
 }
 
 bool MemoryDescriptor::EnsurePagePresent(unsigned long faultAddress)
@@ -1228,6 +1294,59 @@ bool MemoryDescriptor::EnsurePagePresent(unsigned long faultAddress)
 	{
 		return false;
 	}
+
+	if ( pageInfo->state == PAGE_STATE_SWAPPED )
+	{
+		SwapManager& swapManager = Kernel::Instance().GetSwapManager();
+		unsigned int slot = pageInfo->swapSlot;
+		if ( slot == SwapManager::INVALID_SWAP_SLOT )
+		{
+			return false;
+		}
+
+		unsigned long pageFrame = swapManager.GetResidentFrame(slot);
+		if ( pageFrame == 0 )
+		{
+			pageFrame = Kernel::Instance().GetUserPageManager().AllocatePage();
+			if ( pageFrame == 0 )
+			{
+				return false;
+			}
+			if ( swapManager.ReadPage(slot, pageFrame) == false )
+			{
+				Kernel::Instance().GetUserPageManager().FreePage(pageFrame);
+				return false;
+			}
+		}
+
+		unsigned int slotMapCount = swapManager.GetSlotMapCount(slot);
+		bool cow = (pageInfo->flags & PAGE_FLAG_SWAPPED_COW) != 0 &&
+			slotMapCount > 1;
+		bool readWrite = cow ? false : ((region->prot & PROT_WRITE) != 0);
+		unsigned short frameFlags = cow ? UserPageManager::FRAME_FLAG_COW :
+			UserPageManager::FRAME_FLAG_NONE;
+		if ( this->AttachFrame(virtualAddress, pageFrame, readWrite, frameFlags) == false )
+		{
+			return false;
+		}
+		if ( swapManager.RegisterResident(slot, pageFrame) == false )
+		{
+			this->DetachFrame(*pageInfo, true, true, true);
+			return false;
+		}
+		if ( cow &&
+			Kernel::Instance().GetUserPageManager().SetCopyOnWriteRefCount(
+				pageFrame,
+				(unsigned short)slotMapCount) == false )
+		{
+			this->DetachFrame(*pageInfo, true, true, true);
+			return false;
+		}
+		pageInfo->swapSlot = slot;
+		pageInfo->flags &= ~PAGE_FLAG_SWAPPED_COW;
+		X86Assembly::FlushCurrentPageDirectory();
+		return true;
+		}
 
 	if ( pageInfo->state == PAGE_STATE_RESIDENT )
 	{
@@ -1386,10 +1505,10 @@ bool MemoryDescriptor::EnsurePagePresent(unsigned long faultAddress)
 			}
 			else
 			{
-				pageInfo->state = PAGE_STATE_RESIDENT;
-				pageInfo->frameAddress = newPage;
-				this->MapPage(virtualAddress, newPage, readWrite);
-				ok = true;
+				ok = this->AttachFrame(virtualAddress,
+					newPage,
+					readWrite,
+					UserPageManager::FRAME_FLAG_NONE);
 			}
 		}
 		break;
@@ -1685,6 +1804,116 @@ bool MemoryDescriptor::HasUserAddressSpace() const
 	return this->m_UserPageTableArray != NULL;
 }
 
+bool MemoryDescriptor::CollectEvictionInfo(unsigned short virtualPageIndex,
+	bool& accessed,
+	bool& dirty,
+	bool& discardable) const
+{
+	unsigned long virtualAddress =
+		USER_SPACE_START + (unsigned long)virtualPageIndex * PageManager::PAGE_SIZE;
+	const Region* region = NULL;
+	const PageInfo* pageInfo = this->GetPageInfoByAddress(virtualAddress, &region);
+	if ( region == NULL || pageInfo == NULL || pageInfo->state != PAGE_STATE_RESIDENT ||
+		pageInfo->rmapAttached == false )
+	{
+		return false;
+	}
+
+	unsigned int tableIndex =
+		virtualPageIndex / PageTable::ENTRY_CNT_PER_PAGETABLE;
+	unsigned int entryIndex =
+		virtualPageIndex % PageTable::ENTRY_CNT_PER_PAGETABLE;
+	PageTable* table = this->GetUserPageTableByIndex(tableIndex);
+	if ( table == NULL || table->m_Entrys[entryIndex].m_Present == 0 )
+	{
+		return false;
+	}
+
+	accessed = table->m_Entrys[entryIndex].m_Accessed != 0;
+	dirty = table->m_Entrys[entryIndex].m_Dirty != 0;
+	discardable =
+		(region->backing.type == BACKING_SHARED_TEXT) ||
+		(region->backing.type == BACKING_EXEC_FILE && dirty == false);
+	return true;
+}
+
+void MemoryDescriptor::ClearPageAccessed(unsigned short virtualPageIndex)
+{
+	unsigned int tableIndex =
+		virtualPageIndex / PageTable::ENTRY_CNT_PER_PAGETABLE;
+	unsigned int entryIndex =
+		virtualPageIndex % PageTable::ENTRY_CNT_PER_PAGETABLE;
+	PageTable* table = this->GetUserPageTableByIndex(tableIndex);
+	if ( table != NULL )
+	{
+		table->m_Entrys[entryIndex].m_Accessed = 0;
+	}
+}
+
+bool MemoryDescriptor::EvictPageToReserved(unsigned short virtualPageIndex)
+{
+	unsigned long virtualAddress =
+		USER_SPACE_START + (unsigned long)virtualPageIndex * PageManager::PAGE_SIZE;
+	Region* region = NULL;
+	PageInfo* pageInfo = this->GetPageInfoByAddress(virtualAddress, &region);
+	if ( region == NULL || pageInfo == NULL || pageInfo->state != PAGE_STATE_RESIDENT )
+	{
+		return false;
+	}
+
+	if ( region->backing.type == BACKING_SHARED_TEXT &&
+		this->m_Owner != NULL && this->m_Owner->p_textp != NULL )
+	{
+		unsigned int sharedPageIndex =
+			(unsigned int)(pageInfo->backingOffset / PageManager::PAGE_SIZE);
+		if ( region->type == REGION_CODE &&
+			sharedPageIndex < Text::MAX_TEXT_PAGE_COUNT )
+		{
+			this->m_Owner->p_textp->x_addr[sharedPageIndex] = 0;
+		}
+		if ( region->type == REGION_RODATA &&
+			sharedPageIndex < Text::MAX_RODATA_PAGE_COUNT )
+		{
+			this->m_Owner->p_textp->x_roaddr[sharedPageIndex] = 0;
+		}
+	}
+
+	this->DetachFrame(*pageInfo, true, true, true);
+	return true;
+}
+
+bool MemoryDescriptor::EvictPageToSwap(unsigned short virtualPageIndex,
+	unsigned int swapSlot)
+{
+	unsigned long virtualAddress =
+		USER_SPACE_START + (unsigned long)virtualPageIndex * PageManager::PAGE_SIZE;
+	Region* region = NULL;
+	PageInfo* pageInfo = this->GetPageInfoByAddress(virtualAddress, &region);
+	if ( region == NULL || pageInfo == NULL || pageInfo->state != PAGE_STATE_RESIDENT ||
+		swapSlot == SwapManager::INVALID_SWAP_SLOT )
+	{
+		return false;
+	}
+
+	unsigned long frame = pageInfo->frameAddress;
+	UserPageManager& userPageManager = Kernel::Instance().GetUserPageManager();
+	if ( userPageManager.GetCopyOnWriteRefCount(frame) != 0 )
+	{
+		pageInfo->flags |= PAGE_FLAG_SWAPPED_COW;
+	}
+	else
+	{
+		pageInfo->flags &= ~PAGE_FLAG_SWAPPED_COW;
+	}
+
+	this->DetachFrame(*pageInfo, true, false, true);
+	pageInfo->state = PAGE_STATE_SWAPPED;
+	pageInfo->frameAddress = 0;
+	pageInfo->rmapAttached = false;
+	pageInfo->swapSlot = swapSlot;
+	return true;
+}
+
 unsigned long MemoryDescriptor::GetEntryPoint() const
 {
 	return this->m_EntryPoint;
@@ -1911,8 +2140,6 @@ bool MemoryDescriptor::AllocateZeroedPage(unsigned long virtualAddress)
 
 	/* 分配后立即清零，避免泄露旧页内容到用户空间。 */
 	Utility::ZeroPage(newPage);
-	pageInfo->state = PAGE_STATE_RESIDENT;
-	pageInfo->frameAddress = newPage;
 
 	bool readWrite = (region->prot & PROT_WRITE) != 0;
 	if ( readWrite == false )
@@ -1930,7 +2157,14 @@ bool MemoryDescriptor::AllocateZeroedPage(unsigned long virtualAddress)
 		}
 	}
 
-	this->MapPage(virtualAddress, newPage, readWrite);
+	if ( this->AttachFrame(virtualAddress,
+			newPage,
+			readWrite,
+			UserPageManager::FRAME_FLAG_NONE) == false )
+	{
+		Kernel::Instance().GetUserPageManager().FreePage(newPage);
+		return false;
+	}
 	return true;
 }
 
@@ -1965,11 +2199,11 @@ bool MemoryDescriptor::MapZeroPageForCopyOnWrite(unsigned long virtualAddress)
 		return false;
 	}
 
-	pageInfo->state = PAGE_STATE_RESIDENT;
-	pageInfo->frameAddress = zeroPage;
 	/* BACKING_ZERO 初次映射保持只读，后续写访问进入 COW 分裂。 */
-	this->MapPage(virtualAddress, zeroPage, false);
-	return true;
+	return this->AttachFrame(virtualAddress,
+		zeroPage,
+		false,
+		UserPageManager::FRAME_FLAG_ZERO_PAGE | UserPageManager::FRAME_FLAG_COW);
 }
 
 bool MemoryDescriptor::ShareTextPage(unsigned long virtualAddress,
@@ -1983,45 +2217,46 @@ bool MemoryDescriptor::ShareTextPage(unsigned long virtualAddress,
 		return false;
 	}
 
-	pageInfo->state = PAGE_STATE_RESIDENT;
-	pageInfo->frameAddress = textPhysicalAddress;
 	/* 共享页不分配新物理内存，只建立页表映射。 */
-	this->MapPage(virtualAddress, textPhysicalAddress, readWrite);
-	return true;
+	return this->AttachFrame(virtualAddress,
+		textPhysicalAddress,
+		readWrite,
+		UserPageManager::FRAME_FLAG_SHARED_TEXT);
 }
 
 void MemoryDescriptor::FreePageInfo(PageInfo& pageInfo, bool releaseSharedText)
 {
-	if ( pageInfo.state != PAGE_STATE_RESIDENT || pageInfo.regionIndex == 0xffff )
+	if ( pageInfo.regionIndex == 0xffff )
+	{
+		return;
+	}
+
+	if ( pageInfo.state == PAGE_STATE_SWAPPED )
+	{
+		if ( pageInfo.swapSlot != SwapManager::INVALID_SWAP_SLOT )
+		{
+			Kernel::Instance().GetSwapManager().ReleaseSlotReference(pageInfo.swapSlot);
+		}
+		pageInfo.state = PAGE_STATE_RESERVED;
+		pageInfo.frameAddress = 0;
+		pageInfo.rmapAttached = false;
+		pageInfo.swapSlot = SwapManager::INVALID_SWAP_SLOT;
+		return;
+	}
+
+	if ( pageInfo.state != PAGE_STATE_RESIDENT )
 	{
 		return;
 	}
 
 	const Region& region = this->m_Regions[pageInfo.regionIndex];
-	if ( pageInfo.frameAddress != 0 &&
-		(region.backing.type != BACKING_SHARED_TEXT || releaseSharedText) )
+	if ( region.backing.type == BACKING_SHARED_TEXT && releaseSharedText == false )
 	{
-		/* COW 页按引用计数回收；非 COW 页直接释放。 */
-		UserPageManager& userPageManager = Kernel::Instance().GetUserPageManager();
-		unsigned short cowRef =
-			userPageManager.GetCopyOnWriteRefCount(pageInfo.frameAddress);
-		if ( cowRef != 0 )
-		{
-			unsigned short remain =
-				userPageManager.ReleaseCopyOnWriteRef(pageInfo.frameAddress);
-			if ( remain == 0 )
-			{
-				userPageManager.FreePage(pageInfo.frameAddress);
-			}
-		}
-		else
-		{
-			userPageManager.FreePage(pageInfo.frameAddress);
-		}
+		this->DetachFrame(pageInfo, true, true, false);
+		return;
 	}
 
-	pageInfo.state = PAGE_STATE_RESERVED;
-	pageInfo.frameAddress = 0;
+	this->DetachFrame(pageInfo, true, true, true);
 }
 
 void MemoryDescriptor::RemapResidentPages()
@@ -2066,6 +2301,98 @@ unsigned int MemoryDescriptor::AddressToPageIndex(unsigned long address) const
 	return (address - USER_SPACE_START) / PageManager::PAGE_SIZE;
 }
 
+bool MemoryDescriptor::AttachFrame(unsigned long virtualAddress,
+	unsigned long physicalAddress,
+	bool readWrite,
+	unsigned short frameFlags)
+{
+	Region* region = NULL;
+	PageInfo* pageInfo = this->GetPageInfoByAddress(virtualAddress, &region);
+	if ( region == NULL || pageInfo == NULL || physicalAddress == 0 )
+	{
+		return false;
+	}
+
+	if ( pageInfo->rmapAttached )
+	{
+		this->DetachFrame(*pageInfo, true, true, true);
+	}
+
+	UserPageManager::ReverseMapEntry* rmap = &pageInfo->rmap;
+	rmap->owner = this;
+	rmap->virtualPageIndex = (unsigned short)this->AddressToPageIndex(AlignDown(virtualAddress));
+	rmap->debugPid = this->m_Owner == NULL ? -1 : this->m_Owner->p_pid;
+	List::Init(&rmap->frameNode);
+
+	UserPageManager& userPageManager = Kernel::Instance().GetUserPageManager();
+	if ( userPageManager.AttachReverseMap(physicalAddress, rmap, frameFlags) == false )
+	{
+		rmap->owner = NULL;
+		return false;
+	}
+
+	pageInfo->state = PAGE_STATE_RESIDENT;
+	pageInfo->frameAddress = physicalAddress;
+	pageInfo->rmapAttached = true;
+	pageInfo->swapSlot = SwapManager::INVALID_SWAP_SLOT;
+	this->MapPage(virtualAddress, physicalAddress, readWrite);
+	return true;
+}
+
+void MemoryDescriptor::DetachFrame(PageInfo& pageInfo,
+	bool clearPte,
+	bool resetToReserved,
+	bool freeFrameIfUnmapped)
+{
+	if ( pageInfo.rmapAttached == false || pageInfo.frameAddress == 0 )
+	{
+		if ( clearPte && pageInfo.regionIndex != 0xffff )
+		{
+			this->ClearPageMapping((unsigned short)this->AddressToPageIndex(
+				this->GetRegionPageAddress(this->m_Regions[pageInfo.regionIndex],
+					(unsigned int)(pageInfo.backingOffset / PageManager::PAGE_SIZE))));
+		}
+		if ( resetToReserved )
+		{
+			pageInfo.state = PAGE_STATE_RESERVED;
+			pageInfo.frameAddress = 0;
+		}
+		return;
+	}
+
+	UserPageManager& userPageManager = Kernel::Instance().GetUserPageManager();
+	unsigned long oldFrame = pageInfo.frameAddress;
+	UserPageManager::ReverseMapEntry* rmap = &pageInfo.rmap;
+	unsigned int residentSwapSlot = pageInfo.swapSlot;
+	if ( clearPte )
+	{
+		this->ClearPageMapping(rmap->virtualPageIndex);
+	}
+
+	userPageManager.DetachReverseMap(oldFrame, rmap);
+	if ( residentSwapSlot != SwapManager::INVALID_SWAP_SLOT )
+	{
+		Kernel::Instance().GetSwapManager().ReleaseResidentReference(residentSwapSlot);
+	}
+
+	pageInfo.rmapAttached = false;
+	pageInfo.rmap.owner = NULL;
+	pageInfo.frameAddress = 0;
+	pageInfo.swapSlot = SwapManager::INVALID_SWAP_SLOT;
+	if ( resetToReserved )
+	{
+		pageInfo.state = PAGE_STATE_RESERVED;
+	}
+
+	if ( freeFrameIfUnmapped && userPageManager.GetFrameMapCount(oldFrame) == 0 )
+	{
+		if ( userPageManager.IsZeroPage(oldFrame) == false )
+		{
+			userPageManager.FreePage(oldFrame);
+		}
+	}
+}
+
 void MemoryDescriptor::MapPage(unsigned long virtualAddress, unsigned long physicalAddress, bool readWrite)
 {
 	unsigned int pageIndex = this->AddressToPageIndex(virtualAddress);
@@ -2081,8 +2408,40 @@ void MemoryDescriptor::MapPage(unsigned long virtualAddress, unsigned long physi
 	table->m_Entrys[entryIndex].m_Present = 1;
 	table->m_Entrys[entryIndex].m_UserSupervisor = 1;
 	table->m_Entrys[entryIndex].m_ReadWriter = readWrite ? 1 : 0;
+	table->m_Entrys[entryIndex].m_WriteThrough = 0;
+	table->m_Entrys[entryIndex].m_CacheDisabled = 0;
+	table->m_Entrys[entryIndex].m_Accessed = 0;
+	table->m_Entrys[entryIndex].m_Dirty = 0;
+	table->m_Entrys[entryIndex].m_PageTableAttribueIndex = 0;
+	table->m_Entrys[entryIndex].m_GlobalPage = 0;
+	table->m_Entrys[entryIndex].m_ForSystemUser = 0;
 	table->m_Entrys[entryIndex].m_PageBaseAddress =
 		physicalAddress / PageManager::PAGE_SIZE;
+}
+
+void MemoryDescriptor::ClearPageMapping(unsigned short virtualPageIndex)
+{
+	unsigned int tableIndex =
+		virtualPageIndex / PageTable::ENTRY_CNT_PER_PAGETABLE;
+	unsigned int entryIndex =
+		virtualPageIndex % PageTable::ENTRY_CNT_PER_PAGETABLE;
+	PageTable* table = this->GetUserPageTableByIndex(tableIndex);
+	if ( table == NULL )
+	{
+		return;
+	}
+
+	table->m_Entrys[entryIndex].m_Present = 0;
+	table->m_Entrys[entryIndex].m_ReadWriter = 0;
+	table->m_Entrys[entryIndex].m_UserSupervisor = 1;
+	table->m_Entrys[entryIndex].m_WriteThrough = 0;
+	table->m_Entrys[entryIndex].m_CacheDisabled = 0;
+	table->m_Entrys[entryIndex].m_Accessed = 0;
+	table->m_Entrys[entryIndex].m_Dirty = 0;
+	table->m_Entrys[entryIndex].m_PageTableAttribueIndex = 0;
+	table->m_Entrys[entryIndex].m_GlobalPage = 0;
+	table->m_Entrys[entryIndex].m_ForSystemUser = 0;
+	table->m_Entrys[entryIndex].m_PageBaseAddress = 0;
 }
 
 MemoryDescriptor::Region* MemoryDescriptor::FindRegionByType(RegionType type)

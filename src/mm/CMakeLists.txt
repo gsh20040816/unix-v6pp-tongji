@@ -1,6 +1,7 @@
 add_library(oos_mm_obj OBJECT
   Allocator.cpp
   PageManager.cpp
+  SwapManager.cpp
   KernelAllocator.cpp
   New.cpp
 )

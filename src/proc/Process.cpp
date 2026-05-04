@@ -165,13 +165,6 @@ void Process::Exit()
 	/* 递减当前目录的引用计数 */
 	inodeTable.IPut(u.u_cdir);
 
-	/* 释放该进程对共享正文段的引用 */
-	if ( u.u_procp->p_textp != NULL )
-	{
-		u.u_procp->p_textp->XFree();
-		u.u_procp->p_textp = NULL;
-	}
-
 	/* 在进程控制块中保存wait()需要回收的退出信息 */
 	Process* current = u.u_procp;
 	current->p_xstat = u.u_arg[0];
@@ -182,6 +175,12 @@ void Process::Exit()
 
 	/* 释放内存资源 */
 	current->p_memory.ReleaseResidentPages(false);
+	/* 先摘除本进程 rmap，再释放 text 缓存页，避免释放仍被映射的共享页。 */
+	if ( current->p_textp != NULL )
+	{
+		current->p_textp->XFree();
+		current->p_textp = NULL;
+	}
 	current->p_memory.Release();
 	UserPageManager& userPageMgr = Kernel::Instance().GetUserPageManager();
 	if ( current->p_addr != 0 )
@@ -360,8 +359,12 @@ int Process::IsSig()
 	{
 		return 0;
 	}
+	if ( this->p_sig < 0 || this->p_sig >= User::NSIG )
+	{
+		this->p_sig = User::SIGSEGV;
+	}
 	/* u.u_signal[n]为偶数才表示对信号进程处理 */
-	else if ( (u.u_signal[this->p_sig] & 1) == 0 )
+	if ( (u.u_signal[this->p_sig] & 1) == 0 )
 	{
 		return this->p_sig;
 	}

@@ -1,5 +1,9 @@
 #include "PageManager.h"
 #include "Utility.h"
+#include "Kernel.h"
+#include "MemoryDescriptor.h"
+#include "SwapManager.h"
+#include "Assembly.h"
 
 unsigned int PageManager::PHY_MEM_SIZE;
 unsigned int UserPageManager::USER_PAGE_POOL_SIZE;
@@ -168,8 +172,14 @@ UserPageManager::UserPageManager()
 {
 	for ( unsigned int i = 0; i < PageManager::MAX_BITMAP_PAGE_COUNT; ++i )
 	{
-		this->m_CowRefCount[i] = 0;
+		List::Init(&this->m_FrameInfo[i].rmapHead);
+		this->m_FrameInfo[i].mapCount = 0;
+		this->m_FrameInfo[i].flags = FRAME_FLAG_NONE;
+		this->m_FrameInfo[i].cowRefCount = 0;
+		this->m_FrameInfo[i].clockAge = 0;
 	}
+	this->m_ClockHand = 0;
+	this->m_Reclaiming = false;
 }
 
 int UserPageManager::Initialize()
@@ -179,8 +189,14 @@ int UserPageManager::Initialize()
 		USER_PAGE_POOL_SIZE);
 	for ( unsigned int i = 0; i < PageManager::MAX_BITMAP_PAGE_COUNT; ++i )
 	{
-		this->m_CowRefCount[i] = 0;
+		List::Init(&this->m_FrameInfo[i].rmapHead);
+		this->m_FrameInfo[i].mapCount = 0;
+		this->m_FrameInfo[i].flags = FRAME_FLAG_NONE;
+		this->m_FrameInfo[i].cowRefCount = 0;
+		this->m_FrameInfo[i].clockAge = 0;
 	}
+	this->m_ClockHand = 0;
+	this->m_Reclaiming = false;
 
 	/*
 	 * 固定保留用户区第一页(0x400000)作为全局零页：
@@ -193,7 +209,8 @@ int UserPageManager::Initialize()
 	{
 		Utility::Panic("User zero page init failed");
 	}
-	this->m_CowRefCount[0] = 1;	/* 基线引用，防止零页被当作普通 COW 页释放。 */
+	this->m_FrameInfo[0].cowRefCount = 1;	/* 基线引用，防止零页被当作普通 COW 页释放。 */
+	this->m_FrameInfo[0].flags = FRAME_FLAG_ZERO_PAGE | FRAME_FLAG_COW | FRAME_FLAG_PINNED;
 	Utility::ZeroPage(zeroPage);
 
 	return ret;
@@ -224,7 +241,17 @@ bool UserPageManager::ResolvePoolPageIndex(unsigned long pageAddress,
 
 unsigned long UserPageManager::AllocatePages(unsigned long pageCount)
 {
+	if ( this->m_Reclaiming == false && this->ShouldReclaimBeforeAllocate(pageCount) )
+	{
+		this->ReclaimUntilLowWatermark();
+	}
+
 	unsigned long startAddress = PageManager::AllocatePages(pageCount);
+	if ( startAddress == 0 && this->m_Reclaiming == false )
+	{
+		this->ReclaimUntilLowWatermark();
+		startAddress = PageManager::AllocatePages(pageCount);
+	}
 	if ( startAddress == 0 )
 	{
 		return 0;
@@ -235,7 +262,11 @@ unsigned long UserPageManager::AllocatePages(unsigned long pageCount)
 	{
 		for ( unsigned long i = 0; i < pageCount; ++i )
 		{
-			this->m_CowRefCount[startIndex + i] = 0;
+			this->m_FrameInfo[startIndex + i].mapCount = 0;
+			this->m_FrameInfo[startIndex + i].flags = FRAME_FLAG_NONE;
+			this->m_FrameInfo[startIndex + i].cowRefCount = 0;
+			this->m_FrameInfo[startIndex + i].clockAge = 0;
+			List::Init(&this->m_FrameInfo[startIndex + i].rmapHead);
 		}
 	}
 
@@ -263,7 +294,14 @@ unsigned long UserPageManager::FreePages(unsigned long pageCount,
 		unsigned long pageIndex = 0;
 		if ( this->ResolvePoolPageIndex(pageAddress, pageIndex) )
 		{
-			this->m_CowRefCount[pageIndex] = 0;
+			if ( this->m_FrameInfo[pageIndex].mapCount != 0 )
+			{
+				Utility::Panic("Free mapped user page");
+			}
+			this->m_FrameInfo[pageIndex].cowRefCount = 0;
+			this->m_FrameInfo[pageIndex].flags = FRAME_FLAG_NONE;
+			this->m_FrameInfo[pageIndex].clockAge = 0;
+			List::Init(&this->m_FrameInfo[pageIndex].rmapHead);
 		}
 
 		PageManager::FreePage(pageAddress);
@@ -292,6 +330,106 @@ bool UserPageManager::IsZeroPage(unsigned long pageAddress) const
 	return pageAddress == USER_ZERO_PAGE_ADDRESS;
 }
 
+UserPageManager::FrameInfo* UserPageManager::GetFrameInfoByAddress(unsigned long pageAddress)
+{
+	unsigned long pageIndex = 0;
+	if ( this->ResolvePoolPageIndex(pageAddress, pageIndex) == false )
+	{
+		return NULL;
+	}
+	return &this->m_FrameInfo[pageIndex];
+}
+
+const UserPageManager::FrameInfo* UserPageManager::GetFrameInfoByAddress(
+	unsigned long pageAddress) const
+{
+	unsigned long pageIndex = 0;
+	if ( this->ResolvePoolPageIndex(pageAddress, pageIndex) == false )
+	{
+		return NULL;
+	}
+	return &this->m_FrameInfo[pageIndex];
+}
+
+unsigned long UserPageManager::GetPageAddressByIndex(unsigned long pageIndex) const
+{
+	return USER_PAGE_POOL_START_ADDR + pageIndex * PageManager::PAGE_SIZE;
+}
+
+bool UserPageManager::AttachReverseMap(unsigned long pageAddress,
+	ReverseMapEntry* entry,
+	unsigned short frameFlags)
+{
+	FrameInfo* frame = this->GetFrameInfoByAddress(pageAddress);
+	if ( frame == NULL || entry == NULL )
+	{
+		return false;
+	}
+
+	if ( entry->frameNode.next == NULL || entry->frameNode.prev == NULL )
+	{
+		List::Init(&entry->frameNode);
+	}
+	List::AddTail(&entry->frameNode, &frame->rmapHead);
+	++frame->mapCount;
+	frame->flags |= frameFlags;
+	return true;
+}
+
+void UserPageManager::DetachReverseMap(unsigned long pageAddress,
+	ReverseMapEntry* entry)
+{
+	FrameInfo* frame = this->GetFrameInfoByAddress(pageAddress);
+	if ( frame == NULL || entry == NULL )
+	{
+		return;
+	}
+
+	if ( entry->frameNode.next != NULL && entry->frameNode.prev != NULL )
+	{
+		List::Delete(&entry->frameNode);
+	}
+	if ( frame->mapCount != 0 )
+	{
+		--frame->mapCount;
+	}
+
+	if ( frame->cowRefCount != 0 )
+	{
+		this->ReleaseCopyOnWriteRef(pageAddress);
+	}
+
+	if ( frame->mapCount == 0 )
+	{
+		frame->flags &= FRAME_FLAG_ZERO_PAGE | FRAME_FLAG_PINNED;
+		if ( this->IsZeroPage(pageAddress) == false )
+		{
+			frame->cowRefCount = 0;
+		}
+	}
+}
+
+unsigned short UserPageManager::GetFrameMapCount(unsigned long pageAddress) const
+{
+	const FrameInfo* frame = this->GetFrameInfoByAddress(pageAddress);
+	return frame == NULL ? 0 : frame->mapCount;
+}
+
+unsigned short UserPageManager::GetFrameFlags(unsigned long pageAddress) const
+{
+	const FrameInfo* frame = this->GetFrameInfoByAddress(pageAddress);
+	return frame == NULL ? FRAME_FLAG_NONE : frame->flags;
+}
+
+void UserPageManager::SetFrameFlags(unsigned long pageAddress, unsigned short flags)
+{
+	FrameInfo* frame = this->GetFrameInfoByAddress(pageAddress);
+	if ( frame != NULL )
+	{
+		frame->flags = flags;
+	}
+}
+
 bool UserPageManager::ShareAsCopyOnWrite(unsigned long pageAddress)
 {
 	unsigned long pageIndex = 0;
@@ -300,18 +438,20 @@ bool UserPageManager::ShareAsCopyOnWrite(unsigned long pageAddress)
 		return false;
 	}
 
-	if ( this->m_CowRefCount[pageIndex] == 0 )
+	if ( this->m_FrameInfo[pageIndex].cowRefCount == 0 )
 	{
-		this->m_CowRefCount[pageIndex] = 2;
+		this->m_FrameInfo[pageIndex].cowRefCount = 2;
+		this->m_FrameInfo[pageIndex].flags |= FRAME_FLAG_COW;
 		return true;
 	}
 
-	if ( this->m_CowRefCount[pageIndex] == 0xffff )
+	if ( this->m_FrameInfo[pageIndex].cowRefCount == 0xffff )
 	{
 		return false;
 	}
 
-	this->m_CowRefCount[pageIndex]++;
+	this->m_FrameInfo[pageIndex].cowRefCount++;
+	this->m_FrameInfo[pageIndex].flags |= FRAME_FLAG_COW;
 	return true;
 }
 
@@ -323,7 +463,7 @@ unsigned short UserPageManager::GetCopyOnWriteRefCount(unsigned long pageAddress
 		return 0;
 	}
 
-	return this->m_CowRefCount[pageIndex];
+	return this->m_FrameInfo[pageIndex].cowRefCount;
 }
 
 unsigned short UserPageManager::ReleaseCopyOnWriteRef(unsigned long pageAddress)
@@ -334,13 +474,38 @@ unsigned short UserPageManager::ReleaseCopyOnWriteRef(unsigned long pageAddress)
 		return 0;
 	}
 
-	if ( this->m_CowRefCount[pageIndex] == 0 )
+	if ( this->m_FrameInfo[pageIndex].cowRefCount == 0 )
 	{
 		return 0;
 	}
 
-	this->m_CowRefCount[pageIndex]--;
-	return this->m_CowRefCount[pageIndex];
+	this->m_FrameInfo[pageIndex].cowRefCount--;
+	if ( this->m_FrameInfo[pageIndex].cowRefCount == 0 )
+	{
+		this->m_FrameInfo[pageIndex].flags &= ~FRAME_FLAG_COW;
+	}
+	return this->m_FrameInfo[pageIndex].cowRefCount;
+}
+
+bool UserPageManager::SetCopyOnWriteRefCount(unsigned long pageAddress,
+	unsigned short refCount)
+{
+	unsigned long pageIndex = 0;
+	if ( this->ResolvePoolPageIndex(pageAddress, pageIndex) == false )
+	{
+		return false;
+	}
+
+	this->m_FrameInfo[pageIndex].cowRefCount = refCount;
+	if ( refCount == 0 )
+	{
+		this->m_FrameInfo[pageIndex].flags &= ~FRAME_FLAG_COW;
+	}
+	else
+	{
+		this->m_FrameInfo[pageIndex].flags |= FRAME_FLAG_COW;
+	}
+	return true;
 }
 
 void UserPageManager::ClearCopyOnWriteRef(unsigned long pageAddress)
@@ -351,6 +516,161 @@ void UserPageManager::ClearCopyOnWriteRef(unsigned long pageAddress)
 		return;
 	}
 
-	this->m_CowRefCount[pageIndex] = 0;
+	this->m_FrameInfo[pageIndex].cowRefCount = 0;
+	this->m_FrameInfo[pageIndex].flags &= ~FRAME_FLAG_COW;
 }
 
+bool UserPageManager::ShouldReclaimBeforeAllocate(unsigned long pageCount) const
+{
+	unsigned long total = this->GetTotalPageCount();
+	if ( total == 0 )
+	{
+		return false;
+	}
+	unsigned long used = total - this->GetFreePageCount();
+	return (used + pageCount) * 100 >= total * RECLAIM_HIGH_WATERMARK_PERCENT;
+}
+
+bool UserPageManager::ReclaimUntilLowWatermark()
+{
+	unsigned long total = this->GetTotalPageCount();
+	if ( total == 0 || Kernel::Instance().GetSwapManager().IsInitialized() == false )
+	{
+		return false;
+	}
+
+	this->m_Reclaiming = true;
+	unsigned int scannedRounds = 0;
+	while ( (total - this->GetFreePageCount()) * 100 >
+		total * RECLAIM_LOW_WATERMARK_PERCENT )
+	{
+		if ( this->ReclaimOneFrame() == false )
+		{
+			++scannedRounds;
+			if ( scannedRounds > 2 )
+			{
+				break;
+			}
+		}
+		else
+		{
+			scannedRounds = 0;
+		}
+	}
+	this->m_Reclaiming = false;
+	return true;
+}
+
+bool UserPageManager::ReclaimOneFrame()
+{
+	unsigned long total = this->GetTotalPageCount();
+	if ( total == 0 )
+	{
+		return false;
+	}
+
+	for ( unsigned long scanned = 0; scanned < total; ++scanned )
+	{
+		unsigned long pageIndex = this->m_ClockHand;
+		this->m_ClockHand = (this->m_ClockHand + 1) % total;
+		FrameInfo& frame = this->m_FrameInfo[pageIndex];
+		if ( frame.mapCount == 0 ||
+			(frame.flags & (FRAME_FLAG_ZERO_PAGE | FRAME_FLAG_PINNED)) != 0 )
+		{
+			continue;
+		}
+
+		bool accessed = false;
+		bool dirty = false;
+		bool discardable = (frame.flags & FRAME_FLAG_COW) == 0;
+		bool valid = true;
+		ListHead* pos = NULL;
+		LIST_FOR_EACH(pos, &frame.rmapHead)
+		{
+			ReverseMapEntry* entry = LIST_ENTRY(pos, ReverseMapEntry, frameNode);
+			bool entryAccessed = false;
+			bool entryDirty = false;
+			bool entryDiscardable = false;
+			if ( entry->owner == NULL ||
+				entry->owner->CollectEvictionInfo(entry->virtualPageIndex,
+					entryAccessed,
+					entryDirty,
+					entryDiscardable) == false )
+			{
+				valid = false;
+				break;
+			}
+			accessed = accessed || entryAccessed;
+			dirty = dirty || entryDirty;
+			discardable = discardable && entryDiscardable;
+		}
+		if ( valid == false )
+		{
+			continue;
+		}
+
+		if ( accessed )
+		{
+			LIST_FOR_EACH(pos, &frame.rmapHead)
+			{
+				ReverseMapEntry* entry = LIST_ENTRY(pos, ReverseMapEntry, frameNode);
+				entry->owner->ClearPageAccessed(entry->virtualPageIndex);
+			}
+			X86Assembly::FlushCurrentPageDirectory();
+			continue;
+		}
+
+		unsigned long physicalAddress = this->GetPageAddressByIndex(pageIndex);
+		if ( discardable && dirty == false )
+		{
+			while ( List::Empty(&frame.rmapHead) == false )
+			{
+				ReverseMapEntry* entry =
+					LIST_FIRST_ENTRY(&frame.rmapHead, ReverseMapEntry, frameNode);
+				if ( entry->owner->EvictPageToReserved(entry->virtualPageIndex) == false )
+				{
+					return false;
+				}
+			}
+			X86Assembly::FlushCurrentPageDirectory();
+			return true;
+		}
+
+		unsigned int slot =
+			Kernel::Instance().GetSwapManager().AllocateSlot(frame.mapCount);
+		if ( slot == SwapManager::INVALID_SWAP_SLOT )
+		{
+			return false;
+		}
+		if ( Kernel::Instance().GetSwapManager().WritePage(slot, physicalAddress) == false )
+		{
+			Kernel::Instance().GetSwapManager().FreeSlot(slot);
+			return false;
+		}
+
+		unsigned int evictedCount = 0;
+		while ( List::Empty(&frame.rmapHead) == false )
+		{
+			ReverseMapEntry* entry =
+				LIST_FIRST_ENTRY(&frame.rmapHead, ReverseMapEntry, frameNode);
+			if ( entry->owner->EvictPageToSwap(entry->virtualPageIndex, slot) == false )
+			{
+				if ( evictedCount == 0 )
+				{
+					Kernel::Instance().GetSwapManager().FreeSlot(slot);
+				}
+				else
+				{
+					Kernel::Instance().GetSwapManager().SetSlotReferenceCount(slot,
+						evictedCount);
+				}
+				return false;
+			}
+			++evictedCount;
+		}
+		X86Assembly::FlushCurrentPageDirectory();
+		return true;
+	}
+
+	return false;
+}

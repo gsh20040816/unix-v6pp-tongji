@@ -79,7 +79,9 @@ public:
 		/* 已归属某区域，但未映射到物理页。 */
 		PAGE_STATE_RESERVED,
 		/* 已映射到物理页并可访问。 */
-		PAGE_STATE_RESIDENT
+		PAGE_STATE_RESIDENT,
+		/* 已换出到 swap，当前无驻留物理页。 */
+		PAGE_STATE_SWAPPED
 	};
 
 	/* 区域访问权限位。 */
@@ -105,7 +107,9 @@ public:
 		/* 访问标记。 */
 		PAGE_FLAG_ACCESSED = 0x2,
 		/* 可向低地址方向增长（栈）。 */
-		PAGE_FLAG_GROWSDOWN = 0x4
+		PAGE_FLAG_GROWSDOWN = 0x4,
+		/* 换出前属于 COW 共享页，换入后继续只读共享。 */
+		PAGE_FLAG_SWAPPED_COW = 0x8
 	};
 
 	/* 区域的后备信息。 */
@@ -136,6 +140,12 @@ public:
 		unsigned long frameAddress;
 		/* 相对后备窗口起点的偏移，用于按需回填。 */
 		unsigned long backingOffset;
+		/* 当前驻留映射在物理页反向映射链中的结点，生命周期跟随 PageInfo。 */
+		UserPageManager::ReverseMapEntry rmap;
+		/* rmap 当前是否挂在某个物理页的反向映射链上。 */
+		bool rmapAttached;
+		/* PAGE_STATE_SWAPPED 时记录 swap slot。 */
+		unsigned int swapSlot;
 	};
 
 	/* 连续虚拟地址区域描述。 */
@@ -252,6 +262,17 @@ public:
 	PageTable* GetUserPageTableByIndex(unsigned int index) const;
 	/* 当前是否具备用户地址空间（即私有页表是否存在）。 */
 	bool HasUserAddressSpace() const;
+	/* 供物理页回收器读取候选页的 PTE/后备属性。 */
+	bool CollectEvictionInfo(unsigned short virtualPageIndex,
+		bool& accessed,
+		bool& dirty,
+		bool& discardable) const;
+	/* 清除候选页 PTE 的 accessed 位，供 clock 回收策略使用。 */
+	void ClearPageAccessed(unsigned short virtualPageIndex);
+	/* 将驻留页丢弃为原后备 RESERVED 状态。 */
+	bool EvictPageToReserved(unsigned short virtualPageIndex);
+	/* 将驻留页标记为已换出。 */
+	bool EvictPageToSwap(unsigned short virtualPageIndex, unsigned int swapSlot);
 
 	/* 获取入口地址。 */
 	unsigned long GetEntryPoint() const;
@@ -349,6 +370,18 @@ private:
 	unsigned int AddressToPageIndex(unsigned long address) const;
 	/* 在用户页表中写入一个映射。 */
 	void MapPage(unsigned long virtualAddress, unsigned long physicalAddress, bool readWrite);
+	/* 清除指定用户虚页的页表映射。 */
+	void ClearPageMapping(unsigned short virtualPageIndex);
+	/* 统一建立 PageInfo/PTE/物理页反向映射。 */
+	bool AttachFrame(unsigned long virtualAddress,
+		unsigned long physicalAddress,
+		bool readWrite,
+		unsigned short frameFlags);
+	/* 统一拆除 PageInfo/PTE/物理页反向映射。 */
+	void DetachFrame(PageInfo& pageInfo,
+		bool clearPte,
+		bool resetToReserved,
+		bool freeFrameIfUnmapped);
 	/* 按区域类型查找（可写版本）。 */
 	Region* FindRegionByType(RegionType type);
 	/* 按区域类型查找（只读版本）。 */

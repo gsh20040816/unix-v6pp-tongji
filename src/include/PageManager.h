@@ -1,6 +1,10 @@
 #ifndef PAGE_MANAGER_H
 #define PAGE_MANAGER_H
 
+#include "List.h"
+
+class MemoryDescriptor;
+
 class PageManager
 {
 public:
@@ -69,12 +73,38 @@ public:
 class UserPageManager : public PageManager
 {
 public:
+	struct ReverseMapEntry
+	{
+		ListHead frameNode;
+		MemoryDescriptor* owner;
+		unsigned short virtualPageIndex;
+		int debugPid;
+	};
+
+	struct FrameInfo
+	{
+		ListHead rmapHead;
+		unsigned short mapCount;
+		unsigned short flags;
+		unsigned short cowRefCount;
+		unsigned int clockAge;
+	};
+
 	/* static const member */
 	static const unsigned int USER_PAGE_POOL_START_ADDR = 0x400000;		/* 用户物理内存区域起始地址 */
 	static const unsigned int USER_ZERO_PAGE_ADDRESS = USER_PAGE_POOL_START_ADDR;	/* 固定零页，供 BACKING_ZERO 共享映射 */
+	static const unsigned short FRAME_FLAG_NONE = 0x0;
+	static const unsigned short FRAME_FLAG_ZERO_PAGE = 0x1;
+	static const unsigned short FRAME_FLAG_COW = 0x2;
+	static const unsigned short FRAME_FLAG_SHARED_TEXT = 0x4;
+	static const unsigned short FRAME_FLAG_PINNED = 0x8;
+
+	static const unsigned int RECLAIM_HIGH_WATERMARK_PERCENT = 80;
+	static const unsigned int RECLAIM_LOW_WATERMARK_PERCENT = 70;
+
 	/* static member */
 	static unsigned int USER_PAGE_POOL_SIZE;		/* 用户物理内存区域大小：由内核初始化时进行设置 */
-	
+
 public:
 	UserPageManager();
 	int Initialize();	/* 初始化用户物理页池 bitmap */
@@ -84,6 +114,18 @@ public:
 	unsigned long FreePage(unsigned long startAddress);
 	unsigned long GetZeroPageAddress() const;
 	bool IsZeroPage(unsigned long pageAddress) const;
+	bool ResolvePoolPageIndex(unsigned long pageAddress, unsigned long& pageIndex) const;
+	FrameInfo* GetFrameInfoByAddress(unsigned long pageAddress);
+	const FrameInfo* GetFrameInfoByAddress(unsigned long pageAddress) const;
+	unsigned long GetPageAddressByIndex(unsigned long pageIndex) const;
+	bool AttachReverseMap(unsigned long pageAddress,
+		ReverseMapEntry* entry,
+		unsigned short frameFlags);
+	void DetachReverseMap(unsigned long pageAddress, ReverseMapEntry* entry);
+	unsigned short GetFrameMapCount(unsigned long pageAddress) const;
+	unsigned short GetFrameFlags(unsigned long pageAddress) const;
+	void SetFrameFlags(unsigned long pageAddress, unsigned short flags);
+	bool ReclaimUntilLowWatermark();
 
 	/* 将页纳入 COW 追踪：首次共享时置为2，后续共享继续递增。 */
 	bool ShareAsCopyOnWrite(unsigned long pageAddress);
@@ -91,14 +133,19 @@ public:
 	unsigned short GetCopyOnWriteRefCount(unsigned long pageAddress) const;
 	/* COW 引用计数减1，返回新计数。 */
 	unsigned short ReleaseCopyOnWriteRef(unsigned long pageAddress);
+	/* 显式设置页的 COW 引用计数，用于从 swap 元数据恢复共享关系。 */
+	bool SetCopyOnWriteRefCount(unsigned long pageAddress, unsigned short refCount);
 	/* 清除页的 COW 引用计数。 */
 	void ClearCopyOnWriteRef(unsigned long pageAddress);
 
 private:
-	bool ResolvePoolPageIndex(unsigned long pageAddress, unsigned long& pageIndex) const;
+	bool ShouldReclaimBeforeAllocate(unsigned long pageCount) const;
+	bool ReclaimOneFrame();
 
 private:
-	unsigned short m_CowRefCount[PageManager::MAX_BITMAP_PAGE_COUNT];
+	FrameInfo m_FrameInfo[PageManager::MAX_BITMAP_PAGE_COUNT];
+	unsigned long m_ClockHand;
+	bool m_Reclaiming;
 };
 
 #endif

@@ -9,6 +9,7 @@
 #include "DeviceManager.h"
 #include "FileManager.h"
 #include "FileSystem.h"
+#include "SwapManager.h"
 
 /*
  * Kernel类用于封装所有内核相关的全局类实例对象，
@@ -37,6 +38,7 @@ public:
 	DeviceManager& GetDeviceManager();
 	FileSystem& GetFileSystem();
 	FileManager& GetFileManager();
+	SwapManager& GetSwapManager();
 	User& GetUser();		/* 获取当前进程的User结构 */
 
 private:
@@ -44,6 +46,7 @@ private:
 	void InitProcess();
 	void InitBuffer();
 	void InitFileSystem();
+	void InitSwap();
 
 private:
 	static Kernel instance;		/* Kernel单体类实例 */
@@ -56,6 +59,7 @@ private:
 	DeviceManager* m_DeviceManager;
 	FileSystem* m_FileSystem;
 	FileManager* m_FileManager;
+	SwapManager* m_SwapManager;
 };
 
 #endif
