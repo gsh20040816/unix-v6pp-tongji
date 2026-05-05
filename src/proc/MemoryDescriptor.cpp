@@ -2437,6 +2437,13 @@ void MemoryDescriptor::DetachFrame(PageInfo& pageInfo,
 	bool resetToReserved,
 	bool freeFrameIfUnmapped)
 {
+	bool keepRuntimeMapping = false;
+	if ( pageInfo.regionIndex != 0xffff )
+	{
+		keepRuntimeMapping =
+			this->m_Regions[pageInfo.regionIndex].type == REGION_RUNTIME;
+	}
+
 	if ( pageInfo.rmapAttached && pageInfo.rmap == NULL )
 	{
 		Utility::Panic("Attached PageInfo missing reverse map");
@@ -2444,7 +2451,7 @@ void MemoryDescriptor::DetachFrame(PageInfo& pageInfo,
 
 	if ( pageInfo.rmapAttached == false || pageInfo.frameAddress == 0 )
 	{
-		if ( clearPte && pageInfo.regionIndex != 0xffff )
+		if ( clearPte && pageInfo.regionIndex != 0xffff && keepRuntimeMapping == false )
 		{
 			this->ClearPageMapping((unsigned short)this->AddressToPageIndex(
 				this->GetRegionPageAddress(this->m_Regions[pageInfo.regionIndex],
