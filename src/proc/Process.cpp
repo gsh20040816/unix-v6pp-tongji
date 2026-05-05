@@ -356,6 +356,11 @@ void Process::PSignal( int signal )
 	{
 		this->p_pri	= ProcessManager::PUSER;
 	}
+	/*
+	 * sem_wait() 走的是可中断睡眠路径。
+	 * 收到信号时需要先把进程从信号量等待队列摘掉，否则 destroy/post
+	 * 之后仍可能看到已经准备返回用户态的旧节点。
+	 */
 	Kernel::Instance().GetSemaphoreManager().InterruptWait(*this);
 	/* 若进程的处于低优先权睡眠，则将其唤醒 */
 	if ( this->p_stat == Process::SWAIT )

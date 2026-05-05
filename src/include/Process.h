@@ -103,9 +103,9 @@ public:
 	unsigned long p_sigmap;
 
 	/* 信号量等待上下文 */
-	ListHead p_semNode;
-	Semaphore* p_semWaitSem;
-	int p_semWakeReason;
+	ListHead p_semNode;		/* 挂入 Semaphore::waitQueue 时使用的链表节点 */
+	Semaphore* p_semWaitSem;	/* 当前阻塞在哪个信号量上，未等待时为 NULL */
+	int p_semWakeReason;		/* 记录是 post、destroy 还是普通路径返回 */
 
 	/* 僵尸进程阶段保留给wait()读取的退出信息 */
 	int p_xstat;		/* exit(status)的status */

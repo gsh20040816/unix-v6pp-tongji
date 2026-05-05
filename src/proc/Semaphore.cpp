@@ -15,6 +15,7 @@ SemaphoreManager::~SemaphoreManager()
 
 void SemaphoreManager::Initialize()
 {
+	/* 所有槽位先置为空闲态，generation 从 1 开始，0 保留为非法 semId。 */
 	for ( int i = 0; i < SemaphoreManager::NSEMA; ++i )
 	{
 		this->ResetEntry(this->m_Semaphores[i], 1);
@@ -33,6 +34,7 @@ int SemaphoreManager::Init(int value)
 
 	X86Assembly::CLI();
 
+	/* 槽位分配和 generation 读取必须在关中断下完成，避免并发复用。 */
 	int slot = this->FindFreeSlot();
 	if ( slot < 0 )
 	{
@@ -46,6 +48,7 @@ int SemaphoreManager::Init(int value)
 	semaphore.value = value;
 	List::Init(&semaphore.waitQueue);
 
+	/* 用户态只持有编码后的整数句柄，不直接暴露内核地址。 */
 	u.u_ar0[User::EAX] = this->EncodeId(slot, semaphore.generation);
 
 	X86Assembly::STI();
@@ -61,6 +64,10 @@ void SemaphoreManager::Wait(int semId)
 	{
 		X86Assembly::CLI();
 
+		/*
+		 * 与 Sleep() 一样，进入可中断等待前先检查信号。
+		 * 这样可以避免已经有待处理信号时仍然把进程挂到信号量队列上。
+		 */
 		if ( current->IsSig() )
 		{
 			X86Assembly::STI();
@@ -76,6 +83,10 @@ void SemaphoreManager::Wait(int semId)
 			return;
 		}
 
+		/*
+		 * 只有在没有排队等待者时才直接消耗 value。
+		 * 这样可以维持 FIFO 语义，避免新来的进程越过已经睡眠的等待者。
+		 */
 		if ( semaphore->value > 0 && List::Empty(&semaphore->waitQueue) )
 		{
 			semaphore->value--;
@@ -84,6 +95,10 @@ void SemaphoreManager::Wait(int semId)
 			return;
 		}
 
+		/*
+		 * Sleep() 可能因为信号被唤醒，也可能因为 Destroy()/Post() 被唤醒。
+		 * 先把等待上下文挂到 Process 上，醒来后才能区分返回原因。
+		 */
 		current->p_semWaitSem = semaphore;
 		current->p_semWakeReason = SemaphoreManager::WAKE_NONE;
 		List::Init(&current->p_semNode);
@@ -122,12 +137,14 @@ void SemaphoreManager::Post(int semId)
 
 	if ( List::Empty(&semaphore->waitQueue) == false )
 	{
+		/* 直接转交给队头等待者，不增加 value，避免出现“已发放令牌又仍可重复领取”。 */
 		Process* process =
 			LIST_FIRST_ENTRY(&semaphore->waitQueue, Process, p_semNode);
 		this->WakeProcess(*process, SemaphoreManager::WAKE_GRANTED);
 	}
 	else
 	{
+		/* 保持实现简单：溢出视为非法使用，而不是悄悄回绕。 */
 		if ( semaphore->value == 0x7fffffff )
 		{
 			X86Assembly::STI();
@@ -154,6 +171,7 @@ void SemaphoreManager::Destroy(int semId)
 		return;
 	}
 
+	/* 先清空等待队列，再回收槽位，保证被唤醒进程只会看到 destroy 结果。 */
 	while ( List::Empty(&semaphore->waitQueue) == false )
 	{
 		Process* process =
@@ -161,6 +179,7 @@ void SemaphoreManager::Destroy(int semId)
 		this->WakeProcess(*process, SemaphoreManager::WAKE_DESTROYED);
 	}
 
+	/* generation 递增后，旧 semId 即使槽位复用也不会再次匹配。 */
 	unsigned int nextGeneration = semaphore->generation + 1;
 	if ( nextGeneration == 0 )
 	{
@@ -178,6 +197,10 @@ void SemaphoreManager::InterruptWait(Process& process)
 		return;
 	}
 
+	/*
+	 * 信号打断只负责把进程从等待队列里摘掉。
+	 * 最终返回到用户态的错误/信号语义仍由 Sleep()/Trap 路径统一处理。
+	 */
 	List::DeleteInit(&process.p_semNode);
 	process.p_semWaitSem = NULL;
 	process.p_semWakeReason = SemaphoreManager::WAKE_NONE;
@@ -216,6 +239,7 @@ int SemaphoreManager::FindFreeSlot() const
 
 int SemaphoreManager::EncodeId(int slot, unsigned int generation) const
 {
+	/* 低 8 位存槽位，高位存代际号；当前 NSEMA=64，8 位槽位足够。 */
 	return (int)((generation << 8) | (unsigned int)slot);
 }
 
@@ -246,6 +270,7 @@ void SemaphoreManager::ResetEntry(Semaphore& semaphore, unsigned int generation)
 
 void SemaphoreManager::WakeProcess(Process& process, int wakeReason)
 {
+	/* 唤醒前必须先脱链，避免同一进程被重复唤醒或残留在旧队列里。 */
 	List::DeleteInit(&process.p_semNode);
 	process.p_semWaitSem = NULL;
 	process.p_semWakeReason = wakeReason;

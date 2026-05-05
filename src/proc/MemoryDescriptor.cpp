@@ -2437,6 +2437,11 @@ void MemoryDescriptor::DetachFrame(PageInfo& pageInfo,
 	bool resetToReserved,
 	bool freeFrameIfUnmapped)
 {
+	/*
+	 * runtime 区域承载的是进程退出时仍要复用的运行期映射。
+	 * 这类页即使 PageInfo 已经脱离反向映射，也不能顺手把 PTE 清掉，
+	 * 否则用户态退出收尾代码还没执行完就会失去映射。
+	 */
 	bool keepRuntimeMapping = false;
 	if ( pageInfo.regionIndex != 0xffff )
 	{
@@ -2451,6 +2456,10 @@ void MemoryDescriptor::DetachFrame(PageInfo& pageInfo,
 
 	if ( pageInfo.rmapAttached == false || pageInfo.frameAddress == 0 )
 	{
+		/*
+		 * 这里表示 PageInfo 只是逻辑占位，当前并没有真实驻留页框。
+		 * 普通区域可以直接撤掉 PTE，但 runtime 区域要保留现有映射。
+		 */
 		if ( clearPte && pageInfo.regionIndex != 0xffff && keepRuntimeMapping == false )
 		{
 			this->ClearPageMapping((unsigned short)this->AddressToPageIndex(

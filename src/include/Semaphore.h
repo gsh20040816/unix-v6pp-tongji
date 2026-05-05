@@ -9,7 +9,9 @@ struct Semaphore
 {
 	bool used;
 	int value;
+	/* 代际号与槽位一起编码成 semId，避免销毁后旧句柄误指向新对象。 */
 	unsigned int generation;
+	/* 等待队列中的节点属于 Process，本结构只维护队头/队尾。 */
 	ListHead waitQueue;
 };
 
@@ -31,11 +33,16 @@ public:
 
 	void Initialize();
 
+	/* 分配一个可复用槽位，并把返回值写到用户态 EAX。 */
 	int Init(int value);
+	/* P 操作可能因为真正获取到资源、对象被销毁或信号打断而返回。 */
 	void Wait(int semId);
+	/* 优先把资源直接转交给等待者，避免 value 和等待队列同时非空。 */
 	void Post(int semId);
+	/* 销毁后必须唤醒所有等待者，并让旧 semId 立即失效。 */
 	void Destroy(int semId);
 
+	/* 信号打断睡眠时，把进程从信号量等待队列中摘掉。 */
 	void InterruptWait(Process& process);
 
 private:
