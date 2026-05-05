@@ -171,6 +171,42 @@ int setuid(short uid)
 	return -1;
 }
 
+int sem_init(int value)
+{
+	int res;
+	__asm__ volatile ("int $0x80":"=a"(res):"a"(56),"b"(value));
+	if ( res >= 0 )
+		return res;
+	return -1;
+}
+
+int sem_wait(int semid)
+{
+	int res;
+	__asm__ volatile ("int $0x80":"=a"(res):"a"(57),"b"(semid));
+	if ( res >= 0 )
+		return res;
+	return -1;
+}
+
+int sem_post(int semid)
+{
+	int res;
+	__asm__ volatile ("int $0x80":"=a"(res):"a"(58),"b"(semid));
+	if ( res >= 0 )
+		return res;
+	return -1;
+}
+
+int sem_destroy(int semid)
+{
+	int res;
+	__asm__ volatile ("int $0x80":"=a"(res):"a"(59),"b"(semid));
+	if ( res >= 0 )
+		return res;
+	return -1;
+}
+
 int gettime(struct tms* ptms)
 {
 	int res;

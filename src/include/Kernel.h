@@ -9,6 +9,7 @@
 #include "DeviceManager.h"
 #include "FileManager.h"
 #include "FileSystem.h"
+#include "Semaphore.h"
 #include "SwapManager.h"
 
 /*
@@ -38,12 +39,14 @@ public:
 	DeviceManager& GetDeviceManager();
 	FileSystem& GetFileSystem();
 	FileManager& GetFileManager();
+	SemaphoreManager& GetSemaphoreManager();
 	SwapManager& GetSwapManager();
 	User& GetUser();		/* 获取当前进程的User结构 */
 
 private:
 	void InitMemory();
 	void InitProcess();
+	void InitSemaphore();
 	void InitBuffer();
 	void InitFileSystem();
 	void InitSwap();
@@ -59,6 +62,7 @@ private:
 	DeviceManager* m_DeviceManager;
 	FileSystem* m_FileSystem;
 	FileManager* m_FileManager;
+	SemaphoreManager* m_SemaphoreManager;
 	SwapManager* m_SwapManager;
 };
 

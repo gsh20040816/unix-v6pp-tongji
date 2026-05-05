@@ -17,6 +17,13 @@ Process::Process()
 	this->p_stime = 0;
 	this->p_cutime = 0;
 	this->p_cstime = 0;
+	this->p_wchan = 0;
+	this->p_sig = 0;
+	this->p_ttyp = NULL;
+	this->p_sigmap = 0;
+	List::Init(&this->p_semNode);
+	this->p_semWaitSem = NULL;
+	this->p_semWakeReason = SemaphoreManager::WAKE_NONE;
 	this->p_memory.Attach(this);
 }
 
@@ -246,6 +253,12 @@ void Process::Clone(Process& proc)
 	/* 初始化进程调度相关成员 */
 	proc.p_pri = 0;		/* 确保child的优先数较小，与其它进程相比更有机会占用CPU */
 	proc.p_time = 0;
+	proc.p_wchan = 0;
+	proc.p_sig = 0;
+	proc.p_sigmap = 0;
+	List::Init(&proc.p_semNode);
+	proc.p_semWaitSem = NULL;
+	proc.p_semWakeReason = SemaphoreManager::WAKE_NONE;
 	proc.p_xstat = 0;
 	proc.p_utime = 0;
 	proc.p_stime = 0;
@@ -343,6 +356,7 @@ void Process::PSignal( int signal )
 	{
 		this->p_pri	= ProcessManager::PUSER;
 	}
+	Kernel::Instance().GetSemaphoreManager().InterruptWait(*this);
 	/* 若进程的处于低优先权睡眠，则将其唤醒 */
 	if ( this->p_stat == Process::SWAIT )
 	{

@@ -12,10 +12,11 @@ UserPageManager g_UserPageManager;
 KernelPageManager g_KernelPageManager;
 KernelAllocator g_KernelAllocator(&(Allocator::GetInstance()));
 
-/* 
+/*
  * 进程相关全局manager
  */
 ProcessManager g_ProcessManager;
+SemaphoreManager g_SemaphoreManager;
 
 /*
  * 设备管理、高速缓存管理全局manager
@@ -73,6 +74,15 @@ void Kernel::InitProcess()
 	Diagnose::Write("Ok.\n");
 }
 
+void Kernel::InitSemaphore()
+{
+	this->m_SemaphoreManager = &g_SemaphoreManager;
+
+	Diagnose::Write("Initialize Semaphore...");
+	this->GetSemaphoreManager().Initialize();
+	Diagnose::Write("OK.\n");
+}
+
 void Kernel::InitBuffer()
 {
 	this->m_BufferManager = &g_BufferManager;
@@ -114,6 +124,7 @@ void Kernel::Initialize()
 {
 	InitMemory();
 	InitProcess();
+	InitSemaphore();
 	InitBuffer();
 	InitFileSystem();
 	InitSwap();
@@ -157,6 +168,11 @@ FileSystem& Kernel::GetFileSystem()
 FileManager& Kernel::GetFileManager()
 {
 	return *(this->m_FileManager);
+}
+
+SemaphoreManager& Kernel::GetSemaphoreManager()
+{
+	return *(this->m_SemaphoreManager);
 }
 
 SwapManager& Kernel::GetSwapManager()

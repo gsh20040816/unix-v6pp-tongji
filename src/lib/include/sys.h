@@ -78,6 +78,14 @@ int setgid(short gid);
 
 int setuid(short uid);
 
+int sem_init(int value);
+
+int sem_wait(int semid);
+
+int sem_post(int semid);
+
+int sem_destroy(int semid);
+
 int gettime(struct tms* ptms);   /* 读系统时钟 */
 
 /* 获取进程用户态、核心态CPU时间片数 */

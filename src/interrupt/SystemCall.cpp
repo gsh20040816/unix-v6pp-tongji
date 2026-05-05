@@ -137,10 +137,10 @@ SystemCallTableEntry SystemCall::m_SystemEntranceTable[SYSTEM_CALL_NUM] =
 	{ 0, &Sys_GetKerPageMem},		/* 53 = getkerpagemem */
 	{ 0, &Sys_BootReady },			/* 54 = bootready */
 	{ 0, &Sys_Reboot },				/* 55 = reboot	*/
-	{ 0, &Sys_Nosys	},				/* 56 = nosys	*/
-	{ 0, &Sys_Nosys	},				/* 57= nosys	*/
-	{ 0, &Sys_Nosys	},				/* 58 = nosys	*/
-	{ 0, &Sys_Nosys	},				/* 59 = nosys	*/
+	{ 1, &Sys_SemInit },			/* 56 = sem_init */
+	{ 1, &Sys_SemWait },			/* 57 = sem_wait */
+	{ 1, &Sys_SemPost },			/* 58 = sem_post */
+	{ 1, &Sys_SemDestroy },			/* 59 = sem_destroy */
 	{ 0, &Sys_Nosys	},				/* 60 = nosys	*/
 	{ 0, &Sys_Nosys	},				/* 61 = nosys	*/
 	{ 0, &Sys_Nosys	},				/* 62 = nosys	*/
@@ -927,5 +927,37 @@ int SystemCall::Sys_Shutdown()
 		__asm__ __volatile__("hlt");
 	}
 
+	return 0;	/* GCC likes it ! */
+}
+
+/*	56 = sem_init	count = 1	*/
+int SystemCall::Sys_SemInit()
+{
+	User& u = Kernel::Instance().GetUser();
+	Kernel::Instance().GetSemaphoreManager().Init(u.u_arg[0]);
+	return 0;	/* GCC likes it ! */
+}
+
+/*	57 = sem_wait	count = 1	*/
+int SystemCall::Sys_SemWait()
+{
+	User& u = Kernel::Instance().GetUser();
+	Kernel::Instance().GetSemaphoreManager().Wait(u.u_arg[0]);
+	return 0;	/* GCC likes it ! */
+}
+
+/*	58 = sem_post	count = 1	*/
+int SystemCall::Sys_SemPost()
+{
+	User& u = Kernel::Instance().GetUser();
+	Kernel::Instance().GetSemaphoreManager().Post(u.u_arg[0]);
+	return 0;	/* GCC likes it ! */
+}
+
+/*	59 = sem_destroy	count = 1	*/
+int SystemCall::Sys_SemDestroy()
+{
+	User& u = Kernel::Instance().GetUser();
+	Kernel::Instance().GetSemaphoreManager().Destroy(u.u_arg[0]);
 	return 0;	/* GCC likes it ! */
 }

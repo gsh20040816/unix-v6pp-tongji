@@ -1,6 +1,7 @@
 add_library(oos_proc_obj OBJECT
   Process.cpp
   ProcessManager.cpp
+  Semaphore.cpp
   MemoryDescriptor.cpp
   User.cpp
   Text.cpp

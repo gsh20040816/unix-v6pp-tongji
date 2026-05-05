@@ -5,6 +5,9 @@
 #include "TTy.h"
 #include "Regs.h"
 #include "MemoryDescriptor.h"
+#include "List.h"
+
+struct Semaphore;
 
 /*
  * Process类与UNIX V6中进程控制块proc结构对应，这里只改变
@@ -98,6 +101,11 @@ public:
 	int p_sig;			/* 进程信号 */
 	TTy* p_ttyp;		/* 进程tty结构地址 */
 	unsigned long p_sigmap;
+
+	/* 信号量等待上下文 */
+	ListHead p_semNode;
+	Semaphore* p_semWaitSem;
+	int p_semWakeReason;
 
 	/* 僵尸进程阶段保留给wait()读取的退出信息 */
 	int p_xstat;		/* exit(status)的status */

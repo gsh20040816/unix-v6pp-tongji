@@ -242,7 +242,19 @@ private:
 	/*	54 = bootready	count = 0	*/
 	static int Sys_BootReady();
 
-	/*	55 ~ 63 = nosys	count = 0	*/	
+	/*	56 = sem_init	count = 1	*/
+	static int Sys_SemInit();
+
+	/*	57 = sem_wait	count = 1	*/
+	static int Sys_SemWait();
+
+	/*	58 = sem_post	count = 1	*/
+	static int Sys_SemPost();
+
+	/*	59 = sem_destroy	count = 1	*/
+	static int Sys_SemDestroy();
+
+	/*	60 ~ 63 = nosys	count = 0	*/	
 
 private:
 	/*系统调用入口表的声明*/
