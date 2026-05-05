@@ -882,6 +882,58 @@ int main()
 		});
 
 	stdoutCursor = stdoutBuffer.size();
+	if ( ok )
+	{
+		if ( !SendCommand(child.stdinFd, "semtest") )
+		{
+			std::cerr << "failed to send semtest command\n";
+			ok = false;
+		}
+	}
+
+	ok = ok && WaitForCondition(
+		"semtest output",
+		config.cmdTimeoutSec,
+		child,
+		stdoutBuffer,
+		stderrBuffer,
+		stdoutLog,
+		stderrLog,
+		[&]() {
+			return ContainsFrom(stdoutBuffer, stdoutCursor, "child waiting on ") &&
+				ContainsFrom(stdoutBuffer, stdoutCursor, "parent posting semaphore") &&
+				ContainsFrom(stdoutBuffer, stdoutCursor, "child acquired semaphore") &&
+				ContainsFrom(stdoutBuffer, stdoutCursor, "semtest done") &&
+				HasShellPromptFrom(stdoutBuffer, stdoutCursor);
+		});
+
+	stdoutCursor = stdoutBuffer.size();
+	if ( ok )
+	{
+		if ( !SendCommand(child.stdinFd, "fork") )
+		{
+			std::cerr << "failed to send fork command\n";
+			ok = false;
+		}
+	}
+
+	ok = ok && WaitForCondition(
+		"fork command output",
+		config.cmdTimeoutSec,
+		child,
+		stdoutBuffer,
+		stderrBuffer,
+		stdoutLog,
+		stderrLog,
+		[&]() {
+			return ContainsFrom(stdoutBuffer, stdoutCursor, "Before fork, pid=") &&
+				ContainsFrom(stdoutBuffer, stdoutCursor, "child-after-fork") &&
+				ContainsFrom(stdoutBuffer, stdoutCursor, "parent-after-fork") &&
+				ContainsFrom(stdoutBuffer, stdoutCursor, "Parent wait done, child status=0") &&
+				HasShellPromptFrom(stdoutBuffer, stdoutCursor);
+		});
+
+	stdoutCursor = stdoutBuffer.size();
 	size_t stderrCursor = stderrBuffer.size();
 	if ( ok )
 	{
