@@ -571,7 +571,9 @@ int main()
 		stdoutLog,
 		stderrLog,
 		[&]() {
-			return ContainsFrom(stdoutBuffer, stdoutCursor, "swapstress: done free-end=") &&
+			return ContainsFrom(stdoutBuffer, stdoutCursor,
+					"swapstress: PASS swap-observed=1") &&
+				ContainsFrom(stdoutBuffer, stdoutCursor, "swapstress: done free-end=") &&
 				HasShellPromptFrom(stdoutBuffer, stdoutCursor);
 		});
 

@@ -171,6 +171,11 @@ endif()
 add_custom_target(oos_user_payload DEPENDS ${OOS_USER_PAYLOAD_TARGETS})
 add_custom_target(oos_fs_tools DEPENDS filescanner fsedit)
 
+set(OOS_USER_PAYLOAD_OUTPUTS)
+foreach(OOS_USER_PAYLOAD_TARGET IN LISTS OOS_USER_PAYLOAD_TARGETS)
+  list(APPEND OOS_USER_PAYLOAD_OUTPUTS "$<TARGET_FILE:${OOS_USER_PAYLOAD_TARGET}>")
+endforeach()
+
 file(GLOB_RECURSE OOS_FS_CONTENT_FILES CONFIGURE_DEPENDS "${OOS_FS_CONTENT_DIR}/*")
 
 set(OOS_WORKSPACE_IMG "${OOS_FS_WORKSPACE}/c.img")
@@ -195,6 +200,7 @@ add_custom_command(
     filescanner
     fsedit
     oos_user_payload
+    ${OOS_USER_PAYLOAD_OUTPUTS}
     ${OOS_FS_CONTENT_FILES}
   VERBATIM
 )

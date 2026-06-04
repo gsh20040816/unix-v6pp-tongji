@@ -72,11 +72,11 @@ void BlockDevice::Start()
 ATABlockDevice g_ATADevice(&g_Atab);
 
 /* 
- * !hard code!挂载于bochs下磁盘映像文件c.img的扇区数大小，应该在系统启动时获取。
+ * !hard code!挂载于bochs/qemu下磁盘映像文件c.img的扇区数大小，应该在系统启动时获取。
  * 20 Cylinders; 16 Heads; 63 Sectors/Track，20 * 16 * 63 = 20160 Sectors。
  * c.img: 10,321,920 bytes = 10,008KB 
  */
-int ATABlockDevice::NSECTOR = 0x7FFFFFFF;	/* Max Possible Sector Numbers */
+int ATABlockDevice::NSECTOR = 20 * 16 * 63;
 
 ATABlockDevice::ATABlockDevice(Devtab* pDevtab)
 	:BlockDevice(pDevtab)
