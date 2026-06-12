@@ -504,6 +504,48 @@ namespace
 		size_t bracketPos = text.rfind('[', promptPos);
 		return bracketPos != std::string::npos;
 	}
+
+	bool HasOrderedSembarrierOutput(const std::string& text, size_t start)
+	{
+		const char* phaseOneMarkers[] = {
+			"P1_1 done",
+			"P2_1 done",
+			"P3_1 done",
+			"P4_1 done"
+		};
+		const char* phaseTwoMarkers[] = {
+			"P1_2 start",
+			"P2_2 start",
+			"P3_2 start",
+			"P4_2 start"
+		};
+
+		size_t firstPhaseTwo = std::string::npos;
+		for ( const char* marker : phaseTwoMarkers )
+		{
+			size_t pos = text.find(marker, start);
+			if ( pos == std::string::npos )
+			{
+				return false;
+			}
+			if ( firstPhaseTwo == std::string::npos || pos < firstPhaseTwo )
+			{
+				firstPhaseTwo = pos;
+			}
+		}
+
+		for ( const char* marker : phaseOneMarkers )
+		{
+			size_t pos = text.find(marker, start);
+			if ( pos == std::string::npos || pos > firstPhaseTwo )
+			{
+				return false;
+			}
+		}
+
+		return ContainsFrom(text, start, "sembarrier done") &&
+			HasShellPromptFrom(text, start);
+	}
 }
 
 int main()
@@ -876,6 +918,7 @@ int main()
 			return ContainsFrom(stdoutBuffer, stdoutCursor, "Directory '/bin':") &&
 				ContainsFrom(stdoutBuffer, stdoutCursor, "echo") &&
 				ContainsFrom(stdoutBuffer, stdoutCursor, "date") &&
+				ContainsFrom(stdoutBuffer, stdoutCursor, "sembarrier") &&
 				ContainsFrom(stdoutBuffer, stdoutCursor, "reboot") &&
 				(ContainsFrom(stdoutBuffer, stdoutCursor, "utest") ||
 					ContainsFrom(stdoutBuffer, stdoutCursor, "test"));
@@ -906,6 +949,26 @@ int main()
 				ContainsFrom(stdoutBuffer, stdoutCursor, "semtest done") &&
 				HasShellPromptFrom(stdoutBuffer, stdoutCursor);
 		});
+
+	stdoutCursor = stdoutBuffer.size();
+	if ( ok )
+	{
+		if ( !SendCommand(child.stdinFd, "sembarrier") )
+		{
+			std::cerr << "failed to send sembarrier command\n";
+			ok = false;
+		}
+	}
+
+	ok = ok && WaitForCondition(
+		"sembarrier output",
+		config.cmdTimeoutSec,
+		child,
+		stdoutBuffer,
+		stderrBuffer,
+		stdoutLog,
+		stderrLog,
+		[&]() { return HasOrderedSembarrierOutput(stdoutBuffer, stdoutCursor); });
 
 	stdoutCursor = stdoutBuffer.size();
 	if ( ok )
