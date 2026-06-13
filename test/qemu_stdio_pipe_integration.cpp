@@ -973,6 +973,31 @@ int main()
 	stdoutCursor = stdoutBuffer.size();
 	if ( ok )
 	{
+		if ( !SendCommand(child.stdinFd, "semintr") )
+		{
+			std::cerr << "failed to send semintr command\n";
+			ok = false;
+		}
+	}
+
+	ok = ok && WaitForCondition(
+		"semintr output",
+		config.cmdTimeoutSec,
+		child,
+		stdoutBuffer,
+		stderrBuffer,
+		stdoutLog,
+		stderrLog,
+		[&]() {
+			return ContainsFrom(stdoutBuffer, stdoutCursor, "P2: sem_wait interrupted") &&
+				ContainsFrom(stdoutBuffer, stdoutCursor, "P3: acquired semaphore") &&
+				ContainsFrom(stdoutBuffer, stdoutCursor, "semintr done") &&
+				HasShellPromptFrom(stdoutBuffer, stdoutCursor);
+		});
+
+	stdoutCursor = stdoutBuffer.size();
+	if ( ok )
+	{
 		if ( !SendCommand(child.stdinFd, "fork") )
 		{
 			std::cerr << "failed to send fork command\n";
